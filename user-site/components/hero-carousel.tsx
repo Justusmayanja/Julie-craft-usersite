@@ -63,7 +63,7 @@ export function HeroCarousel() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length)
-    }, 4000)
+    }, 5000) // Changed to 5 seconds for better viewing
 
     return () => clearInterval(timer)
   }, [])
@@ -81,65 +81,70 @@ export function HeroCarousel() {
   }
 
   return (
-    <section className="relative h-[70vh] min-h-[500px] overflow-hidden">
-      {/* Slides */}
-      {slides.map((slide, index) => (
-        <div
-          key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-1000 ${
-            index === currentSlide ? "opacity-100" : "opacity-0"
-          }`}
-        >
+    <section className="relative h-[50vh] min-h-[400px] overflow-hidden">
+      {/* Slides Container */}
+      <div 
+        className="flex transition-transform duration-700 ease-in-out h-full"
+        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+      >
+        {slides.map((slide, index) => (
           <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url(${slide.image})` }}
-          />
-          <div className="absolute inset-0 bg-black/40" />
+            key={slide.id}
+            className="w-full flex-shrink-0 relative"
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${slide.image})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
 
-          {/* Content */}
-          <div className="relative h-full flex items-center">
-            <div className="container mx-auto px-4">
-              <div className="max-w-2xl text-white">
-                <p className="text-lg font-medium text-secondary mb-2">{slide.subtitle}</p>
-                <h1 className="text-4xl md:text-6xl font-bold mb-4 text-balance">{slide.title}</h1>
-                <p className="text-lg md:text-xl mb-8 text-pretty opacity-90">{slide.description}</p>
-                <div className="flex gap-4">
-                  <Link href={slide.ctaLink}>
-                    <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                      {slide.cta}
-                    </Button>
-                  </Link>
-                  <Link href="/products">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="bg-white/10 hover:bg-white/20 text-white border-white/30"
-                    >
-                      Start Shopping
-                    </Button>
-                  </Link>
+            {/* Content */}
+            <div className="relative h-full flex items-center justify-center">
+              <div className="container mx-auto px-6 lg:px-8">
+                <div className="max-w-2xl text-white text-center mx-auto">
+                  <div className="mb-4">
+                    <p className="text-lg font-semibold text-secondary mb-2 tracking-wide">{slide.subtitle}</p>
+                    <h1 className="text-3xl md:text-5xl font-bold mb-4 text-balance leading-tight">{slide.title}</h1>
+                    <p className="text-lg md:text-xl mb-6 text-pretty opacity-95 leading-relaxed max-w-xl mx-auto">{slide.description}</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                    <Link href={slide.ctaLink}>
+                      <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-4 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+                        {slide.cta}
+                      </Button>
+                    </Link>
+                    <Link href="/products">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="bg-white/10 hover:bg-white/20 text-white border-white/40 px-6 py-4 text-base font-semibold backdrop-blur-sm hover:backdrop-blur-md transition-all duration-300"
+                      >
+                        Start Shopping
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       {/* Navigation Arrows */}
       <button
         onClick={goToPrevious}
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-colors"
+        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-2 transition-all duration-300 hover:scale-110 shadow-lg z-10"
         aria-label="Previous slide"
       >
-        <ChevronLeft className="h-6 w-6 text-white" />
+        <ChevronLeft className="h-5 w-5 text-white" />
       </button>
 
       <button
         onClick={goToNext}
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-colors"
+        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-2 transition-all duration-300 hover:scale-110 shadow-lg z-10"
         aria-label="Next slide"
       >
-        <ChevronRight className="h-6 w-6 text-white" />
+        <ChevronRight className="h-5 w-5 text-white" />
       </button>
 
       {/* Dots Indicator */}
@@ -148,7 +153,11 @@ export function HeroCarousel() {
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full transition-colors ${index === currentSlide ? "bg-white" : "bg-white/50"}`}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              index === currentSlide 
+                ? "bg-white shadow-lg scale-110" 
+                : "bg-white/50 hover:bg-white/70 hover:scale-105"
+            }`}
             aria-label={`Go to slide ${index + 1}`}
           />
         ))}

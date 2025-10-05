@@ -43,40 +43,40 @@ export function Testimonials() {
   }, [])
 
   return (
-    <section className="py-16">
-      <div className="container mx-auto px-4">
+    <section className="py-16 bg-background">
+      <div className="container mx-auto px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-balance">What Our Customers Say</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-pretty">
+          <p className="text-lg text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed">
             Hear from our satisfied customers who have experienced the beauty of authentic Ugandan crafts.
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto">
-          <div className="relative h-64 overflow-hidden">
+        <div className="max-w-5xl mx-auto">
+          <div className="relative h-80 overflow-hidden rounded-2xl">
             {testimonials.map((testimonial, index) => (
               <Card
                 key={testimonial.id}
-                className={`absolute inset-0 transition-opacity duration-1000 ${
+                className={`absolute inset-0 transition-opacity duration-1000 bg-card/90 backdrop-blur-sm border-0 shadow-xl ${
                   index === currentTestimonial ? "opacity-100" : "opacity-0"
                 }`}
               >
-                <CardContent className="p-8 text-center">
-                  <div className="flex justify-center mb-4">
+                <CardContent className="p-10 text-center h-full flex flex-col justify-center">
+                  <div className="flex justify-center mb-6">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      <Star key={i} className="h-6 w-6 fill-yellow-400 text-yellow-400 mx-1" />
                     ))}
                   </div>
-                  <blockquote className="text-lg mb-6 text-pretty">"{testimonial.text}"</blockquote>
-                  <div className="flex items-center justify-center space-x-3">
+                  <blockquote className="text-xl md:text-2xl mb-8 text-pretty leading-relaxed italic text-muted-foreground">"{testimonial.text}"</blockquote>
+                  <div className="flex items-center justify-center space-x-4">
                     <img
                       src={testimonial.image || "/placeholder.svg"}
                       alt={testimonial.name}
-                      className="w-12 h-12 rounded-full object-cover"
+                      className="w-16 h-16 rounded-full object-cover shadow-md"
                     />
-                    <div>
-                      <p className="font-semibold">{testimonial.name}</p>
-                      <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                    <div className="text-left">
+                      <p className="font-bold text-lg">{testimonial.name}</p>
+                      <p className="text-muted-foreground">{testimonial.location}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -85,13 +85,15 @@ export function Testimonials() {
           </div>
 
           {/* Dots Indicator */}
-          <div className="flex justify-center space-x-2 mt-6">
+          <div className="flex justify-center space-x-3 mt-8">
             {testimonials.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentTestimonial(index)}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentTestimonial ? "bg-primary" : "bg-muted-foreground/30"
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  index === currentTestimonial 
+                    ? "bg-primary scale-125 shadow-lg" 
+                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
                 }`}
                 aria-label={`Go to testimonial ${index + 1}`}
               />

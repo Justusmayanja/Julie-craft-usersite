@@ -111,57 +111,58 @@ export function FeaturedProducts() {
   }
 
   return (
-    <section className="py-16">
-      <div className="container mx-auto px-4">
+    <section className="py-16 bg-background">
+      <div className="container mx-auto px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-balance">Featured Products</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-pretty">
+          <p className="text-lg text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed">
             Handpicked selection of our finest crafts, showcasing the exceptional skill and creativity of Ugandan
             artisans.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6 mb-12">
           {featuredProducts.map((product) => (
-            <Card key={product.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-0 shadow-md overflow-hidden">
               <CardContent className="p-0">
-                <div className="relative aspect-square overflow-hidden rounded-t-lg">
+                <div className="relative aspect-square overflow-hidden">
                   <img
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="absolute top-2 left-2 flex flex-col gap-1">
                     {product.isNew && (
-                      <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
+                      <Badge variant="secondary" className="bg-secondary text-secondary-foreground text-xs px-2 py-1">
                         New
                       </Badge>
                     )}
                     {product.onSale && (
-                      <Badge variant="destructive" className="bg-destructive text-destructive-foreground">
+                      <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-xs px-2 py-1">
                         Sale
                       </Badge>
                     )}
                     {!product.inStock && (
-                      <Badge variant="outline" className="bg-muted text-muted-foreground">
+                      <Badge variant="outline" className="bg-muted text-muted-foreground text-xs px-2 py-1">
                         Out of Stock
                       </Badge>
                     )}
                   </div>
                 </div>
                 <div className="p-4">
-                  <p className="text-sm text-muted-foreground mb-1 capitalize">{product.category.replace("-", " ")}</p>
-                  <h3 className="font-semibold mb-2 text-balance">{product.name}</h3>
+                  <p className="text-xs text-muted-foreground mb-1 capitalize font-medium">{product.category.replace("-", " ")}</p>
+                  <h3 className="font-semibold mb-2 text-balance text-sm leading-tight group-hover:text-primary transition-colors duration-300 line-clamp-2">{product.name}</h3>
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="font-bold text-primary">{formatPrice(product.price)}</span>
+                    <span className="font-bold text-primary text-sm">{formatPrice(product.price)}</span>
                     {product.originalPrice && (
-                      <span className="text-sm text-muted-foreground line-through">
+                      <span className="text-xs text-muted-foreground line-through">
                         {formatPrice(product.originalPrice)}
                       </span>
                     )}
                   </div>
                   <Button
-                    className="w-full"
+                    className="w-full text-xs font-medium"
                     size="sm"
                     onClick={() => handleAddToCart(product)}
                     disabled={!product.inStock}
@@ -176,7 +177,7 @@ export function FeaturedProducts() {
 
         <div className="text-center">
           <Link href="/products">
-            <Button size="lg" variant="outline">
+            <Button size="default" variant="outline" className="px-6 py-3 text-base font-semibold border-2 hover:bg-primary hover:text-primary-foreground transition-all duration-300">
               View All Products
             </Button>
           </Link>
