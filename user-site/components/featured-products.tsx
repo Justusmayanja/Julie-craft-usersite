@@ -4,9 +4,13 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Loader2 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
+import { useFeaturedProducts } from "@/hooks/use-products"
+import type { FrontendProduct } from "@/lib/types/product"
 
-const featuredProducts = [
+// Fallback featured products in case API fails
+const fallbackFeaturedProducts: FrontendProduct[] = [
   {
     id: 1,
     name: "Traditional Wall Hanging - Geometric Pattern",
@@ -14,6 +18,11 @@ const featuredProducts = [
     originalPrice: 55000,
     image: "/traditional-wall-hanging-african-textile-patterns.jpg",
     category: "wall-hangings",
+    description: "",
+    materials: "",
+    dimensions: "",
+    care: "",
+    cultural: "",
     isNew: false,
     onSale: true,
     inStock: true,
@@ -24,6 +33,11 @@ const featuredProducts = [
     price: 25000,
     image: "/colorful-maasai-beaded-necklace-traditional.jpg",
     category: "jewelry",
+    description: "",
+    materials: "",
+    dimensions: "",
+    care: "",
+    cultural: "",
     isNew: true,
     onSale: false,
     inStock: true,
@@ -34,6 +48,11 @@ const featuredProducts = [
     price: 35000,
     image: "/traditional-door-mats-woven-natural-materials.jpg",
     category: "door-mats",
+    description: "",
+    materials: "",
+    dimensions: "",
+    care: "",
+    cultural: "",
     isNew: false,
     onSale: false,
     inStock: true,
@@ -45,6 +64,11 @@ const featuredProducts = [
     originalPrice: 100000,
     image: "/wooden-elephant-sculpture-african-carving.jpg",
     category: "wood",
+    description: "",
+    materials: "",
+    dimensions: "",
+    care: "",
+    cultural: "",
     isNew: false,
     onSale: true,
     inStock: true,
@@ -55,6 +79,11 @@ const featuredProducts = [
     price: 75000,
     image: "/sitting-room-traditional-mats-african-patterns.jpg",
     category: "traditional-mats",
+    description: "",
+    materials: "",
+    dimensions: "",
+    care: "",
+    cultural: "",
     isNew: true,
     onSale: false,
     inStock: true,
@@ -65,6 +94,11 @@ const featuredProducts = [
     price: 18000,
     image: "/colorful-african-beaded-jewelry-display-vibrant.jpg",
     category: "jewelry",
+    description: "",
+    materials: "",
+    dimensions: "",
+    care: "",
+    cultural: "",
     isNew: false,
     onSale: false,
     inStock: true,
@@ -75,6 +109,11 @@ const featuredProducts = [
     price: 52000,
     image: "/traditional-wall-hanging-african-textile-patterns.jpg",
     category: "wall-hangings",
+    description: "",
+    materials: "",
+    dimensions: "",
+    care: "",
+    cultural: "",
     isNew: true,
     onSale: false,
     inStock: false,
@@ -86,6 +125,11 @@ const featuredProducts = [
     originalPrice: 38000,
     image: "/wooden-african-sculptures-carvings.jpg",
     category: "wood",
+    description: "",
+    materials: "",
+    dimensions: "",
+    care: "",
+    cultural: "",
     isNew: false,
     onSale: true,
     inStock: true,
@@ -93,21 +137,29 @@ const featuredProducts = [
 ]
 
 export function FeaturedProducts() {
-  const { addItem } = useCart()
+  const { dispatch } = useCart()
+  const { products: apiFeaturedProducts, loading, error } = useFeaturedProducts(8)
+
+  // Use API data or fallback to hardcoded data
+  const featuredProducts = apiFeaturedProducts.length > 0 ? apiFeaturedProducts : fallbackFeaturedProducts
 
   const formatPrice = (price: number) => {
     return `UGX ${price.toLocaleString()}`
   }
 
-  const handleAddToCart = (product: any) => {
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      category: product.category,
-      inStock: product.inStock,
-    })
+  const handleAddToCart = (product: FrontendProduct) => {
+    if (product.inStock) {
+      dispatch({
+        type: "ADD_ITEM",
+        payload: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          quantity: 1,
+        },
+      })
+    }
   }
 
   return (
@@ -121,8 +173,25 @@ export function FeaturedProducts() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6 mb-12">
-          {featuredProducts.map((product) => (
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6 mb-12">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index} className="animate-pulse">
+                <CardContent className="p-0">
+                  <div className="aspect-square w-full bg-muted" />
+                  <div className="p-4">
+                    <div className="h-3 bg-muted rounded mb-2" />
+                    <div className="h-4 bg-muted rounded mb-3 w-3/4" />
+                    <div className="h-5 bg-muted rounded w-1/2 mb-3" />
+                    <div className="h-8 bg-muted rounded" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6 mb-12">
+            {featuredProducts.map((product) => (
             <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-card/90 backdrop-blur-sm border-0 shadow-md overflow-hidden">
               <CardContent className="p-0">
                 <div className="relative aspect-square overflow-hidden">
@@ -173,7 +242,8 @@ export function FeaturedProducts() {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
 
         <div className="text-center">
           <Link href="/products">

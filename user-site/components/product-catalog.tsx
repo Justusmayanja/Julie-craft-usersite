@@ -2,17 +2,20 @@
 
 import type React from "react"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Grid, List } from "lucide-react"
+import { Search, Grid, List, Loader2 } from "lucide-react"
 import { ProductModal } from "@/components/product-modal"
 import { useCart } from "@/contexts/cart-context"
+import { useProducts, useCategories } from "@/hooks/use-products"
+import type { FrontendProduct } from "@/lib/types/product"
 
-const products = [
+// Fallback products in case API fails
+const fallbackProducts: FrontendProduct[] = [
   {
     id: 1,
     name: "Traditional Wall Hanging - Geometric Pattern",
@@ -146,7 +149,8 @@ const products = [
   },
 ]
 
-const categories = [
+// Fallback categories in case API fails
+const fallbackCategories = [
   { value: "all", label: "All Categories" },
   { value: "wall-hangings", label: "Wall Hangings" },
   { value: "door-mats", label: "Door Mats" },
@@ -167,10 +171,42 @@ export function ProductCatalog() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("name")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [selectedProduct, setSelectedProduct] = useState<(typeof products)[0] | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<FrontendProduct | null>(null)
   const { dispatch } = useCart()
 
+  // Fetch products and categories
+  const { products: apiProducts, loading: productsLoading, error: productsError, total } = useProducts({
+    search: searchTerm || undefined,
+    category_id: selectedCategory !== "all" ? selectedCategory : undefined,
+    sort_by: sortBy === "name" ? "name" : sortBy === "price-low" ? "price" : sortBy === "price-high" ? "price" : "created_at",
+    sort_order: sortBy === "price-high" ? "desc" : "asc",
+  })
+
+  const { categories: apiCategories, loading: categoriesLoading, error: categoriesError } = useCategories()
+
+  // Use API data or fallback to hardcoded data
+  const products = apiProducts.length > 0 ? apiProducts : fallbackProducts
+  const categories = apiCategories.length > 0 
+    ? [
+        { value: "all", label: "All Categories" },
+        ...apiCategories.map(cat => ({
+          value: cat.name.toLowerCase().replace(/\s+/g, '-'),
+          label: cat.name
+        }))
+      ]
+    : fallbackCategories
+
+  const loading = productsLoading || categoriesLoading
+
+  // Since we're fetching filtered data from API, we don't need client-side filtering
+  // But we'll keep some client-side filtering for fallback data
   const filteredAndSortedProducts = useMemo(() => {
+    if (apiProducts.length > 0) {
+      // API data is already filtered and sorted
+      return apiProducts
+    }
+
+    // Fallback filtering for hardcoded data
     const filtered = products.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -198,13 +234,13 @@ export function ProductCatalog() {
     })
 
     return filtered
-  }, [searchTerm, selectedCategory, sortBy])
+  }, [products, searchTerm, selectedCategory, sortBy, apiProducts])
 
   const formatPrice = (price: number) => {
     return `UGX ${price.toLocaleString()}`
   }
 
-  const handleAddToCart = (product: (typeof products)[0], e: React.MouseEvent) => {
+  const handleAddToCart = (product: FrontendProduct, e: React.MouseEvent) => {
     e.stopPropagation()
     if (product.inStock) {
       dispatch({
@@ -296,18 +332,48 @@ export function ProductCatalog() {
           </div>
 
           <div className="text-sm text-muted-foreground">
-            Showing {filteredAndSortedProducts.length} of {products.length} products
-            {searchTerm && ` for "${searchTerm}"`}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading products...
+              </div>
+            ) : (
+              <>
+                Showing {filteredAndSortedProducts.length} of {total || products.length} products
+                {searchTerm && ` for "${searchTerm}"`}
+                {(productsError || categoriesError) && (
+                  <span className="text-orange-500 ml-2">
+                    (Using cached data due to connection issues)
+                  </span>
+                )}
+              </>
+            )}
           </div>
         </div>
 
         {/* Products Grid/List */}
-        <div
-          className={
-            viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "space-y-4"
-          }
-        >
-          {filteredAndSortedProducts.map((product) => (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Card key={index} className="animate-pulse">
+                <CardContent className="p-0">
+                  <div className="aspect-square w-full bg-muted rounded-t-lg" />
+                  <div className="p-4">
+                    <div className="h-4 bg-muted rounded mb-2" />
+                    <div className="h-4 bg-muted rounded mb-4 w-3/4" />
+                    <div className="h-6 bg-muted rounded w-1/2" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div
+            className={
+              viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "space-y-4"
+            }
+          >
+            {filteredAndSortedProducts.map((product) => (
             <Card
               key={product.id}
               className={`group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer ${
@@ -371,7 +437,8 @@ export function ProductCatalog() {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
 
         {filteredAndSortedProducts.length === 0 && (
           <div className="text-center py-12">
