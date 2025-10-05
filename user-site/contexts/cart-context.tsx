@@ -1,6 +1,8 @@
 "use client"
 
 import { createContext, useContext, useReducer, useEffect, type ReactNode } from "react"
+import { createOrder, generateOrderItemsFromCart, calculateOrderTotals } from "@/lib/api-orders"
+import type { CartOrder, OrderConfirmation } from "@/lib/types/order"
 
 export interface CartItem {
   id: number
@@ -16,6 +18,8 @@ interface CartState {
   items: CartItem[]
   total: number
   itemCount: number
+  isPlacingOrder: boolean
+  lastOrder?: OrderConfirmation
 }
 
 type CartAction =
@@ -24,11 +28,14 @@ type CartAction =
   | { type: "UPDATE_QUANTITY"; payload: { id: number; quantity: number } }
   | { type: "CLEAR_CART" }
   | { type: "LOAD_CART"; payload: CartItem[] }
+  | { type: "SET_PLACING_ORDER"; payload: boolean }
+  | { type: "SET_LAST_ORDER"; payload: OrderConfirmation }
 
 const initialState: CartState = {
   items: [],
   total: 0,
   itemCount: 0,
+  isPlacingOrder: false,
 }
 
 function cartReducer(state: CartState, action: CartAction): CartState {
@@ -79,8 +86,14 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       const total = action.payload.reduce((sum, item) => sum + item.price * item.quantity, 0)
       const itemCount = action.payload.reduce((sum, item) => sum + item.quantity, 0)
 
-      return { items: action.payload, total, itemCount }
+      return { items: action.payload, total, itemCount, isPlacingOrder: state.isPlacingOrder, lastOrder: state.lastOrder }
     }
+
+    case "SET_PLACING_ORDER":
+      return { ...state, isPlacingOrder: action.payload }
+
+    case "SET_LAST_ORDER":
+      return { ...state, lastOrder: action.payload }
 
     default:
       return state
@@ -93,6 +106,8 @@ const CartContext = createContext<{
   removeItem: (id: number) => void
   updateQuantity: (id: number, quantity: number) => void
   clearCart: () => void
+  placeOrder: (orderData: CartOrder) => Promise<OrderConfirmation>
+  dispatch: React.Dispatch<CartAction>
 } | null>(null)
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -132,8 +147,54 @@ export function CartProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "CLEAR_CART" })
   }
 
+  const placeOrder = async (orderData: CartOrder): Promise<OrderConfirmation> => {
+    try {
+      dispatch({ type: "SET_PLACING_ORDER", payload: true })
+
+      // Generate order items from cart
+      const orderItems = generateOrderItemsFromCart(state.items)
+      
+      // Calculate totals
+      const totals = calculateOrderTotals(state.items, 10000) // 10,000 UGX shipping
+
+      // Create order data
+      const createOrderData = {
+        customer_email: orderData.customer_email,
+        customer_name: orderData.customer_name,
+        customer_phone: orderData.customer_phone,
+        shipping_address: orderData.shipping_address,
+        billing_address: orderData.billing_address || orderData.shipping_address,
+        items: orderItems,
+        ...totals,
+        currency: 'UGX',
+        notes: orderData.notes
+      }
+
+      // Submit order
+      const orderConfirmation = await createOrder(createOrderData)
+      
+      // Update state
+      dispatch({ type: "SET_LAST_ORDER", payload: orderConfirmation })
+      dispatch({ type: "CLEAR_CART" })
+      
+      return orderConfirmation
+    } catch (error) {
+      throw error
+    } finally {
+      dispatch({ type: "SET_PLACING_ORDER", payload: false })
+    }
+  }
+
   return (
-    <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity, clearCart }}>
+    <CartContext.Provider value={{ 
+      state, 
+      addItem, 
+      removeItem, 
+      updateQuantity, 
+      clearCart, 
+      placeOrder,
+      dispatch 
+    }}>
       {children}
     </CartContext.Provider>
   )

@@ -220,7 +220,7 @@ export function FeaturedProducts() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <p className="text-xs text-muted-foreground mb-1 capitalize font-medium">{product.category.replace("-", " ")}</p>
+                  <p className="text-xs text-muted-foreground mb-1 capitalize font-medium">{product.category ? product.category.replace("-", " ") : "General"}</p>
                   <h3 className="font-semibold mb-2 text-balance text-sm leading-tight group-hover:text-primary transition-colors duration-300 line-clamp-2">{product.name}</h3>
                   <div className="flex items-center gap-2 mb-3">
                     <span className="font-bold text-primary text-sm">{formatPrice(product.price)}</span>

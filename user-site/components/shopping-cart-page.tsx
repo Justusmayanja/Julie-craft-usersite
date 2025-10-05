@@ -94,7 +94,7 @@ export function ShoppingCartPage() {
                       <div className="flex justify-between items-start">
                         <div>
                           <Badge variant="outline" className="mb-2 capitalize">
-                            {item.category.replace("-", " ")}
+                            {item.category ? item.category.replace("-", " ") : "General"}
                           </Badge>
                           <h3 className="font-semibold text-lg">{item.name}</h3>
                           <p className="text-primary font-bold">{formatPrice(item.price)}</p>
@@ -187,11 +187,11 @@ export function ShoppingCartPage() {
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>Free</span>
+                    <span>{formatPrice(10000)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Tax</span>
-                    <span>Included</span>
+                    <span>Tax (18%)</span>
+                    <span>{formatPrice(Math.round(state.total * 0.18))}</span>
                   </div>
                 </div>
 
@@ -199,7 +199,7 @@ export function ShoppingCartPage() {
 
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span className="text-primary">{formatPrice(state.total)}</span>
+                  <span className="text-primary">{formatPrice(state.total + 10000 + Math.round(state.total * 0.18))}</span>
                 </div>
 
                 <Button className="w-full" size="lg" onClick={() => setShowCheckout(true)}>

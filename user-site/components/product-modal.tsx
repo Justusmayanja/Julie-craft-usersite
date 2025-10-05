@@ -97,7 +97,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
           {/* Product Details */}
           <div className="space-y-6">
             <div>
-              <p className="text-sm text-muted-foreground mb-2 capitalize">{product.category.replace("-", " ")}</p>
+              <p className="text-sm text-muted-foreground mb-2 capitalize">{product.category ? product.category.replace("-", " ") : "General"}</p>
               <h1 className="text-2xl md:text-3xl font-bold mb-4 text-balance">{product.name}</h1>
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-2xl font-bold text-primary">{formatPrice(product.price)}</span>

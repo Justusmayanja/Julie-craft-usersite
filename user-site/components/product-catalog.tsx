@@ -413,7 +413,7 @@ export function ProductCatalog() {
                 <div className={`p-4 ${viewMode === "list" ? "flex-1 flex flex-col justify-between" : ""}`}>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1 capitalize">
-                      {product.category.replace("-", " ")}
+                      {product.category ? product.category.replace("-", " ") : "General"}
                     </p>
                     <h3 className="font-semibold mb-2 text-balance">{product.name}</h3>
                     {viewMode === "list" && (

@@ -1,8 +1,18 @@
 import type { FrontendProduct, Category } from './types/product'
 
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-domain.com/api' 
-  : 'http://localhost:3000/api'
+const getApiBaseUrl = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://your-domain.com/api'
+  }
+  
+  // In development, use the current window location
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api`
+  }
+  
+  // Fallback for server-side rendering
+  return 'http://localhost:3000/api'
+}
 
 export interface ProductsResponse {
   products: FrontendProduct[]
@@ -40,7 +50,7 @@ export async function fetchProducts(filters: ProductFilters = {}): Promise<Produ
     }
   })
 
-  const url = `${API_BASE_URL}/products${params.toString() ? `?${params.toString()}` : ''}`
+  const url = `${getApiBaseUrl()}/products${params.toString() ? `?${params.toString()}` : ''}`
   
   const response = await fetch(url, {
     method: 'GET',
@@ -59,7 +69,7 @@ export async function fetchProducts(filters: ProductFilters = {}): Promise<Produ
 }
 
 export async function fetchCategories(): Promise<CategoriesResponse> {
-  const url = `${API_BASE_URL}/categories`
+  const url = `${getApiBaseUrl()}/categories`
   
   const response = await fetch(url, {
     method: 'GET',
