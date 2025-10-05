@@ -90,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem('julie-crafts-token')
       if (token) {
         try {
+          console.log('Verifying existing token...')
           const response = await fetch('/api/auth/verify', {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -98,11 +99,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (response.ok) {
             const data = await response.json()
+            console.log('Token verification successful:', data.user)
             dispatch({
               type: "AUTH_SUCCESS",
               payload: { user: data.user, token }
             })
           } else {
+            console.log('Token verification failed, removing token')
             // Token is invalid, remove it
             localStorage.removeItem('julie-crafts-token')
             dispatch({ type: "AUTH_LOGOUT" })
@@ -113,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           dispatch({ type: "AUTH_LOGOUT" })
         }
       } else {
+        console.log('No token found, user not authenticated')
         dispatch({ type: "AUTH_LOGOUT" })
       }
     }
@@ -124,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "AUTH_START" })
 
     try {
+      console.log('Attempting login for:', email)
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -133,19 +138,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       const data = await response.json()
+      console.log('Login response:', { ok: response.ok, data })
 
       if (response.ok) {
         // Store token in localStorage
         localStorage.setItem('julie-crafts-token', data.token)
+        console.log('Token stored, user authenticated:', data.user)
         
         dispatch({
           type: "AUTH_SUCCESS",
           payload: { user: data.user, token: data.token }
         })
       } else {
+        console.log('Login failed:', data.error)
         dispatch({ type: "AUTH_FAILURE", payload: data.error || 'Login failed' })
       }
     } catch (error) {
+      console.error('Login network error:', error)
       dispatch({ type: "AUTH_FAILURE", payload: 'Network error. Please try again.' })
     }
   }
@@ -154,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "AUTH_START" })
 
     try {
+      console.log('Attempting registration for:', email)
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -163,19 +173,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       const data = await response.json()
+      console.log('Registration response:', { ok: response.ok, data })
 
       if (response.ok) {
         // Store token in localStorage
         localStorage.setItem('julie-crafts-token', data.token)
+        console.log('User registered and authenticated:', data.user)
         
         dispatch({
           type: "AUTH_SUCCESS",
           payload: { user: data.user, token: data.token }
         })
       } else {
+        console.log('Registration failed:', data.error)
         dispatch({ type: "AUTH_FAILURE", payload: data.error || 'Registration failed' })
       }
     } catch (error) {
+      console.error('Registration network error:', error)
       dispatch({ type: "AUTH_FAILURE", payload: 'Network error. Please try again.' })
     }
   }

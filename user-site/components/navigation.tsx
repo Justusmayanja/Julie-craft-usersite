@@ -75,12 +75,12 @@ export function Navigation() {
             </nav>
 
             {/* Right side actions */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <Button variant="ghost" size="icon" className="hidden sm:flex">
                 <Search className="h-5 w-5" />
               </Button>
 
-              <Button variant="ghost" size="icon" onClick={handleChatToggle}>
+              <Button variant="ghost" size="icon" onClick={handleChatToggle} className="hidden sm:flex">
                 <MessageCircle className="h-5 w-5" />
               </Button>
 
@@ -139,7 +139,7 @@ export function Navigation() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <div className="flex items-center space-x-2">
+                <div className="hidden sm:flex items-center space-x-2">
                   <Link href="/login">
                     <Button variant="ghost" size="sm">
                       Sign In
@@ -172,6 +172,18 @@ export function Navigation() {
                         {item.name}
                       </Link>
                     ))}
+                    
+                    {/* Mobile Actions */}
+                    <div className="border-t pt-4 mt-4 space-y-3">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Search className="mr-2 h-4 w-4" />
+                        Search
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start" onClick={handleChatToggle}>
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        Chat Support
+                      </Button>
+                    </div>
                     
                     {/* Mobile Auth Section */}
                     <div className="border-t pt-4 mt-4">
