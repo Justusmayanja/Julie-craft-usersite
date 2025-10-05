@@ -120,7 +120,7 @@ export function ShoppingCartPage() {
                           </Button>
                         </div>
 
-                        {!item.inStock && (
+                        {!(item.inStock ?? true) && (
                           <Badge variant="outline" className="text-red-600 border-red-300 bg-red-50">
                             Out of Stock
                           </Badge>
@@ -134,8 +134,12 @@ export function ShoppingCartPage() {
                               <Button
                                 variant="outline"
                                 size="icon"
-                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                disabled={!item.inStock || item.quantity <= 1}
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleQuantityChange(item.id, item.quantity - 1)
+                                }}
+                                disabled={!(item.inStock ?? true) || item.quantity <= 1}
                                 className="h-10 w-10 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                                 title="Decrease quantity"
                               >
@@ -154,14 +158,18 @@ export function ShoppingCartPage() {
                                     }
                                   }}
                                   className="w-16 h-10 text-center font-semibold border-gray-300 focus:border-primary focus:ring-primary"
-                                  disabled={!item.inStock}
+                                  disabled={!(item.inStock ?? true)}
                                 />
                               </div>
                               <Button
                                 variant="outline"
                                 size="icon"
-                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                disabled={!item.inStock || item.quantity >= 99}
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleQuantityChange(item.id, item.quantity + 1)
+                                }}
+                                disabled={!(item.inStock ?? true) || item.quantity >= 99}
                                 className="h-10 w-10 hover:bg-green-50 hover:text-green-600 hover:border-green-300"
                                 title="Increase quantity"
                               >

@@ -262,7 +262,8 @@ export function ProductCatalog() {
           name: product.name,
           price: product.price,
           image: product.image,
-          quantity: 1,
+          category: product.category,
+          inStock: product.inStock,
         },
       })
     }

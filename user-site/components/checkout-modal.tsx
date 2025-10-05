@@ -108,9 +108,9 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-hidden p-0 m-4">
+      <DialogContent className="max-w-[98vw] w-full h-[98vh] max-h-[98vh] p-0 m-2 flex flex-col">
         {/* Header Section */}
-        <div className="border-b bg-gradient-to-r from-primary/5 to-primary/10 px-4 lg:px-8 py-4 lg:py-6">
+        <div className="border-b bg-gradient-to-r from-primary/5 to-primary/10 px-4 lg:px-6 py-3 lg:py-4 flex-shrink-0">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <DialogTitle className="text-2xl lg:text-3xl font-bold text-primary">Complete Your Order</DialogTitle>
@@ -123,42 +123,42 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
           </div>
           
           {/* Progress Steps */}
-          <div className="flex justify-center mt-4 lg:mt-6">
+          <div className="flex justify-center mt-3 lg:mt-4">
             <div className="flex items-center space-x-2 lg:space-x-6">
-              <div className={`flex items-center space-x-2 lg:space-x-3 ${currentStep === "details" ? "text-primary" : "text-muted-foreground"}`}>
-                <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-2 ${currentStep === "details" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
-                  <User className="h-4 w-4 lg:h-5 lg:w-5" />
+              <div className={`flex items-center space-x-2 ${currentStep === "details" ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-7 h-7 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 ${currentStep === "details" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
+                  <User className="h-3 w-3 lg:h-4 lg:w-4" />
                 </div>
-                <span className="font-medium text-sm lg:text-base hidden sm:block">Personal Details</span>
+                <span className="font-medium text-xs lg:text-sm hidden sm:block">Personal Details</span>
               </div>
-              <div className="w-6 lg:w-12 h-px bg-border"></div>
-              <div className={`flex items-center space-x-2 lg:space-x-3 ${currentStep === "payment" ? "text-primary" : "text-muted-foreground"}`}>
-                <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-2 ${currentStep === "payment" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
-                  <CreditCard className="h-4 w-4 lg:h-5 lg:w-5" />
+              <div className="w-4 lg:w-8 h-px bg-border"></div>
+              <div className={`flex items-center space-x-2 ${currentStep === "payment" ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-7 h-7 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 ${currentStep === "payment" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
+                  <CreditCard className="h-3 w-3 lg:h-4 lg:w-4" />
                 </div>
-                <span className="font-medium text-sm lg:text-base hidden sm:block">Payment Method</span>
+                <span className="font-medium text-xs lg:text-sm hidden sm:block">Payment Method</span>
               </div>
-              <div className="w-6 lg:w-12 h-px bg-border"></div>
-              <div className={`flex items-center space-x-2 lg:space-x-3 ${currentStep === "confirmation" ? "text-primary" : "text-muted-foreground"}`}>
-                <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-2 ${currentStep === "confirmation" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
-                  <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5" />
+              <div className="w-4 lg:w-8 h-px bg-border"></div>
+              <div className={`flex items-center space-x-2 ${currentStep === "confirmation" ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-7 h-7 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 ${currentStep === "confirmation" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
+                  <CheckCircle className="h-3 w-3 lg:h-4 lg:w-4" />
                 </div>
-                <span className="font-medium text-sm lg:text-base hidden sm:block">Confirmation</span>
+                <span className="font-medium text-xs lg:text-sm hidden sm:block">Confirmation</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-col xl:flex-row min-h-0 flex-1">
+        <div className="flex flex-col xl:flex-row flex-1 min-h-0 overflow-y-auto">
           {/* Left Content Area */}
-          <div className="flex-1 p-4 lg:p-8 overflow-y-auto">
-            <div className="max-w-5xl mx-auto">
+          <div className="flex-1 p-3 lg:p-6">
+            <div className="max-w-4xl mx-auto">
               {currentStep === "details" && (
-                <form onSubmit={handleSubmitDetails} className="space-y-8">
+                <form onSubmit={handleSubmitDetails} className="space-y-6">
                   {/* Customer Information */}
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <div className="px-4 lg:px-8 py-4 lg:py-6 border-b border-gray-100">
+                    <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-gray-100">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 lg:w-10 lg:h-10 bg-primary/10 rounded-full flex items-center justify-center">
                           <User className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
@@ -169,7 +169,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                         </div>
                       </div>
                     </div>
-                    <div className="p-4 lg:p-8">
+                    <div className="p-4 lg:p-6">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="firstName" className="text-sm font-semibold">First Name *</Label>
@@ -178,7 +178,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                             required
                             value={formData.firstName}
                             onChange={(e) => handleInputChange("firstName", e.target.value)}
-                            className="h-12 text-base"
+                            className="h-10 text-sm"
                             placeholder="Enter your first name"
                           />
                         </div>
@@ -189,7 +189,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                             required
                             value={formData.lastName}
                             onChange={(e) => handleInputChange("lastName", e.target.value)}
-                            className="h-12 text-base"
+                            className="h-10 text-sm"
                             placeholder="Enter your last name"
                           />
                         </div>
@@ -229,7 +229,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
 
                   {/* Delivery Information */}
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <div className="px-4 lg:px-8 py-4 lg:py-6 border-b border-gray-100">
+                    <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-gray-100">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 lg:w-10 lg:h-10 bg-primary/10 rounded-full flex items-center justify-center">
                           <MapPin className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
@@ -240,7 +240,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                         </div>
                       </div>
                     </div>
-                    <div className="p-4 lg:p-8">
+                    <div className="p-4 lg:p-6">
                       <div className="space-y-6">
                         <div className="space-y-2">
                           <Label htmlFor="address" className="text-sm font-semibold">Street Address *</Label>
@@ -264,7 +264,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                               id="city"
                               value={formData.city}
                               onChange={(e) => handleInputChange("city", e.target.value)}
-                              className="h-12 text-base"
+                              className="h-10 text-sm"
                               placeholder="Enter city"
                             />
                           </div>
@@ -316,7 +316,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
               {currentStep === "payment" && (
                 <form onSubmit={handleSubmitPayment} className="space-y-8">
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <div className="px-4 lg:px-8 py-4 lg:py-6 border-b border-gray-100">
+                    <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-gray-100">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 lg:w-10 lg:h-10 bg-primary/10 rounded-full flex items-center justify-center">
                           <CreditCard className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
@@ -327,7 +327,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                         </div>
                       </div>
                     </div>
-                    <div className="p-4 lg:p-8">
+                    <div className="p-4 lg:p-6">
                     <Tabs
                       value={formData.paymentMethod}
                       onValueChange={(value) => handleInputChange("paymentMethod", value)}
@@ -449,13 +449,13 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                       type="button" 
                       variant="outline" 
                       onClick={() => setCurrentStep("details")} 
-                      className="flex-1 h-12 text-base font-semibold"
+                      className="flex-1 h-10 text-sm font-semibold"
                     >
                       Back to Details
                     </Button>
                     <Button 
                       type="submit" 
-                      className="flex-1 h-12 text-base font-semibold" 
+                      className="flex-1 h-10 text-sm font-semibold" 
                       disabled={!formData.paymentMethod || isPlacingOrder}
                     >
                       {isPlacingOrder ? (
@@ -495,19 +495,19 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="w-full xl:w-96 bg-gray-50 border-t xl:border-t-0 xl:border-l border-gray-200 p-4 lg:p-6 overflow-y-auto">
-            <div className="sticky top-6">
+          <div className="w-full xl:w-80 bg-gray-50 border-t xl:border-t-0 xl:border-l border-gray-200 p-3 lg:p-4">
+            <div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-100">
+                <div className="px-4 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 bg-primary rounded-full"></div>
                     <h3 className="text-lg font-semibold">Order Summary</h3>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{state.itemCount} {state.itemCount === 1 ? 'item' : 'items'} in your order</p>
                 </div>
-                <div className="p-6">
+                <div className="p-4">
                   {/* Items */}
-                  <div className="space-y-4 max-h-80 overflow-y-auto">
+                  <div className="space-y-4">
                     {state.items.map((item) => (
                       <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
                         <img
