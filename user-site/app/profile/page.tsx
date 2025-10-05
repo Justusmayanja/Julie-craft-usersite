@@ -211,75 +211,79 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
             <Link href="/">
-              <Button variant="ghost" size="icon" className="hover:bg-gray-200">
-                <ArrowLeft className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="hover:bg-gray-200 h-9 w-9">
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-              <p className="text-lg text-gray-600 mt-1">Manage your account and orders</p>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">My Profile</h1>
+              <p className="text-sm sm:text-lg text-gray-600 mt-1">Manage your account and orders</p>
             </div>
           </div>
         </div>
 
         <div className="max-w-4xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="profile" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Profile
+            <TabsList className="grid w-full grid-cols-3 h-auto p-1">
+              <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Profile</span>
               </TabsTrigger>
-              <TabsTrigger value="orders" className="flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4" />
-                Orders ({orders.length})
+              <TabsTrigger value="orders" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Orders</span>
+                <span className="xs:hidden">({orders.length})</span>
+                <span className="hidden xs:inline">({orders.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="settings" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Settings
+              <TabsTrigger value="settings" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Settings</span>
               </TabsTrigger>
             </TabsList>
 
             {/* Profile Tab */}
-            <TabsContent value="profile" className="space-y-6">
+            <TabsContent value="profile" className="space-y-4 sm:space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Personal Information</CardTitle>
-                  <CardDescription>Your account details and contact information</CardDescription>
+                <CardHeader className="pb-4 sm:pb-6">
+                  <CardTitle className="text-lg sm:text-xl">Personal Information</CardTitle>
+                  <CardDescription className="text-sm">Your account details and contact information</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 sm:space-y-6">
                   {/* Profile Picture Section */}
-                  <div className="flex items-center gap-6">
-                    <div className="relative">
-                      <Avatar className="w-24 h-24">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                    <div className="relative flex-shrink-0 mx-auto sm:mx-0">
+                      <Avatar className="w-20 h-20 sm:w-24 sm:h-24">
                         <AvatarImage src={profileImage || undefined} alt={user.name || 'Profile'} />
-                        <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                        <AvatarFallback className="text-lg sm:text-2xl bg-primary text-primary-foreground">
                           {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       {isUploading && (
                         <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                          <Loader2 className="h-6 w-6 animate-spin text-white" />
+                          <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-white" />
                         </div>
                       )}
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-3 w-full sm:flex-1">
                       <div className="space-y-2">
-                        <Label>Profile Picture</Label>
-                        <div className="flex gap-2">
+                        <Label className="text-sm font-medium">Profile Picture</Label>
+                        <div className="flex flex-col xs:flex-row gap-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-2 w-full xs:w-auto justify-center xs:justify-start"
                           >
                             <Camera className="h-4 w-4" />
-                            {profileImage ? 'Change Photo' : 'Upload Photo'}
+                            <span className="text-xs sm:text-sm">
+                              {profileImage ? 'Change Photo' : 'Upload Photo'}
+                            </span>
                           </Button>
                           {profileImage && (
                             <Button
@@ -287,9 +291,9 @@ export default function ProfilePage() {
                               size="sm"
                               onClick={handleRemoveImage}
                               disabled={isUploading}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-red-600 hover:text-red-700 w-full xs:w-auto justify-center xs:justify-start"
                             >
-                              Remove
+                              <span className="text-xs sm:text-sm">Remove</span>
                             </Button>
                           )}
                         </div>
@@ -301,7 +305,7 @@ export default function ProfilePage() {
                           className="hidden"
                         />
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 text-center sm:text-left">
                         JPG, PNG or GIF. Max size 5MB.
                       </p>
                     </div>
@@ -309,25 +313,30 @@ export default function ProfilePage() {
 
                   <Separator />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
+                      <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
                       <Input 
                         id="name" 
                         name="name"
                         value={isEditing ? editForm.name : (user.name || '')} 
                         onChange={handleInputChange}
                         disabled={!isEditing} 
-                        className={isEditing ? "bg-white border-gray-300" : "bg-gray-50"} 
+                        className={`h-10 text-sm ${isEditing ? "bg-white border-gray-300" : "bg-gray-50"}`}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input id="email" value={user.email} disabled className="bg-gray-50" />
+                      <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
+                      <Input 
+                        id="email" 
+                        value={user.email} 
+                        disabled 
+                        className="h-10 text-sm bg-gray-50" 
+                      />
                       <p className="text-xs text-gray-500">Email cannot be changed</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
+                      <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
                       <Input 
                         id="phone" 
                         name="phone"
@@ -335,16 +344,16 @@ export default function ProfilePage() {
                         onChange={handleInputChange}
                         disabled={!isEditing} 
                         placeholder="Enter your phone number"
-                        className={isEditing ? "bg-white border-gray-300" : "bg-gray-50"} 
+                        className={`h-10 text-sm ${isEditing ? "bg-white border-gray-300" : "bg-gray-50"}`}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="member-since">Member Since</Label>
+                      <Label htmlFor="member-since" className="text-sm font-medium">Member Since</Label>
                       <Input 
                         id="member-since" 
                         value={formatDate(user.created_at)} 
                         disabled 
-                        className="bg-gray-50" 
+                        className="h-10 text-sm bg-gray-50" 
                       />
                     </div>
                   </div>
@@ -361,24 +370,37 @@ export default function ProfilePage() {
                   )}
 
                   {/* Edit/Save Buttons */}
-                  <div className="flex justify-end gap-3 pt-4">
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                     {!isEditing ? (
-                      <Button onClick={handleEditToggle} variant="outline">
-                        Edit Profile
+                      <Button 
+                        onClick={handleEditToggle} 
+                        variant="outline" 
+                        className="w-full sm:w-auto h-10"
+                      >
+                        <span className="text-sm">Edit Profile</span>
                       </Button>
                     ) : (
                       <>
-                        <Button onClick={handleEditToggle} variant="outline" disabled={isSaving}>
-                          Cancel
+                        <Button 
+                          onClick={handleEditToggle} 
+                          variant="outline" 
+                          disabled={isSaving}
+                          className="w-full sm:w-auto h-10 order-2 sm:order-1"
+                        >
+                          <span className="text-sm">Cancel</span>
                         </Button>
-                        <Button onClick={handleSaveProfile} disabled={isSaving}>
+                        <Button 
+                          onClick={handleSaveProfile} 
+                          disabled={isSaving}
+                          className="w-full sm:w-auto h-10 order-1 sm:order-2"
+                        >
                           {isSaving ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Saving...
+                              <span className="text-sm">Saving...</span>
                             </>
                           ) : (
-                            'Save Changes'
+                            <span className="text-sm">Save Changes</span>
                           )}
                         </Button>
                       </>
@@ -387,13 +409,13 @@ export default function ProfilePage() {
 
                   <Separator />
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold">Account Status</h3>
-                      <p className="text-sm text-gray-600">Your account is active and verified</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm sm:text-base">Account Status</h3>
+                      <p className="text-xs sm:text-sm text-gray-600">Your account is active and verified</p>
                     </div>
-                    <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
-                      Active
+                    <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50 w-fit">
+                      <span className="text-xs sm:text-sm">Active</span>
                     </Badge>
                   </div>
                 </CardContent>
@@ -401,11 +423,11 @@ export default function ProfilePage() {
             </TabsContent>
 
             {/* Orders Tab */}
-            <TabsContent value="orders" className="space-y-6">
+            <TabsContent value="orders" className="space-y-4 sm:space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Order History</CardTitle>
-                  <CardDescription>Track your past and current orders</CardDescription>
+                <CardHeader className="pb-4 sm:pb-6">
+                  <CardTitle className="text-lg sm:text-xl">Order History</CardTitle>
+                  <CardDescription className="text-sm">Track your past and current orders</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {ordersLoading ? (
@@ -422,22 +444,22 @@ export default function ProfilePage() {
                       </Link>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {orders.map((order) => (
-                        <div key={order.order_id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <h4 className="font-semibold">Order #{order.order_number}</h4>
-                              <p className="text-sm text-gray-600">{formatDate(order.order_date)}</p>
+                        <div key={order.order_id} className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-sm sm:text-base truncate">Order #{order.order_number}</h4>
+                              <p className="text-xs sm:text-sm text-gray-600">{formatDate(order.order_date)}</p>
                             </div>
-                            <div className="text-right">
-                              <p className="font-semibold">{formatPrice(order.total_amount)}</p>
-                              <Badge variant={order.status === 'delivered' ? 'default' : 'outline'} className="capitalize">
+                            <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
+                              <p className="font-semibold text-sm sm:text-base">{formatPrice(order.total_amount)}</p>
+                              <Badge variant={order.status === 'delivered' ? 'default' : 'outline'} className="capitalize text-xs">
                                 {order.status}
                               </Badge>
                             </div>
                           </div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-xs sm:text-sm text-gray-600">
                             <p>{order.item_count} item(s)</p>
                           </div>
                         </div>
@@ -449,45 +471,45 @@ export default function ProfilePage() {
             </TabsContent>
 
             {/* Settings Tab */}
-            <TabsContent value="settings" className="space-y-6">
+            <TabsContent value="settings" className="space-y-4 sm:space-y-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Account Settings</CardTitle>
-                  <CardDescription>Manage your account preferences and security</CardDescription>
+                <CardHeader className="pb-4 sm:pb-6">
+                  <CardTitle className="text-lg sm:text-xl">Account Settings</CardTitle>
+                  <CardDescription className="text-sm">Manage your account preferences and security</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 sm:space-y-6">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="font-semibold mb-2">Security</h3>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <h3 className="font-semibold text-sm sm:text-base mb-2">Security</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 mb-4">
                         Keep your account secure by managing your password and login settings.
                       </p>
-                      <Button variant="outline">
-                        Change Password
+                      <Button variant="outline" className="w-full sm:w-auto h-10">
+                        <span className="text-sm">Change Password</span>
                       </Button>
                     </div>
 
                     <Separator />
 
                     <div>
-                      <h3 className="font-semibold mb-2">Notifications</h3>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <h3 className="font-semibold text-sm sm:text-base mb-2">Notifications</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 mb-4">
                         Choose how you want to be notified about your orders and promotions.
                       </p>
-                      <Button variant="outline">
-                        Notification Settings
+                      <Button variant="outline" className="w-full sm:w-auto h-10">
+                        <span className="text-sm">Notification Settings</span>
                       </Button>
                     </div>
 
                     <Separator />
 
                     <div>
-                      <h3 className="font-semibold mb-2 text-red-600">Danger Zone</h3>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <h3 className="font-semibold text-sm sm:text-base mb-2 text-red-600">Danger Zone</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 mb-4">
                         Permanently delete your account and all associated data.
                       </p>
-                      <Button variant="destructive">
-                        Delete Account
+                      <Button variant="destructive" className="w-full sm:w-auto h-10">
+                        <span className="text-sm">Delete Account</span>
                       </Button>
                     </div>
                   </div>
@@ -497,10 +519,14 @@ export default function ProfilePage() {
           </Tabs>
 
           {/* Logout Button */}
-          <div className="mt-8 text-center">
-            <Button variant="outline" onClick={handleLogout} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+          <div className="mt-6 sm:mt-8 text-center">
+            <Button 
+              variant="outline" 
+              onClick={handleLogout} 
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full sm:w-auto h-10"
+            >
               <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+              <span className="text-sm">Sign Out</span>
             </Button>
           </div>
         </div>
