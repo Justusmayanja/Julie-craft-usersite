@@ -102,3 +102,27 @@ export interface OrderConfirmation {
   estimated_delivery?: string
   tracking_info?: string
 }
+
+// User order history interface (for profile page)
+export interface UserOrder {
+  order_id: string
+  order_number: string
+  order_date: string
+  status: string
+  total_amount: number
+  item_count: number
+  items: Array<{
+    product_name: string
+    quantity: number
+    unit_price: number
+    image: string
+  }>
+}
+
+// User orders response interface
+export interface UserOrdersResponse {
+  orders: UserOrder[]
+  total: number
+  limit: number
+  offset: number
+}

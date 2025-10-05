@@ -1,17 +1,41 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
-import { Menu, ShoppingCart, Search, MessageCircle } from "lucide-react"
+import { Menu, ShoppingCart, Search, MessageCircle, User, LogOut } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
+import { useAuth } from "@/contexts/auth-context"
+import { useClientOnly } from "@/hooks/use-client-only"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const isClient = useClientOnly()
   const { state } = useCart()
+  const { user, isAuthenticated, logout } = useAuth()
+
+  // Load profile image from localStorage
+  useEffect(() => {
+    if (user?.id && isClient) {
+      const savedImage = localStorage.getItem(`profile_image_${user.id}`)
+      if (savedImage) {
+        setProfileImage(savedImage)
+      }
+    }
+  }, [user?.id, isClient])
 
   const navItems = [
     { name: "Home", href: "/" },
@@ -63,7 +87,7 @@ export function Navigation() {
               <Link href="/cart">
                 <Button variant="ghost" size="icon" className="relative">
                   <ShoppingCart className="h-5 w-5" />
-                  {state.itemCount > 0 && (
+                  {isClient && state.itemCount > 0 && (
                     <Badge
                       variant="destructive"
                       className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
@@ -73,6 +97,61 @@ export function Navigation() {
                   )}
                 </Button>
               </Link>
+
+              {/* User Menu */}
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={isClient ? profileImage || undefined : undefined} alt={user?.name || 'Profile'} />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                          {user?.name ? user.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user?.name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile?tab=orders">
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        My Orders
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout} className="text-red-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Link href="/login">
+                    <Button variant="ghost" size="sm">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button size="sm">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </div>
+              )}
 
               {/* Mobile menu */}
               <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -93,6 +172,54 @@ export function Navigation() {
                         {item.name}
                       </Link>
                     ))}
+                    
+                    {/* Mobile Auth Section */}
+                    <div className="border-t pt-4 mt-4">
+                      {isAuthenticated ? (
+                        <div className="space-y-3">
+                          <div className="px-2 py-1">
+                            <p className="text-sm font-medium text-foreground">{user?.name}</p>
+                            <p className="text-xs text-muted-foreground">{user?.email}</p>
+                          </div>
+                          <Link href="/profile" onClick={() => setIsOpen(false)}>
+                            <Button variant="outline" className="w-full justify-start">
+                              <User className="mr-2 h-4 w-4" />
+                              Profile
+                            </Button>
+                          </Link>
+                          <Link href="/profile?tab=orders" onClick={() => setIsOpen(false)}>
+                            <Button variant="outline" className="w-full justify-start">
+                              <ShoppingCart className="mr-2 h-4 w-4" />
+                              My Orders
+                            </Button>
+                          </Link>
+                          <Button 
+                            variant="destructive" 
+                            className="w-full justify-start"
+                            onClick={() => {
+                              logout()
+                              setIsOpen(false)
+                            }}
+                          >
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Sign Out
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Link href="/login" onClick={() => setIsOpen(false)}>
+                            <Button variant="outline" className="w-full">
+                              Sign In
+                            </Button>
+                          </Link>
+                          <Link href="/register" onClick={() => setIsOpen(false)}>
+                            <Button className="w-full">
+                              Sign Up
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
                   </nav>
                 </SheetContent>
               </Sheet>

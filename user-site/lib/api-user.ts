@@ -79,6 +79,26 @@ export async function getUserOrders(
   return response.json()
 }
 
+// Update user profile
+export async function updateUserProfile(userId: string, profileData: { name: string; phone?: string }): Promise<any> {
+  const url = `${getApiBaseUrl()}/users/${userId}`
+  
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(profileData)
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(errorData.error || `Failed to update profile: ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
 // Save cart for user/session
 export async function saveUserCart(cartData: any, userId?: string, sessionId?: string): Promise<void> {
   const url = `${getApiBaseUrl()}/cart/save`

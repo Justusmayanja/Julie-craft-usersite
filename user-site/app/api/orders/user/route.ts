@@ -48,8 +48,26 @@ export async function GET(request: NextRequest) {
 
     // Filter by user email or session
     if (userId) {
-      // For registered users, filter by customer_email
-      query = query.eq('customer_email', userId)
+      // For registered users, we need to get the user's email first
+      // Since userId might be an email or UUID, we'll try both approaches
+      
+      // First, check if userId looks like an email
+      if (userId.includes('@')) {
+        query = query.eq('customer_email', userId)
+      } else {
+        // If it's a UUID, we need to get the user's email from the users table
+        const { data: userData, error: userError } = await supabaseAdmin
+          .from('users')
+          .select('email')
+          .eq('id', userId)
+          .single()
+        
+        if (userError || !userData) {
+          return NextResponse.json({ error: 'User not found' }, { status: 404 })
+        }
+        
+        query = query.eq('customer_email', userData.email)
+      }
     } else if (sessionId) {
       // For guest sessions, we might need to store session_id with orders
       // For now, we'll return empty since guest orders don't have session tracking yet
