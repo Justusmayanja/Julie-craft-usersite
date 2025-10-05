@@ -107,6 +107,15 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    // Return a more descriptive error message
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: errorMessage,
+      products: [],
+      total: 0,
+      limit: 50,
+      offset: 0
+    }, { status: 500 })
   }
 }

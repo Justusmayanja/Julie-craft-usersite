@@ -174,6 +174,9 @@ export function ProductCatalog() {
   const [selectedProduct, setSelectedProduct] = useState<FrontendProduct | null>(null)
   const { dispatch } = useCart()
 
+  // Check if we should use API or fallback data
+  const [useApiData, setUseApiData] = useState(true)
+
   // Fetch products and categories
   const { products: apiProducts, loading: productsLoading, error: productsError, total } = useProducts({
     search: searchTerm || undefined,
@@ -184,9 +187,19 @@ export function ProductCatalog() {
 
   const { categories: apiCategories, loading: categoriesLoading, error: categoriesError } = useCategories()
 
+  // Determine if we should use API data or fallback
+  useEffect(() => {
+    // If API returns empty products and we have an error, or if API is not configured, use fallback
+    if ((apiProducts.length === 0 && productsError) || (apiProducts.length === 0 && !productsLoading)) {
+      setUseApiData(false)
+    } else if (apiProducts.length > 0) {
+      setUseApiData(true)
+    }
+  }, [apiProducts.length, productsError, productsLoading])
+
   // Use API data or fallback to hardcoded data
-  const products = apiProducts.length > 0 ? apiProducts : fallbackProducts
-  const categories = apiCategories.length > 0 
+  const products = useApiData && apiProducts.length > 0 ? apiProducts : fallbackProducts
+  const categories = useApiData && apiCategories.length > 0 
     ? [
         { value: "all", label: "All Categories" },
         ...apiCategories.map(cat => ({
@@ -198,16 +211,15 @@ export function ProductCatalog() {
 
   const loading = productsLoading || categoriesLoading
 
-  // Since we're fetching filtered data from API, we don't need client-side filtering
-  // But we'll keep some client-side filtering for fallback data
+  // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
-    if (apiProducts.length > 0) {
+    if (useApiData && apiProducts.length > 0) {
       // API data is already filtered and sorted
       return apiProducts
     }
 
     // Fallback filtering for hardcoded data
-    const filtered = products.filter((product) => {
+    const filtered = fallbackProducts.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -234,7 +246,7 @@ export function ProductCatalog() {
     })
 
     return filtered
-  }, [products, searchTerm, selectedCategory, sortBy, apiProducts])
+  }, [useApiData, apiProducts, searchTerm, selectedCategory, sortBy])
 
   const formatPrice = (price: number) => {
     return `UGX ${price.toLocaleString()}`
@@ -266,6 +278,13 @@ export function ProductCatalog() {
             Discover our complete collection of authentic Ugandan crafts, each piece carefully selected for quality and
             cultural significance.
           </p>
+          {!useApiData && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> Showing sample products. Database connection not available - using cached data.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Filters and Search */}
@@ -339,10 +358,10 @@ export function ProductCatalog() {
               </div>
             ) : (
               <>
-                Showing {filteredAndSortedProducts.length} of {total || products.length} products
+                Showing {filteredAndSortedProducts.length} of {useApiData ? (total || products.length) : fallbackProducts.length} products
                 {searchTerm && ` for "${searchTerm}"`}
-                {(productsError || categoriesError) && (
-                  <span className="text-orange-500 ml-2">
+                {!useApiData && (
+                  <span className="text-blue-600 ml-2">
                     (Using cached data due to connection issues)
                   </span>
                 )}

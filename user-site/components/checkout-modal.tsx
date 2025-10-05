@@ -108,68 +108,68 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl w-full max-h-[95vh] overflow-hidden p-0">
+      <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-hidden p-0 m-4">
         {/* Header Section */}
-        <div className="border-b bg-gradient-to-r from-primary/5 to-primary/10 px-8 py-6">
-          <div className="flex items-center justify-between">
+        <div className="border-b bg-gradient-to-r from-primary/5 to-primary/10 px-4 lg:px-8 py-4 lg:py-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <DialogTitle className="text-3xl font-bold text-primary">Complete Your Order</DialogTitle>
-              <p className="text-muted-foreground mt-1">Secure checkout for your authentic Ugandan crafts</p>
+              <DialogTitle className="text-2xl lg:text-3xl font-bold text-primary">Complete Your Order</DialogTitle>
+              <p className="text-sm lg:text-base text-muted-foreground mt-1">Secure checkout for your authentic Ugandan crafts</p>
             </div>
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <div className="flex items-center space-x-2 text-xs lg:text-sm text-muted-foreground">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               <span>Secure checkout</span>
             </div>
           </div>
           
           {/* Progress Steps */}
-          <div className="flex justify-center mt-6">
-            <div className="flex items-center space-x-6">
-              <div className={`flex items-center space-x-3 ${currentStep === "details" ? "text-primary" : "text-muted-foreground"}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${currentStep === "details" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
-                  <User className="h-5 w-5" />
+          <div className="flex justify-center mt-4 lg:mt-6">
+            <div className="flex items-center space-x-2 lg:space-x-6">
+              <div className={`flex items-center space-x-2 lg:space-x-3 ${currentStep === "details" ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-2 ${currentStep === "details" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
+                  <User className="h-4 w-4 lg:h-5 lg:w-5" />
                 </div>
-                <span className="font-medium">Personal Details</span>
+                <span className="font-medium text-sm lg:text-base hidden sm:block">Personal Details</span>
               </div>
-              <div className="w-12 h-px bg-border"></div>
-              <div className={`flex items-center space-x-3 ${currentStep === "payment" ? "text-primary" : "text-muted-foreground"}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${currentStep === "payment" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
-                  <CreditCard className="h-5 w-5" />
+              <div className="w-6 lg:w-12 h-px bg-border"></div>
+              <div className={`flex items-center space-x-2 lg:space-x-3 ${currentStep === "payment" ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-2 ${currentStep === "payment" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
+                  <CreditCard className="h-4 w-4 lg:h-5 lg:w-5" />
                 </div>
-                <span className="font-medium">Payment Method</span>
+                <span className="font-medium text-sm lg:text-base hidden sm:block">Payment Method</span>
               </div>
-              <div className="w-12 h-px bg-border"></div>
-              <div className={`flex items-center space-x-3 ${currentStep === "confirmation" ? "text-primary" : "text-muted-foreground"}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${currentStep === "confirmation" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
-                  <CheckCircle className="h-5 w-5" />
+              <div className="w-6 lg:w-12 h-px bg-border"></div>
+              <div className={`flex items-center space-x-2 lg:space-x-3 ${currentStep === "confirmation" ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-2 ${currentStep === "confirmation" ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30"}`}>
+                  <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5" />
                 </div>
-                <span className="font-medium">Confirmation</span>
+                <span className="font-medium text-sm lg:text-base hidden sm:block">Confirmation</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-col lg:flex-row min-h-0 flex-1">
+        <div className="flex flex-col xl:flex-row min-h-0 flex-1">
           {/* Left Content Area */}
-          <div className="flex-1 p-8 overflow-y-auto">
-            <div className="max-w-4xl mx-auto">
+          <div className="flex-1 p-4 lg:p-8 overflow-y-auto">
+            <div className="max-w-5xl mx-auto">
               {currentStep === "details" && (
                 <form onSubmit={handleSubmitDetails} className="space-y-8">
                   {/* Customer Information */}
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <div className="px-8 py-6 border-b border-gray-100">
+                    <div className="px-4 lg:px-8 py-4 lg:py-6 border-b border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <User className="h-5 w-5 text-primary" />
+                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <User className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
                         </div>
                         <div>
-                          <h3 className="text-xl font-semibold">Personal Information</h3>
-                          <p className="text-sm text-muted-foreground">Tell us about yourself</p>
+                          <h3 className="text-lg lg:text-xl font-semibold">Personal Information</h3>
+                          <p className="text-xs lg:text-sm text-muted-foreground">Tell us about yourself</p>
                         </div>
                       </div>
                     </div>
-                    <div className="p-8">
+                    <div className="p-4 lg:p-8">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="firstName" className="text-sm font-semibold">First Name *</Label>
@@ -229,18 +229,18 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
 
                   {/* Delivery Information */}
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <div className="px-8 py-6 border-b border-gray-100">
+                    <div className="px-4 lg:px-8 py-4 lg:py-6 border-b border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <MapPin className="h-5 w-5 text-primary" />
+                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <MapPin className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
                         </div>
                         <div>
-                          <h3 className="text-xl font-semibold">Delivery Address</h3>
-                          <p className="text-sm text-muted-foreground">Where should we deliver your order?</p>
+                          <h3 className="text-lg lg:text-xl font-semibold">Delivery Address</h3>
+                          <p className="text-xs lg:text-sm text-muted-foreground">Where should we deliver your order?</p>
                         </div>
                       </div>
                     </div>
-                    <div className="p-8">
+                    <div className="p-4 lg:p-8">
                       <div className="space-y-6">
                         <div className="space-y-2">
                           <Label htmlFor="address" className="text-sm font-semibold">Street Address *</Label>
@@ -316,18 +316,18 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
               {currentStep === "payment" && (
                 <form onSubmit={handleSubmitPayment} className="space-y-8">
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <div className="px-8 py-6 border-b border-gray-100">
+                    <div className="px-4 lg:px-8 py-4 lg:py-6 border-b border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <CreditCard className="h-5 w-5 text-primary" />
+                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <CreditCard className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
                         </div>
                         <div>
-                          <h3 className="text-xl font-semibold">Payment Method</h3>
-                          <p className="text-sm text-muted-foreground">Choose your preferred payment method</p>
+                          <h3 className="text-lg lg:text-xl font-semibold">Payment Method</h3>
+                          <p className="text-xs lg:text-sm text-muted-foreground">Choose your preferred payment method</p>
                         </div>
                       </div>
                     </div>
-                    <div className="p-8">
+                    <div className="p-4 lg:p-8">
                     <Tabs
                       value={formData.paymentMethod}
                       onValueChange={(value) => handleInputChange("paymentMethod", value)}
@@ -495,7 +495,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="w-full lg:w-96 bg-gray-50 border-l border-gray-200 p-6 overflow-y-auto">
+          <div className="w-full xl:w-96 bg-gray-50 border-t xl:border-t-0 xl:border-l border-gray-200 p-4 lg:p-6 overflow-y-auto">
             <div className="sticky top-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                 <div className="px-6 py-4 border-b border-gray-100">
