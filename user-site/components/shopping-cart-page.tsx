@@ -60,39 +60,39 @@ export function ShoppingCartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 lg:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="mb-6 lg:mb-8">
+          <div className="flex items-center gap-3 lg:gap-4 mb-4 lg:mb-6">
             <Link href="/products">
-              <Button variant="ghost" size="icon" className="hover:bg-gray-200">
-                <ArrowLeft className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="hover:bg-gray-200 h-9 w-9 lg:h-10 lg:w-10">
+                <ArrowLeft className="h-4 w-4 lg:h-5 lg:w-5" />
               </Button>
             </Link>
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900">Shopping Cart</h1>
-              <p className="text-lg text-gray-600 mt-1">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl lg:text-4xl font-bold text-gray-900 truncate">Shopping Cart</h1>
+              <p className="text-sm lg:text-lg text-gray-600 mt-1">
                 {state.itemCount} {state.itemCount === 1 ? "item" : "items"} in your cart
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
           {/* Cart Items */}
-          <div className="xl:col-span-3 space-y-6">
+          <div className="lg:col-span-2 xl:col-span-3 space-y-4 lg:space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900">Cart Items</h2>
-          <p className="text-sm text-gray-600">Review and modify your selected items</p>
-          <p className="text-xs text-gray-500 mt-1">💡 Tip: You can adjust quantities using the +/- buttons or type directly in the input field (1-99)</p>
+        <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-gray-100">
+          <h2 className="text-lg lg:text-xl font-semibold text-gray-900">Cart Items</h2>
+          <p className="text-xs lg:text-sm text-gray-600">Review and modify your selected items</p>
+          <p className="text-xs text-gray-500 mt-1 hidden sm:block">💡 Tip: You can adjust quantities using the +/- buttons or type directly in the input field (1-99)</p>
         </div>
-              <div className="p-6">
-                <div className="space-y-6">
+              <div className="p-4 lg:p-6">
+                <div className="space-y-4 lg:space-y-6">
                   {state.items.map((item) => (
-                    <div key={item.id} className="flex flex-col lg:flex-row gap-6 p-6 bg-gray-50 rounded-xl">
+                    <div key={item.id} className="flex flex-col sm:flex-row gap-4 lg:gap-6 p-4 lg:p-6 bg-gray-50 rounded-xl">
                       {/* Product Image */}
-                      <div className="w-full lg:w-40 h-40 flex-shrink-0">
+                      <div className="w-full sm:w-32 lg:w-40 h-32 sm:h-32 lg:h-40 flex-shrink-0 mx-auto sm:mx-0">
                         <img
                           src={item.image || "/placeholder.svg"}
                           alt={item.name}
@@ -101,22 +101,22 @@ export function ShoppingCartPage() {
                       </div>
 
                       {/* Product Details */}
-                      <div className="flex-1 space-y-4">
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-2">
+                      <div className="flex-1 space-y-3 lg:space-y-4">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="space-y-1 lg:space-y-2 flex-1 min-w-0">
                             <Badge variant="outline" className="capitalize text-xs">
                               {item.category ? item.category.replace("-", " ") : "General"}
                             </Badge>
-                            <h3 className="font-semibold text-lg text-gray-900">{item.name}</h3>
-                            <p className="text-lg font-bold text-primary">{formatPrice(item.price)} each</p>
+                            <h3 className="font-semibold text-base lg:text-lg text-gray-900 line-clamp-2">{item.name}</h3>
+                            <p className="text-sm lg:text-lg font-bold text-primary">{formatPrice(item.price)} each</p>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => removeItem(item.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0 h-8 w-8 lg:h-10 lg:w-10"
                           >
-                            <Trash2 className="h-5 w-5" />
+                            <Trash2 className="h-4 w-4 lg:h-5 lg:w-5" />
                           </Button>
                         </div>
 
@@ -127,10 +127,10 @@ export function ShoppingCartPage() {
                         )}
 
                         {/* Quantity Controls and Total */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-gray-700">Quantity:</span>
-                            <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:gap-4">
+                          <div className="flex items-center gap-2 lg:gap-3">
+                            <span className="text-xs lg:text-sm font-medium text-gray-700">Quantity:</span>
+                            <div className="flex items-center gap-1 lg:gap-2">
                               <Button
                                 variant="outline"
                                 size="icon"
@@ -140,10 +140,10 @@ export function ShoppingCartPage() {
                                   handleQuantityChange(item.id, item.quantity - 1)
                                 }}
                                 disabled={!(item.inStock ?? true) || item.quantity <= 1}
-                                className="h-10 w-10 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
+                                className="h-8 w-8 lg:h-10 lg:w-10 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                                 title="Decrease quantity"
                               >
-                                <Minus className="h-4 w-4" />
+                                <Minus className="h-3 w-3 lg:h-4 lg:w-4" />
                               </Button>
                               <div className="relative">
                                 <Input
@@ -157,7 +157,7 @@ export function ShoppingCartPage() {
                                       handleQuantityChange(item.id, newQuantity)
                                     }
                                   }}
-                                  className="w-16 h-10 text-center font-semibold border-gray-300 focus:border-primary focus:ring-primary"
+                                  className="w-12 lg:w-16 h-8 lg:h-10 text-center font-semibold border-gray-300 focus:border-primary focus:ring-primary text-sm lg:text-base"
                                   disabled={!(item.inStock ?? true)}
                                 />
                               </div>
@@ -170,15 +170,15 @@ export function ShoppingCartPage() {
                                   handleQuantityChange(item.id, item.quantity + 1)
                                 }}
                                 disabled={!(item.inStock ?? true) || item.quantity >= 99}
-                                className="h-10 w-10 hover:bg-green-50 hover:text-green-600 hover:border-green-300"
+                                className="h-8 w-8 lg:h-10 lg:w-10 hover:bg-green-50 hover:text-green-600 hover:border-green-300"
                                 title="Increase quantity"
                               >
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-3 w-3 lg:h-4 lg:w-4" />
                               </Button>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
+                          <div className="text-left sm:text-right">
+                            <p className="text-base lg:text-lg font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
                             <p className="text-xs text-gray-500">({formatPrice(item.price)} each)</p>
                           </div>
                         </div>
@@ -188,11 +188,11 @@ export function ShoppingCartPage() {
                 </div>
 
                 {/* Clear Cart Button */}
-                <div className="flex justify-end mt-6 pt-6 border-t border-gray-200">
+                <div className="flex justify-center sm:justify-end mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-gray-200">
                   <Button
                     variant="outline"
                     onClick={clearCart}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 text-sm lg:text-base"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Clear Cart
@@ -203,25 +203,25 @@ export function ShoppingCartPage() {
           </div>
 
           {/* Order Summary */}
-          <div className="xl:col-span-1">
-            <div className="sticky top-8">
+          <div className="lg:col-span-1 xl:col-span-1">
+            <div className="sticky top-4 lg:top-8">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-xl font-semibold text-gray-900">Order Summary</h3>
-                  <p className="text-sm text-gray-600">{state.itemCount} items</p>
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-gray-100">
+                  <h3 className="text-lg lg:text-xl font-semibold text-gray-900">Order Summary</h3>
+                  <p className="text-xs lg:text-sm text-gray-600">{state.itemCount} items</p>
                 </div>
-                <div className="p-6 space-y-6">
+                <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
                   {/* Promo Code */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-semibold text-gray-700">Promo Code</label>
+                  <div className="space-y-2 lg:space-y-3">
+                    <label className="text-xs lg:text-sm font-semibold text-gray-700">Promo Code</label>
                     <div className="flex gap-2">
                       <Input 
                         placeholder="Enter promo code" 
                         value={promoCode} 
                         onChange={(e) => setPromoCode(e.target.value)}
-                        className="h-11"
+                        className="h-9 lg:h-11 text-sm lg:text-base"
                       />
-                      <Button variant="outline" onClick={applyPromoCode} className="h-11 px-6">
+                      <Button variant="outline" onClick={applyPromoCode} className="h-9 lg:h-11 px-3 lg:px-6 text-sm lg:text-base">
                         Apply
                       </Button>
                     </div>
@@ -230,16 +230,16 @@ export function ShoppingCartPage() {
                   <Separator />
 
                   {/* Price Breakdown */}
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-sm">
+                  <div className="space-y-3 lg:space-y-4">
+                    <div className="flex justify-between text-xs lg:text-sm">
                       <span className="text-gray-600">Subtotal ({state.itemCount} items)</span>
                       <span className="font-medium">{formatPrice(state.total)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs lg:text-sm">
                       <span className="text-gray-600">Shipping</span>
                       <span className="font-medium">{formatPrice(10000)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs lg:text-sm">
                       <span className="text-gray-600">Tax (18%)</span>
                       <span className="font-medium">{formatPrice(Math.round(state.total * 0.18))}</span>
                     </div>
@@ -247,13 +247,13 @@ export function ShoppingCartPage() {
 
                   <Separator />
 
-                  <div className="flex justify-between text-xl font-bold">
+                  <div className="flex justify-between text-lg lg:text-xl font-bold">
                     <span className="text-gray-900">Total</span>
                     <span className="text-primary">{formatPrice(state.total + 10000 + Math.round(state.total * 0.18))}</span>
                   </div>
 
                   <Button 
-                    className="w-full h-12 text-base font-semibold" 
+                    className="w-full h-10 lg:h-12 text-sm lg:text-base font-semibold" 
                     onClick={() => setShowCheckout(true)}
                   >
                     Proceed to Checkout
@@ -261,19 +261,19 @@ export function ShoppingCartPage() {
 
                   <div className="text-center">
                     <Link href="/products">
-                      <Button variant="ghost" className="text-primary hover:text-primary/80">
+                      <Button variant="ghost" className="text-primary hover:text-primary/80 text-sm lg:text-base">
                         Continue Shopping
                       </Button>
                     </Link>
                   </div>
 
                   {/* Security Notice */}
-                  <div className="pt-4 border-t border-gray-200">
+                  <div className="pt-3 lg:pt-4 border-t border-gray-200">
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <div className="w-3 h-3 lg:w-4 lg:h-4 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 bg-green-500 rounded-full"></div>
                       </div>
-                      <span>🔒 Secure checkout • Free delivery in Kampala</span>
+                      <span className="text-xs">🔒 Secure checkout • Free delivery in Kampala</span>
                     </div>
                   </div>
                 </div>

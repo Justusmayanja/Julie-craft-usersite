@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useReducer, useEffect, type ReactNode } from "react"
 import { createOrder, generateOrderItemsFromCart, calculateOrderTotals } from "@/lib/api-orders"
+import { sessionManager } from "@/lib/session-manager"
+import { saveUserCart, loadUserCart } from "@/lib/api-user"
 import type { CartOrder, OrderConfirmation } from "@/lib/types/order"
 
 export interface CartItem {
@@ -113,22 +115,65 @@ const CartContext = createContext<{
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState)
 
-  // Load cart from localStorage on mount
+  // Load cart from session manager and API
   useEffect(() => {
-    const savedCart = localStorage.getItem("julie-crafts-cart")
-    if (savedCart) {
+    const loadCart = async () => {
       try {
-        const cartItems = JSON.parse(savedCart)
-        dispatch({ type: "LOAD_CART", payload: cartItems })
+        // First try to load from localStorage as fallback
+        const cartKey = sessionManager.getCartKey()
+        const savedCart = localStorage.getItem(cartKey)
+        
+        if (savedCart) {
+          const cartItems = JSON.parse(savedCart)
+          dispatch({ type: "LOAD_CART", payload: cartItems })
+        }
+
+        // Then try to load from API (this will override localStorage if available)
+        const sessionInfo = sessionManager.getSessionInfo()
+        if (sessionInfo.session_id) {
+          try {
+            const apiCart = await loadUserCart(sessionInfo.user_id, sessionInfo.session_id)
+            if (apiCart.cart_data) {
+              dispatch({ type: "LOAD_CART", payload: apiCart.cart_data })
+            }
+          } catch (error) {
+            console.log("Failed to load cart from API, using localStorage:", error)
+          }
+        }
       } catch (error) {
-        console.error("Failed to load cart from localStorage:", error)
+        console.error("Failed to load cart:", error)
       }
     }
+
+    loadCart()
   }, [])
 
-  // Save cart to localStorage whenever it changes
+  // Save cart to both localStorage and API whenever it changes
   useEffect(() => {
-    localStorage.setItem("julie-crafts-cart", JSON.stringify(state.items))
+    const saveCart = async () => {
+      try {
+        // Save to localStorage
+        const cartKey = sessionManager.getCartKey()
+        localStorage.setItem(cartKey, JSON.stringify(state.items))
+
+        // Save to API
+        const sessionInfo = sessionManager.getSessionInfo()
+        if (sessionInfo.session_id) {
+          try {
+            await saveUserCart(state.items, sessionInfo.user_id, sessionInfo.session_id)
+          } catch (error) {
+            console.log("Failed to save cart to API:", error)
+          }
+        }
+      } catch (error) {
+        console.error("Failed to save cart:", error)
+      }
+    }
+
+    // Only save if cart has items or if we're clearing it
+    if (state.items.length > 0 || state.itemCount === 0) {
+      saveCart()
+    }
   }, [state.items])
 
   const addItem = (item: Omit<CartItem, "quantity">) => {

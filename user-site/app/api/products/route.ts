@@ -7,12 +7,26 @@ export async function GET(request: NextRequest) {
     // Check if Supabase is configured
     if (!isSupabaseConfigured || !supabaseAdmin) {
       console.log('Supabase not configured, returning empty products array')
+      console.log('Environment check:', {
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        isConfigured: isSupabaseConfigured,
+        hasAdmin: !!supabaseAdmin
+      })
       return NextResponse.json({
         products: [],
         total: 0,
         limit: 50,
         offset: 0,
-        message: 'Database not configured - using fallback data'
+        message: 'Database not configured - using fallback data',
+        debug: {
+          hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+          isConfigured: isSupabaseConfigured,
+          hasAdmin: !!supabaseAdmin
+        }
       })
     }
     // Get query parameters
