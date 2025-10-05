@@ -1,17 +1,14 @@
 import type { FrontendProduct, Category } from './types/product'
 
 const getApiBaseUrl = () => {
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://your-domain.com/api'
-  }
-  
-  // In development, use the current window location
+  // Always use the current window location for API calls
+  // This ensures we use the correct domain whether in development or production
   if (typeof window !== 'undefined') {
     return `${window.location.origin}/api`
   }
   
   // Fallback for server-side rendering
-  return 'http://localhost:3000/api'
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
 }
 
 export interface ProductsResponse {
