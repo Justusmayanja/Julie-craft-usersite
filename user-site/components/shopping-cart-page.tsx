@@ -21,10 +21,13 @@ export function ShoppingCartPage() {
   }
 
   const handleQuantityChange = (id: number, newQuantity: number) => {
-    if (newQuantity <= 0) {
+    // Validate quantity range
+    const validatedQuantity = Math.max(1, Math.min(99, newQuantity))
+    
+    if (validatedQuantity <= 0) {
       removeItem(id)
     } else {
-      updateQuantity(id, newQuantity)
+      updateQuantity(id, validatedQuantity)
     }
   }
 
@@ -79,10 +82,11 @@ export function ShoppingCartPage() {
           {/* Cart Items */}
           <div className="xl:col-span-3 space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h2 className="text-xl font-semibold text-gray-900">Cart Items</h2>
-                <p className="text-sm text-gray-600">Review and modify your selected items</p>
-              </div>
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900">Cart Items</h2>
+          <p className="text-sm text-gray-600">Review and modify your selected items</p>
+          <p className="text-xs text-gray-500 mt-1">💡 Tip: You can adjust quantities using the +/- buttons or type directly in the input field (1-99)</p>
+        </div>
               <div className="p-6">
                 <div className="space-y-6">
                   {state.items.map((item) => (
@@ -131,18 +135,35 @@ export function ShoppingCartPage() {
                                 variant="outline"
                                 size="icon"
                                 onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                disabled={!item.inStock}
-                                className="h-10 w-10"
+                                disabled={!item.inStock || item.quantity <= 1}
+                                className="h-10 w-10 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
+                                title="Decrease quantity"
                               >
                                 <Minus className="h-4 w-4" />
                               </Button>
-                              <span className="w-12 text-center font-semibold text-lg">{item.quantity}</span>
+                              <div className="relative">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="99"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const newQuantity = parseInt(e.target.value) || 1
+                                    if (newQuantity >= 1 && newQuantity <= 99) {
+                                      handleQuantityChange(item.id, newQuantity)
+                                    }
+                                  }}
+                                  className="w-16 h-10 text-center font-semibold border-gray-300 focus:border-primary focus:ring-primary"
+                                  disabled={!item.inStock}
+                                />
+                              </div>
                               <Button
                                 variant="outline"
                                 size="icon"
                                 onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                disabled={!item.inStock}
-                                className="h-10 w-10"
+                                disabled={!item.inStock || item.quantity >= 99}
+                                className="h-10 w-10 hover:bg-green-50 hover:text-green-600 hover:border-green-300"
+                                title="Increase quantity"
                               >
                                 <Plus className="h-4 w-4" />
                               </Button>
@@ -150,6 +171,7 @@ export function ShoppingCartPage() {
                           </div>
                           <div className="text-right">
                             <p className="text-lg font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
+                            <p className="text-xs text-gray-500">({formatPrice(item.price)} each)</p>
                           </div>
                         </div>
                       </div>
