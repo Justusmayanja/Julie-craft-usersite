@@ -4,7 +4,7 @@ export interface OrderItem {
   product_name: string
   product_sku?: string
   quantity: number
-  unit_price: number
+  price: number // Database column is 'price', not 'unit_price'
   total_price: number
   product_image?: string
 }
@@ -62,6 +62,7 @@ export interface CreateOrderData {
   total_amount: number
   currency?: string
   notes?: string
+  payment_method?: string
 }
 
 export interface OrderFilters {
@@ -92,6 +93,7 @@ export interface CartOrder {
   shipping_address: Address
   billing_address?: Address
   notes?: string
+  payment_method?: string
 }
 
 // Order confirmation interface
@@ -114,7 +116,7 @@ export interface UserOrder {
   items: Array<{
     product_name: string
     quantity: number
-    unit_price: number
+    price: number // Database column is 'price', not 'unit_price'
     image: string
   }>
 }

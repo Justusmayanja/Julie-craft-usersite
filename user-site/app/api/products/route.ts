@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
 
     // Transform products to frontend format
     const transformedProducts: FrontendProduct[] = (data || []).map((product: Product) => ({
-      id: parseInt(product.id.replace(/-/g, '').slice(0, 8), 16), // Convert UUID to number
+      id: product.id, // Keep UUID as string
       name: product.name,
       price: product.price,
       originalPrice: product.cost_price && product.cost_price > product.price ? product.cost_price : undefined,

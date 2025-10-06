@@ -7,7 +7,7 @@ import { saveUserCart, loadUserCart } from "@/lib/api-user"
 import type { CartOrder, OrderConfirmation } from "@/lib/types/order"
 
 export interface CartItem {
-  id: number
+  id: string
   name: string
   price: number
   image: string
@@ -26,8 +26,8 @@ interface CartState {
 
 type CartAction =
   | { type: "ADD_ITEM"; payload: Omit<CartItem, "quantity"> }
-  | { type: "REMOVE_ITEM"; payload: number }
-  | { type: "UPDATE_QUANTITY"; payload: { id: number; quantity: number } }
+  | { type: "REMOVE_ITEM"; payload: string }
+  | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
   | { type: "CLEAR_CART" }
   | { type: "LOAD_CART"; payload: CartItem[] }
   | { type: "SET_PLACING_ORDER"; payload: boolean }
@@ -57,7 +57,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       const total = newItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
       const itemCount = newItems.reduce((sum, item) => sum + item.quantity, 0)
 
-      return { items: newItems, total, itemCount }
+      return { items: newItems, total, itemCount, isPlacingOrder: state.isPlacingOrder }
     }
 
     case "REMOVE_ITEM": {
@@ -65,7 +65,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       const total = newItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
       const itemCount = newItems.reduce((sum, item) => sum + item.quantity, 0)
 
-      return { items: newItems, total, itemCount }
+      return { items: newItems, total, itemCount, isPlacingOrder: state.isPlacingOrder }
     }
 
     case "UPDATE_QUANTITY": {
@@ -78,7 +78,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       const total = newItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
       const itemCount = newItems.reduce((sum, item) => sum + item.quantity, 0)
 
-      return { items: newItems, total, itemCount }
+      return { items: newItems, total, itemCount, isPlacingOrder: state.isPlacingOrder }
     }
 
     case "CLEAR_CART":
@@ -105,10 +105,11 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 const CartContext = createContext<{
   state: CartState
   addItem: (item: Omit<CartItem, "quantity">) => void
-  removeItem: (id: number) => void
-  updateQuantity: (id: number, quantity: number) => void
+  removeItem: (id: string) => void
+  updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
   placeOrder: (orderData: CartOrder) => Promise<OrderConfirmation>
+  reloadCart: () => Promise<boolean>
   dispatch: React.Dispatch<CartAction>
 } | null>(null)
 
@@ -119,25 +120,37 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadCart = async () => {
       try {
-        // First try to load from localStorage as fallback
+        const sessionInfo = sessionManager.getSessionInfo()
+        
+        // Try to load from API first (prioritize database over localStorage)
+        if (sessionInfo.user_id || sessionInfo.session_id) {
+          try {
+            const apiCart = await loadUserCart(sessionInfo.user_id || undefined, sessionInfo.session_id || undefined)
+            if (apiCart.cart_data && Array.isArray(apiCart.cart_data)) {
+              console.log("Loaded cart from API:", apiCart.cart_data.length, "items")
+              dispatch({ type: "LOAD_CART", payload: apiCart.cart_data })
+              return // Successfully loaded from API, no need to check localStorage
+            }
+          } catch (error) {
+            console.log("Failed to load cart from API:", error)
+          }
+        }
+
+        // Fallback to localStorage if API fails or returns empty cart
         const cartKey = sessionManager.getCartKey()
         const savedCart = localStorage.getItem(cartKey)
         
         if (savedCart) {
-          const cartItems = JSON.parse(savedCart)
-          dispatch({ type: "LOAD_CART", payload: cartItems })
-        }
-
-        // Then try to load from API (this will override localStorage if available)
-        const sessionInfo = sessionManager.getSessionInfo()
-        if (sessionInfo.session_id) {
           try {
-            const apiCart = await loadUserCart(sessionInfo.user_id, sessionInfo.session_id)
-            if (apiCart.cart_data) {
-              dispatch({ type: "LOAD_CART", payload: apiCart.cart_data })
+            const cartItems = JSON.parse(savedCart)
+            if (Array.isArray(cartItems)) {
+              console.log("Loaded cart from localStorage:", cartItems.length, "items")
+              dispatch({ type: "LOAD_CART", payload: cartItems })
             }
-          } catch (error) {
-            console.log("Failed to load cart from API, using localStorage:", error)
+          } catch (parseError) {
+            console.error("Failed to parse cart from localStorage:", parseError)
+            // Clear invalid localStorage data
+            localStorage.removeItem(cartKey)
           }
         }
       } catch (error) {
@@ -146,6 +159,44 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     loadCart()
+  }, [])
+
+  // Expose a function to reload cart (to be called from auth context)
+  const reloadCart = async () => {
+    try {
+      const sessionInfo = sessionManager.getSessionInfo()
+      if (sessionInfo.user_id || sessionInfo.session_id) {
+        const apiCart = await loadUserCart(sessionInfo.user_id || undefined, sessionInfo.session_id || undefined)
+        if (apiCart.cart_data && Array.isArray(apiCart.cart_data)) {
+          console.log("Reloaded cart after auth change:", apiCart.cart_data.length, "items")
+          dispatch({ type: "LOAD_CART", payload: apiCart.cart_data })
+          return true
+        }
+      }
+      return false
+    } catch (error) {
+      console.log("Failed to reload cart after auth change:", error)
+      return false
+    }
+  }
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const handleAuthChange = (event: CustomEvent) => {
+      console.log("Auth state changed, reloading cart:", event.detail)
+      // Add a small delay to ensure session manager is updated
+      setTimeout(() => {
+        reloadCart()
+      }, 100)
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('authStateChanged', handleAuthChange as EventListener)
+      
+      return () => {
+        window.removeEventListener('authStateChanged', handleAuthChange as EventListener)
+      }
+    }
   }, [])
 
   // Save cart to both localStorage and API whenever it changes
@@ -180,11 +231,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "ADD_ITEM", payload: item })
   }
 
-  const removeItem = (id: number) => {
+  const removeItem = (id: string) => {
     dispatch({ type: "REMOVE_ITEM", payload: id })
   }
 
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = (id: string, quantity: number) => {
     dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } })
   }
 
@@ -212,7 +263,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         items: orderItems,
         ...totals,
         currency: 'UGX',
-        notes: orderData.notes
+        notes: orderData.notes,
+        payment_method: orderData.payment_method
       }
 
       // Submit order
@@ -238,6 +290,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       updateQuantity, 
       clearCart, 
       placeOrder,
+      reloadCart,
       dispatch 
     }}>
       {children}

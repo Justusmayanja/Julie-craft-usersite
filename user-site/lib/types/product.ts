@@ -58,7 +58,7 @@ export interface ProductFilters {
 
 // Frontend-compatible product interface (matches current hardcoded structure)
 export interface FrontendProduct {
-  id: number
+  id: string
   name: string
   price: number
   originalPrice?: number

@@ -174,7 +174,7 @@ export function UserOrderHistory() {
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.product_name}</p>
                           <p className="text-xs text-muted-foreground">
-                            Qty: {item.quantity} × {formatPrice(item.unit_price)}
+                            Qty: {item.quantity} × {formatPrice(item.price)}
                           </p>
                         </div>
                       </div>

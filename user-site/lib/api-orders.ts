@@ -21,11 +21,20 @@ export interface OrdersResponse {
 export async function createOrder(orderData: CreateOrderData): Promise<OrderConfirmation> {
   const url = `${getApiBaseUrl()}/orders`
   
+  // Get JWT token from localStorage for authentication
+  const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(orderData),
   })
 
@@ -143,15 +152,22 @@ function getEstimatedDelivery(): string {
 
 // Helper function to generate order items from cart
 export function generateOrderItemsFromCart(cartItems: any[]): Omit<any, 'id'>[] {
-  return cartItems.map(item => ({
-    product_id: item.id.toString(),
-    product_name: item.name,
-    product_sku: `SKU-${item.id}`,
-    quantity: item.quantity,
-    unit_price: item.price,
-    total_price: item.price * item.quantity,
-    product_image: item.image
-  }))
+  return cartItems.map(item => {
+    // Ensure price is a valid number
+    const unitPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0
+    const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
+    const totalPrice = unitPrice * quantity
+    
+    return {
+      product_id: item.id,
+      product_name: item.name || 'Unknown Product',
+      product_sku: `SKU-${item.id}`,
+      quantity: quantity,
+      price: unitPrice, // Database column is 'price', not 'unit_price'
+      total_price: totalPrice,
+      product_image: item.image || null
+    }
+  })
 }
 
 // Helper function to calculate order totals

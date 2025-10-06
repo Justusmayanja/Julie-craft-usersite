@@ -39,7 +39,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
     district: "",
     deliveryNotes: "",
     // Payment
-    paymentMethod: "",
+    paymentMethod: "mobile-money",
   })
 
   const formatPrice = (price: number) => {
@@ -77,7 +77,8 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
           zip_code: "",
           country: "Uganda"
         },
-        notes: formData.deliveryNotes
+        notes: formData.deliveryNotes,
+        payment_method: formData.paymentMethod
       }
 
       // Place the order
@@ -332,14 +333,10 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                       value={formData.paymentMethod}
                       onValueChange={(value) => handleInputChange("paymentMethod", value)}
                     >
-                      <TabsList className="grid w-full grid-cols-3 mb-6">
+                      <TabsList className="grid w-full grid-cols-2 mb-6">
                         <TabsTrigger value="mobile-money" className="flex items-center gap-2">
                           <Smartphone className="h-4 w-4" />
                           Mobile Money
-                        </TabsTrigger>
-                        <TabsTrigger value="card" className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          Card
                         </TabsTrigger>
                         <TabsTrigger value="cash" className="flex items-center gap-2">
                           <MapPin className="h-4 w-4" />
@@ -371,48 +368,6 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="card" className="space-y-4">
-                        <div className="p-4 border rounded-lg bg-green-50/50 border-green-200">
-                          <div className="flex items-center gap-3">
-                            <CreditCard className="h-6 w-6 text-green-600" />
-                            <div>
-                              <p className="font-semibold text-green-900">Credit/Debit Card</p>
-                              <p className="text-sm text-green-700">Pay securely with your card</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="cardNumber" className="text-sm font-medium">Card Number</Label>
-                            <Input 
-                              id="cardNumber" 
-                              placeholder="1234 5678 9012 3456" 
-                              required 
-                              className="h-11"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="expiry" className="text-sm font-medium">Expiry Date</Label>
-                              <Input 
-                                id="expiry" 
-                                placeholder="MM/YY" 
-                                required 
-                                className="h-11"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="cvv" className="text-sm font-medium">CVV</Label>
-                              <Input 
-                                id="cvv" 
-                                placeholder="123" 
-                                required 
-                                className="h-11"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </TabsContent>
 
                       <TabsContent value="cash" className="space-y-4">
                         <div className="p-4 border rounded-lg bg-orange-50/50 border-orange-200">

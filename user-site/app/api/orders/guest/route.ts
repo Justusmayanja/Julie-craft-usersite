@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       product_name: item.product_name || item.name,
       product_sku: item.product_sku,
       quantity: item.quantity,
-      unit_price: item.unit_price || item.price,
+      price: item.unit_price || item.price, // Database column is 'price', not 'unit_price'
       total_price: item.total_price || (item.price * item.quantity),
       product_image: item.product_image || item.image
     }))

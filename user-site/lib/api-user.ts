@@ -121,8 +121,19 @@ export async function uploadProfileImage(file: File): Promise<{ success: boolean
   // Get JWT token from localStorage for authentication
   const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
   
+  console.log('Upload Profile Image - Token check:', {
+    hasWindow: typeof window !== 'undefined',
+    token: token ? `${token.substring(0, 20)}...` : null,
+    localStorageKeys: typeof window !== 'undefined' ? Object.keys(localStorage) : []
+  })
+  
   if (!token) {
-    throw new Error('Authentication token not found')
+    console.error('No authentication token found in localStorage')
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') {
+      throw new Error('Cannot upload image in server environment')
+    }
+    throw new Error('Please log in to upload a profile image')
   }
 
   const formData = new FormData()
@@ -153,7 +164,7 @@ export async function removeProfileImage(): Promise<{ success: boolean; message:
   const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
   
   if (!token) {
-    throw new Error('Authentication token not found')
+    throw new Error('Please log in to remove a profile image')
   }
 
   const response = await fetch(url, {

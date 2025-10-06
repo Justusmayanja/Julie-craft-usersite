@@ -148,6 +148,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               type: "AUTH_SUCCESS",
               payload: { user: data.user, token }
             })
+
+            // Dispatch custom event to notify cart context to reload
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('authStateChanged', { 
+                detail: { user: data.user, isLogin: true } 
+              }))
+            }
           } else {
             console.log('Token verification failed, removing token')
             // Token is invalid, remove it
@@ -201,6 +208,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           type: "AUTH_SUCCESS",
           payload: { user: data.user, token: data.session?.access_token || data.token }
         })
+
+        // Dispatch custom event to notify cart context to reload
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('authStateChanged', { 
+            detail: { user: data.user, isLogin: true } 
+          }))
+        }
       } else {
         console.log('Login failed:', data.error)
         dispatch({ type: "AUTH_FAILURE", payload: data.error || 'Login failed' })
@@ -244,6 +258,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           type: "AUTH_SUCCESS",
           payload: { user: data.user, token: data.session?.access_token || data.token }
         })
+
+        // Dispatch custom event to notify cart context to reload
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('authStateChanged', { 
+            detail: { user: data.user, isLogin: true } 
+          }))
+        }
       } else {
         console.log('Registration failed:', data.error)
         dispatch({ type: "AUTH_FAILURE", payload: data.error || 'Registration failed' })
@@ -258,6 +279,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('julie-crafts-token')
     sessionManager.clearSession()
     dispatch({ type: "AUTH_LOGOUT" })
+
+    // Dispatch custom event to notify cart context to reload
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('authStateChanged', { 
+        detail: { user: null, isLogin: false } 
+      }))
+    }
   }
 
   const clearError = () => {

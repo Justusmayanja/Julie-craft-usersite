@@ -112,6 +112,19 @@ export async function POST(request: NextRequest) {
     // Generate order number
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
 
+    // Get user ID from request headers if available
+    const authHeader = request.headers.get('authorization')
+    let userId = null
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      try {
+        const { data: { user } } = await supabaseAdmin.auth.getUser(token)
+        userId = user?.id
+      } catch (error) {
+        console.log('Could not verify user token:', error)
+      }
+    }
+
     // Create order
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from('orders')
@@ -122,6 +135,7 @@ export async function POST(request: NextRequest) {
         customer_phone: body.customer_phone,
         status: 'pending',
         payment_status: 'pending',
+        payment_method: body.payment_method || 'cash',
         subtotal: body.subtotal,
         tax_amount: body.tax_amount || 0,
         shipping_amount: body.shipping_amount || 0,
@@ -131,7 +145,9 @@ export async function POST(request: NextRequest) {
         shipping_address: body.shipping_address,
         billing_address: body.billing_address || body.shipping_address,
         notes: body.notes,
-        order_date: new Date().toISOString()
+        order_date: new Date().toISOString(),
+        user_id: userId, // Associate order with user if authenticated
+        is_guest_order: !userId // Mark as guest order if no user
       })
       .select()
       .single()
@@ -141,16 +157,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
 
-    // Create order items
-    const orderItems = body.items.map(item => ({
-      order_id: orderData.id,
-      product_id: item.product_id,
-      product_name: item.product_name,
-      product_sku: item.product_sku,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_price: item.total_price
-    }))
+    // Create order items with validation
+    console.log('Creating order items from:', JSON.stringify(body.items, null, 2))
+    
+    const orderItems = body.items.map(item => {
+      // Validate and ensure all required fields are present
+      // Check both 'price' and 'unit_price' fields for compatibility
+      const unitPrice = typeof item.price === 'number' ? item.price : 
+                       typeof item.unit_price === 'number' ? item.unit_price : 
+                       parseFloat(item.price || item.unit_price) || 0
+      const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
+      const totalPrice = typeof item.total_price === 'number' ? item.total_price : (unitPrice * quantity)
+      
+      if (unitPrice <= 0) {
+        throw new Error(`Invalid price for product ${item.product_name || item.product_id}: ${unitPrice}`)
+      }
+      
+      if (quantity <= 0) {
+        throw new Error(`Invalid quantity for product ${item.product_name || item.product_id}: ${quantity}`)
+      }
+      
+      return {
+        order_id: orderData.id,
+        product_id: item.product_id,
+        product_name: item.product_name || 'Unknown Product',
+        product_sku: item.product_sku || `SKU-${item.product_id}`,
+        quantity: quantity,
+        price: unitPrice, // Database column is 'price', not 'unit_price'
+        total_price: totalPrice,
+        product_image: item.product_image || null
+      }
+    })
+    
+    console.log('Processed order items:', JSON.stringify(orderItems, null, 2))
 
     const { error: itemsError } = await supabaseAdmin
       .from('order_items')

@@ -20,16 +20,37 @@ export async function POST(request: NextRequest) {
     }
 
     // Save cart to database
-    const { error } = await supabaseAdmin
-      .from('user_carts')
-      .upsert({
-        user_id: user_id || null,
-        session_id: session_id || null,
-        cart_data: cart_data,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: user_id ? 'user_id' : 'session_id'
-      })
+    let error;
+    
+    if (user_id) {
+      // For registered users, upsert by user_id
+      const { error: userError } = await supabaseAdmin
+        .from('user_carts')
+        .upsert({
+          user_id: user_id,
+          session_id: null, // Clear session_id for registered users
+          cart_data: cart_data,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        })
+      error = userError;
+    } else if (session_id) {
+      // For guest users, upsert by session_id
+      const { error: sessionError } = await supabaseAdmin
+        .from('user_carts')
+        .upsert({
+          user_id: null,
+          session_id: session_id,
+          cart_data: cart_data,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'session_id'
+        })
+      error = sessionError;
+    } else {
+      return NextResponse.json({ error: 'Either user_id or session_id required' }, { status: 400 })
+    }
 
     if (error) {
       console.error('Cart save error:', error)

@@ -208,6 +208,13 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     if (!user?.id) return
 
+    console.log('Save Profile - User check:', {
+      userId: user?.id,
+      userEmail: user?.email,
+      isAuthenticated,
+      token: typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') ? 'exists' : 'missing' : 'no-window'
+    })
+
     // Clear any previous messages
     setSaveMessage(null)
 
@@ -229,16 +236,30 @@ export default function ProfilePage() {
 
     setIsSaving(true)
     try {
-      // Upload image first if one was selected
-      if (selectedFile) {
-        await handleImageUpload(selectedFile)
-        setSelectedFile(null) // Clear selected file after successful upload
-      } else if (!profileImage && user?.avatar_url) {
-        // If no image is selected and no current image, remove the avatar
-        await removeProfileImage()
-        // Refresh user data after removal
-        await refreshUser()
-      }
+        // Upload image first if one was selected
+        if (selectedFile) {
+          try {
+            await handleImageUpload(selectedFile)
+            setSelectedFile(null) // Clear selected file after successful upload
+          } catch (error) {
+            console.error('Image upload failed:', error)
+            const errorMessage = error instanceof Error ? error.message : 'Failed to upload image'
+            setSaveMessage({ type: 'error', text: errorMessage })
+            return
+          }
+        } else if (!profileImage && user?.avatar_url) {
+          // If no image is selected and no current image, remove the avatar
+          try {
+            await removeProfileImage()
+            // Refresh user data after removal
+            await refreshUser()
+          } catch (error) {
+            console.error('Image removal failed:', error)
+            const errorMessage = error instanceof Error ? error.message : 'Failed to remove image'
+            setSaveMessage({ type: 'error', text: errorMessage })
+            return
+          }
+        }
 
       // Call the API to update user profile
       const profileData = {

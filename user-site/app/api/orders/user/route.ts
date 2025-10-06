@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
       items: order.order_items?.map((item: any) => ({
         product_name: item.product_name,
         quantity: item.quantity,
-        unit_price: item.unit_price,
+        price: item.price, // Database column is 'price', not 'unit_price'
         image: item.product_image
       })) || []
     }))
