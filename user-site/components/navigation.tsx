@@ -28,15 +28,26 @@ export function Navigation() {
   const { state } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
 
-  // Load profile image from localStorage
+  // Load profile image from user data or localStorage
   useEffect(() => {
-    if (user?.id && isClient) {
-      const savedImage = localStorage.getItem(`profile_image_${user.id}`)
-      if (savedImage) {
-        setProfileImage(savedImage)
+    if (user && isClient) {
+      console.log('Navigation: User object:', user)
+      console.log('Navigation: User avatar_url:', user.avatar_url)
+      
+      // First check if user has an avatar_url from the database
+      if (user.avatar_url) {
+        console.log('Navigation: Setting profile image from database:', user.avatar_url)
+        setProfileImage(user.avatar_url)
+      } else if (user.id) {
+        // Fallback to localStorage for backward compatibility
+        const savedImage = localStorage.getItem(`profile_image_${user.id}`)
+        if (savedImage) {
+          console.log('Navigation: Setting profile image from localStorage:', savedImage)
+          setProfileImage(savedImage)
+        }
       }
     }
-  }, [user?.id, isClient])
+  }, [user, isClient])
 
   const navItems = [
     { name: "Home", href: "/" },

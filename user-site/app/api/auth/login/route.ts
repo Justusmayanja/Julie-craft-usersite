@@ -44,6 +44,30 @@ export async function POST(request: NextRequest) {
       }, { status: 401 })
     }
 
+    // Get profile data if available
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    // Combine user and profile data
+    const userData = {
+      ...user,
+      ...(profile && {
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        avatar_url: profile.avatar_url,
+        preferences: profile.preferences,
+        is_verified: profile.is_verified,
+        bio: profile.bio,
+        location: profile.location,
+        website: profile.website,
+        timezone: profile.timezone,
+        language: profile.language
+      })
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       { 
@@ -62,7 +86,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
 
     // Return user data (without password)
-    const { password_hash, ...userWithoutPassword } = user
+    const { password_hash, ...userWithoutPassword } = userData
 
     return NextResponse.json({
       message: 'Login successful',

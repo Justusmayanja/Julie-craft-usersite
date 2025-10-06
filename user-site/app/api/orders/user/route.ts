@@ -15,13 +15,32 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Verify JWT token if provided
+    const authHeader = request.headers.get('authorization')
+    let authenticatedUserId = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+        if (!error && user) {
+          authenticatedUserId = user.id
+        }
+      } catch (error) {
+        console.error('Token verification failed:', error)
+      }
+    }
+
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('user_id')
     const sessionId = searchParams.get('session_id')
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    if (!userId && !sessionId) {
+    // Use authenticated user ID if available, otherwise fall back to URL parameter
+    const targetUserId = authenticatedUserId || userId
+
+    if (!targetUserId && !sessionId) {
       return NextResponse.json({ error: 'User ID or Session ID required' }, { status: 400 })
     }
 
@@ -47,26 +66,42 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' })
 
     // Filter by user email or session
-    if (userId) {
+    if (targetUserId) {
       // For registered users, we need to get the user's email first
-      // Since userId might be an email or UUID, we'll try both approaches
+      // Since targetUserId might be an email or UUID, we'll try both approaches
       
-      // First, check if userId looks like an email
-      if (userId.includes('@')) {
-        query = query.eq('customer_email', userId)
+      // First, check if targetUserId looks like an email
+      if (targetUserId.includes('@')) {
+        query = query.eq('customer_email', targetUserId)
       } else {
-        // If it's a UUID, we need to get the user's email from the users table
-        const { data: userData, error: userError } = await supabaseAdmin
-          .from('users')
-          .select('email')
-          .eq('id', userId)
-          .single()
+        // If it's a UUID, we need to get the user's email from auth.users or profiles table
+        let userEmail = null
         
-        if (userError || !userData) {
-          return NextResponse.json({ error: 'User not found' }, { status: 404 })
+        // Try to get email from auth.users first
+        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(targetUserId)
+        
+        if (!authError && authUser?.user?.email) {
+          userEmail = authUser.user.email
+        } else {
+          // Fallback to profiles table
+          const { data: profileData, error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .select('email')
+            .eq('id', targetUserId)
+            .single()
+          
+          if (profileError || !profileData) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 })
+          }
+          
+          userEmail = profileData.email
         }
         
-        query = query.eq('customer_email', userData.email)
+        if (!userEmail) {
+          return NextResponse.json({ error: 'User email not found' }, { status: 404 })
+        }
+        
+        query = query.eq('customer_email', userEmail)
       }
     } else if (sessionId) {
       // For guest sessions, we might need to store session_id with orders

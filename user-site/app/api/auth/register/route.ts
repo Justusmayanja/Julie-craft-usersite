@@ -78,6 +78,36 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
+    // Create corresponding profile record
+    const [firstName, ...lastNameParts] = name.split(' ')
+    const lastName = lastNameParts.join(' ') || ''
+    
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .insert({
+        id: newUser.id, // Use the same ID as the user
+        email: newUser.email,
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone || null,
+        is_admin: false,
+        is_verified: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        preferences: {
+          sms: false,
+          push: true,
+          email: true,
+          marketing: true
+        }
+      })
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError)
+      // Don't fail registration if profile creation fails, just log it
+      console.warn('Profile creation failed, but user was created successfully')
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       { 

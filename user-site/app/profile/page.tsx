@@ -13,21 +13,23 @@ import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Loader2, User, ShoppingBag, Settings, LogOut, ArrowLeft, Camera, Upload } from 'lucide-react'
 import Link from 'next/link'
-import { getUserOrders, updateUserProfile } from '@/lib/api-user'
+import { getUserOrders, updateUserProfile, uploadProfileImage, removeProfileImage } from '@/lib/api-user'
 import type { UserOrder } from '@/lib/types/order'
 
 export default function ProfilePage() {
-  const { user, logout, isAuthenticated, isLoading } = useAuth()
+  const { user, logout, isAuthenticated, isLoading, refreshUser } = useAuth()
   const [orders, setOrders] = useState<UserOrder[]>([])
   const [ordersLoading, setOrdersLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('profile')
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [editForm, setEditForm] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     phone: ''
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -68,7 +70,7 @@ export default function ProfilePage() {
     router.push('/')
   }
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -84,52 +86,91 @@ export default function ProfilePage() {
       return
     }
 
+    // Store the selected file for later upload
+    setSelectedFile(file)
+    
+    // Create a preview URL for immediate display
+    const previewUrl = URL.createObjectURL(file)
+    setProfileImage(previewUrl)
+    
+    console.log('Image selected, will upload when saving profile:', file.name)
+  }
+
+  const handleImageUpload = async (file: File) => {
+    if (!file) return
+
     setIsUploading(true)
 
     try {
-      // Create a preview URL
-      const imageUrl = URL.createObjectURL(file)
-      setProfileImage(imageUrl)
-
-      // In a real app, you would upload to a cloud service like Cloudinary or AWS S3
-      // For now, we'll just store the preview URL in localStorage
-      localStorage.setItem(`profile_image_${user?.id}`, imageUrl)
-
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // TODO: Implement actual file upload to server/cloud storage
-      console.log('Profile image uploaded:', file.name)
+      // Upload image to server
+      const response = await uploadProfileImage(file)
+      
+      if (response.success && response.avatar_url) {
+        // Set the uploaded image URL
+        setProfileImage(response.avatar_url)
+        
+        // Remove old localStorage entry
+        if (user?.id) {
+          localStorage.removeItem(`profile_image_${user.id}`)
+        }
+        
+        console.log('Profile image uploaded successfully:', response.avatar_url)
+        
+        // Refresh user data to get updated avatar_url
+        await refreshUser()
+        
+        return true
+      } else {
+        throw new Error(response.error || 'Upload failed')
+      }
     } catch (error) {
       console.error('Error uploading image:', error)
-      alert('Failed to upload image. Please try again.')
+      throw error
     } finally {
       setIsUploading(false)
     }
   }
 
   const handleRemoveImage = () => {
-    setProfileImage(null)
-    if (user?.id) {
-      localStorage.removeItem(`profile_image_${user.id}`)
-    }
+    // Just clear the selected file and preview, actual removal happens on save
+    setSelectedFile(null)
+    setProfileImage(user?.avatar_url || null)
+    console.log('Image removal scheduled for save')
   }
 
-  // Load profile image from localStorage on component mount
+  // Load profile image from user data or localStorage on component mount
   useEffect(() => {
-    if (user?.id) {
-      const savedImage = localStorage.getItem(`profile_image_${user.id}`)
-      if (savedImage) {
-        setProfileImage(savedImage)
+    if (user) {
+      console.log('User object in profile page:', user)
+      console.log('User avatar_url:', user.avatar_url)
+      
+      // First check if user has an avatar_url from the database
+      if (user.avatar_url) {
+        console.log('Setting profile image from database:', user.avatar_url)
+        setProfileImage(user.avatar_url)
+      } else if (user.id) {
+        // Fallback to localStorage for backward compatibility
+        const savedImage = localStorage.getItem(`profile_image_${user.id}`)
+        if (savedImage) {
+          console.log('Setting profile image from localStorage:', savedImage)
+          setProfileImage(savedImage)
+        }
       }
     }
-  }, [user?.id])
+  }, [user])
 
   // Initialize edit form with user data
   useEffect(() => {
     if (user) {
+      // Split full name into first and last name
+      const fullName = user.full_name || user.name || ''
+      const nameParts = fullName.split(' ')
+      const firstName = nameParts[0] || ''
+      const lastName = nameParts.slice(1).join(' ') || ''
+      
       setEditForm({
-        name: user.name || '',
+        firstName,
+        lastName,
         phone: user.phone || ''
       })
     }
@@ -138,10 +179,20 @@ export default function ProfilePage() {
   const handleEditToggle = () => {
     if (isEditing) {
       // Reset form to original values when canceling
+      const fullName = user?.full_name || user?.name || ''
+      const nameParts = fullName.split(' ')
+      const firstName = nameParts[0] || ''
+      const lastName = nameParts.slice(1).join(' ') || ''
+      
       setEditForm({
-        name: user?.name || '',
+        firstName,
+        lastName,
         phone: user?.phone || ''
       })
+      
+      // Reset image to original state
+      setSelectedFile(null)
+      setProfileImage(user?.avatar_url || null)
     }
     setIsEditing(!isEditing)
   }
@@ -161,25 +212,49 @@ export default function ProfilePage() {
     setSaveMessage(null)
 
     // Basic validation
-    if (!editForm.name.trim()) {
-      setSaveMessage({ type: 'error', text: 'Name is required' })
+    if (!editForm.firstName.trim()) {
+      setSaveMessage({ type: 'error', text: 'First name is required' })
       return
     }
 
-    if (editForm.name.trim().length < 2) {
-      setSaveMessage({ type: 'error', text: 'Name must be at least 2 characters long' })
+    if (!editForm.firstName || editForm.firstName.trim().length < 2) {
+      setSaveMessage({ type: 'error', text: 'First name must be at least 2 characters long' })
+      return
+    }
+    
+    if (!editForm.lastName || editForm.lastName.trim().length < 2) {
+      setSaveMessage({ type: 'error', text: 'Last name must be at least 2 characters long' })
       return
     }
 
     setIsSaving(true)
     try {
+      // Upload image first if one was selected
+      if (selectedFile) {
+        await handleImageUpload(selectedFile)
+        setSelectedFile(null) // Clear selected file after successful upload
+      } else if (!profileImage && user?.avatar_url) {
+        // If no image is selected and no current image, remove the avatar
+        await removeProfileImage()
+        // Refresh user data after removal
+        await refreshUser()
+      }
+
       // Call the API to update user profile
-      const response = await updateUserProfile(user.id, {
-        name: editForm.name.trim(),
+      const profileData = {
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim(),
         phone: editForm.phone.trim() || undefined
-      })
+      }
+      
+      console.log('Sending profile update:', profileData)
+      const response = await updateUserProfile(user.id, profileData)
       
       console.log('Profile updated:', response)
+      
+      // Refresh user data from server to get updated profile info
+      await refreshUser()
+      
       setIsEditing(false)
       setSaveMessage({ type: 'success', text: 'Profile updated successfully!' })
       
@@ -301,7 +376,7 @@ export default function ProfilePage() {
                           ref={fileInputRef}
                           type="file"
                           accept="image/*"
-                          onChange={handleImageUpload}
+                          onChange={handleImageSelect}
                           className="hidden"
                         />
                       </div>
@@ -315,11 +390,22 @@ export default function ProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
+                      <Label htmlFor="firstName" className="text-sm font-medium">First Name</Label>
                       <Input 
-                        id="name" 
-                        name="name"
-                        value={isEditing ? editForm.name : (user.name || '')} 
+                        id="firstName" 
+                        name="firstName"
+                        value={isEditing ? editForm.firstName : (user.first_name || '')} 
+                        onChange={handleInputChange}
+                        disabled={!isEditing} 
+                        className={`h-10 text-sm ${isEditing ? "bg-white border-gray-300" : "bg-gray-50"}`}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-sm font-medium">Last Name</Label>
+                      <Input 
+                        id="lastName" 
+                        name="lastName"
+                        value={isEditing ? editForm.lastName : (user.last_name || '')} 
                         onChange={handleInputChange}
                         disabled={!isEditing} 
                         className={`h-10 text-sm ${isEditing ? "bg-white border-gray-300" : "bg-gray-50"}`}

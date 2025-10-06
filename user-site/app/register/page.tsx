@@ -13,7 +13,8 @@ import { Loader2, Eye, EyeOff, ArrowLeft, CheckCircle, User, Mail, Phone, Lock, 
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     password: '',
@@ -23,7 +24,8 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<{
-    name?: string
+    firstName?: string
+    lastName?: string
     email?: string
     phone?: string
     password?: string
@@ -49,10 +51,16 @@ export default function RegisterPage() {
   const validateForm = () => {
     const errors: typeof formErrors = {}
     
-    if (!formData.name.trim()) {
-      errors.name = 'Full name is required'
-    } else if (formData.name.trim().length < 2) {
-      errors.name = 'Name must be at least 2 characters long'
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'First name is required'
+    } else if (formData.firstName.trim().length < 2) {
+      errors.firstName = 'First name must be at least 2 characters long'
+    }
+    
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'Last name is required'
+    } else if (formData.lastName.trim().length < 2) {
+      errors.lastName = 'Last name must be at least 2 characters long'
     }
     
     if (!formData.email.trim()) {
@@ -95,10 +103,11 @@ export default function RegisterPage() {
     setFormErrors({})
 
     try {
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim()
       await register(
         formData.email,
         formData.password,
-        formData.name,
+        fullName,
         formData.phone || undefined
       )
       router.push('/')
@@ -149,31 +158,61 @@ export default function RegisterPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Full Name Field */}
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-slate-700">
-                  Full Name <span className="text-red-500">*</span>
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className={`h-12 pl-10 pr-4 border-slate-200 focus:border-primary focus:ring-primary ${
-                      formErrors.name ? 'border-red-300 focus:border-red-500' : ''
-                    }`}
-                  />
+              {/* Name Fields */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* First Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="firstName" className="text-sm font-medium text-slate-700">
+                    First Name <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      placeholder="First name"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      className={`h-12 pl-10 pr-4 border-slate-200 focus:border-primary focus:ring-primary ${
+                        formErrors.firstName ? 'border-red-300 focus:border-red-500' : ''
+                      }`}
+                    />
+                  </div>
+                  {formErrors.firstName && (
+                    <p className="text-sm text-red-600 flex items-center gap-1">
+                      <span className="text-red-500">•</span>
+                      {formErrors.firstName}
+                    </p>
+                  )}
                 </div>
-                {formErrors.name && (
-                  <p className="text-sm text-red-600 flex items-center gap-1">
-                    <span className="text-red-500">•</span>
-                    {formErrors.name}
-                  </p>
-                )}
+
+                {/* Last Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="text-sm font-medium text-slate-700">
+                    Last Name <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      placeholder="Last name"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className={`h-12 pl-10 pr-4 border-slate-200 focus:border-primary focus:ring-primary ${
+                        formErrors.lastName ? 'border-red-300 focus:border-red-500' : ''
+                      }`}
+                    />
+                  </div>
+                  {formErrors.lastName && (
+                    <p className="text-sm text-red-600 flex items-center gap-1">
+                      <span className="text-red-500">•</span>
+                      {formErrors.lastName}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Email Field */}

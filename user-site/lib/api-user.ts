@@ -62,11 +62,20 @@ export async function getUserOrders(
 
   const url = `${getApiBaseUrl()}/orders/user${params.toString() ? `?${params.toString()}` : ''}`
 
+  // Get JWT token from localStorage for authentication
+  const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch(url, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
   })
 
   if (!response.ok) {
@@ -77,14 +86,23 @@ export async function getUserOrders(
 }
 
 // Update user profile
-export async function updateUserProfile(userId: string, profileData: { name: string; phone?: string }): Promise<any> {
-  const url = `${getApiBaseUrl()}/users/${userId}`
+export async function updateUserProfile(userId: string, profileData: { firstName: string; lastName: string; phone?: string; bio?: string; location?: string; website?: string; preferences?: any }): Promise<any> {
+  const url = `${getApiBaseUrl()}/users/profile`
+  
+  // Get JWT token from localStorage for authentication
+  const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
   
   const response = await fetch(url, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(profileData)
   })
 
@@ -94,6 +112,65 @@ export async function updateUserProfile(userId: string, profileData: { name: str
   }
 
   return response.json()
+}
+
+// Upload profile image
+export async function uploadProfileImage(file: File): Promise<{ success: boolean; avatar_url?: string; message: string; error?: string }> {
+  const url = `${getApiBaseUrl()}/media/upload`
+  
+  // Get JWT token from localStorage for authentication
+  const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
+  
+  if (!token) {
+    throw new Error('Authentication token not found')
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.error || `Failed to upload image: ${response.statusText}`)
+  }
+
+  return data
+}
+
+// Remove profile image
+export async function removeProfileImage(): Promise<{ success: boolean; message: string; error?: string }> {
+  const url = `${getApiBaseUrl()}/media/upload`
+  
+  // Get JWT token from localStorage for authentication
+  const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
+  
+  if (!token) {
+    throw new Error('Authentication token not found')
+  }
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.error || `Failed to remove image: ${response.statusText}`)
+  }
+
+  return data
 }
 
 // Save cart for user/session
