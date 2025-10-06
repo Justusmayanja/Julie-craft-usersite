@@ -13,6 +13,8 @@ import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCart } from "@/contexts/cart-context"
+import { useToast, ToastContainer } from "@/components/ui/toast"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { CreditCard, Smartphone, MapPin, CheckCircle, Loader2, User, Mail, Phone, Home, MessageSquare } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type { CartOrder } from "@/lib/types/order"
@@ -24,6 +26,7 @@ interface CheckoutModalProps {
 export function CheckoutModal({ onClose }: CheckoutModalProps) {
   const { state, placeOrder } = useCart()
   const router = useRouter()
+  const { showSuccess, showError, toasts, removeToast } = useToast()
   const [currentStep, setCurrentStep] = useState<"details" | "payment" | "confirmation">("details")
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const [orderError, setOrderError] = useState<string | null>(null)
@@ -84,27 +87,179 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
       // Place the order
       const orderConfirmation = await placeOrder(orderData)
       
-      // Redirect to confirmation page
-      router.push('/order-confirmation')
-      onClose()
+      // Show success message
+      showSuccess(
+        "🎉 Order Placed Successfully!",
+        "Your beautiful handcrafted items are being prepared with care. Redirecting to confirmation..."
+      )
+      
+      // Small delay to show the success message before redirecting
+      setTimeout(() => {
+        router.push('/order-confirmation')
+        onClose()
+      }, 1500)
     } catch (error) {
-      setOrderError(error instanceof Error ? error.message : "Failed to place order. Please try again.")
+      let errorMessage = "Failed to place order. Please try again."
+      let errorTitle = "❌ Order Failed"
+      
+      if (error instanceof Error) {
+        errorMessage = error.message
+        
+        // Handle specific stock-related errors
+        if (error.message.includes("Insufficient stock")) {
+          errorTitle = "📦 Stock Issue"
+          errorMessage = error.message
+        } else if (error.message.includes("out of stock")) {
+          errorTitle = "🚫 Out of Stock"
+          errorMessage = error.message
+        } else if (error.message.includes("Product not found")) {
+          errorTitle = "🔍 Product Not Available"
+          errorMessage = error.message
+        }
+      }
+      
+      setOrderError(errorMessage)
+      showError(errorTitle, errorMessage)
     } finally {
       setIsPlacingOrder(false)
     }
   }
 
   const ugandanDistricts = [
-    "Kampala",
-    "Wakiso",
-    "Mukono",
-    "Entebbe",
-    "Jinja",
-    "Mbale",
+    "Abim",
+    "Adjumani", 
+    "Agago",
+    "Alebtong",
+    "Amolatar",
+    "Amudat",
+    "Amuria",
+    "Amuru",
+    "Apac",
+    "Arua",
+    "Budaka",
+    "Bududa",
+    "Bugiri",
+    "Bugweri",
+    "Buhweju",
+    "Buikwe",
+    "Bukedea",
+    "Bukomansimbi",
+    "Bukwo",
+    "Bulambuli",
+    "Buliisa",
+    "Bundibugyo",
+    "Bunyangabu",
+    "Bushenyi",
+    "Busia",
+    "Butaleja",
+    "Butambala",
+    "Butebo",
+    "Buvuma",
+    "Buyende",
+    "Dokolo",
+    "Gomba",
     "Gulu",
-    "Mbarara",
-    "Fort Portal",
+    "Hoima",
+    "Ibanda",
+    "Iganga",
+    "Isingiro",
+    "Jinja",
+    "Kaabong",
+    "Kabale",
+    "Kabarole",
+    "Kaberamaido",
+    "Kagadi",
+    "Kakumiro",
+    "Kalaki",
+    "Kalangala",
+    "Kaliro",
+    "Kalungu",
+    "Kampala",
+    "Kamuli",
+    "Kamwenge",
+    "Kanungu",
+    "Kapchorwa",
+    "Kapelebyong",
+    "Karenga",
+    "Kasese",
+    "Katakwi",
+    "Kayunga",
+    "Kazo",
+    "Kibaale",
+    "Kiboga",
+    "Kibuku",
+    "Kikuube",
+    "Kiruhura",
+    "Kiryandongo",
+    "Kisoro",
+    "Kitagwenda",
+    "Kitgum",
+    "Koboko",
+    "Kole",
+    "Kotido",
+    "Kumi",
+    "Kwania",
+    "Kween",
+    "Kyankwanzi",
+    "Kyegegwa",
+    "Kyenjojo",
+    "Kyotera",
+    "Lamwo",
+    "Lira",
+    "Luuka",
+    "Luweero",
+    "Lwengo",
+    "Lyantonde",
+    "Madi-Okollo",
+    "Manafwa",
+    "Maracha",
     "Masaka",
+    "Masindi",
+    "Mayuge",
+    "Mbale",
+    "Mbarara",
+    "Mitooma",
+    "Mityana",
+    "Moroto",
+    "Moyo",
+    "Mpigi",
+    "Mubende",
+    "Mukono",
+    "Nabilatuk",
+    "Nakapiripirit",
+    "Nakaseke",
+    "Nakasongola",
+    "Namayingo",
+    "Namisindwa",
+    "Namutumba",
+    "Napak",
+    "Nebbi",
+    "Ngora",
+    "Ntoroko",
+    "Ntungamo",
+    "Nwoya",
+    "Obongi",
+    "Omoro",
+    "Otuke",
+    "Oyam",
+    "Pader",
+    "Pakwach",
+    "Pallisa",
+    "Rakai",
+    "Rubanda",
+    "Rubirizi",
+    "Rukiga",
+    "Rukungiri",
+    "Rwampara",
+    "Sembabule",
+    "Serere",
+    "Sheema",
+    "Sironko",
+    "Soroti",
+    "Tororo",
+    "Wakiso",
+    "Yumbe",
+    "Zombo"
   ]
 
   return (
@@ -269,24 +424,14 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                               placeholder="Enter city"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="district" className="text-sm font-semibold">District *</Label>
-                            <Select
-                              value={formData.district}
-                              onValueChange={(value) => handleInputChange("district", value)}
-                            >
-                              <SelectTrigger className="h-12 text-base">
-                                <SelectValue placeholder="Select your district" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {ugandanDistricts.map((district) => (
-                                  <SelectItem key={district} value={district}>
-                                    {district}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          <SearchableSelect
+                            label="District *"
+                            options={ugandanDistricts}
+                            value={formData.district}
+                            onValueChange={(value) => handleInputChange("district", value)}
+                            placeholder="Select your district"
+                            className="space-y-2"
+                          />
                         </div>
 
                         <div className="space-y-2">
@@ -392,9 +537,34 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
 
                   {orderError && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <p className="text-red-800 font-medium">{orderError}</p>
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-white text-xs">!</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-red-800 font-medium mb-2">Oops! There's an issue with your order</p>
+                          <p className="text-red-700 text-sm leading-relaxed">{orderError}</p>
+                          {orderError.includes("Insufficient stock") && (
+                            <div className="mt-3 p-3 bg-red-100 rounded-lg">
+                              <p className="text-red-800 text-sm font-medium mb-1">💡 What you can do:</p>
+                              <ul className="text-red-700 text-sm space-y-1">
+                                <li>• Reduce the quantity in your cart</li>
+                                <li>• Remove the item and try again later</li>
+                                <li>• Contact us for availability updates</li>
+                              </ul>
+                            </div>
+                          )}
+                          {orderError.includes("out of stock") && (
+                            <div className="mt-3 p-3 bg-red-100 rounded-lg">
+                              <p className="text-red-800 text-sm font-medium mb-1">💡 What you can do:</p>
+                              <ul className="text-red-700 text-sm space-y-1">
+                                <li>• Remove this item from your cart</li>
+                                <li>• Check back later for restocking</li>
+                                <li>• Browse similar products instead</li>
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -523,6 +693,9 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
           </div>
         </div>
       </DialogContent>
+      
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </Dialog>
   )
 }

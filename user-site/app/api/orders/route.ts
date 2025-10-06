@@ -60,10 +60,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply sorting
-    query = query.order(filters.sort_by, { ascending: filters.sort_order === 'asc' })
+    query = query.order(filters.sort_by || 'order_date', { ascending: filters.sort_order === 'asc' })
 
     // Apply pagination
-    query = query.range(filters.offset, filters.offset + filters.limit - 1)
+    query = query.range(filters.offset || 0, (filters.offset || 0) + (filters.limit || 50) - 1)
 
     const { data, error, count } = await query
 
@@ -157,6 +157,100 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
 
+    // Validate stock availability before creating order items
+    console.log('Validating stock availability for order items...')
+    
+    try {
+      for (const item of body.items) {
+        const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
+        
+        console.log(`Looking for product with ID: ${item.product_id} (type: ${typeof item.product_id})`)
+        
+        // Check current stock for this product
+        const { data: product, error: productError } = await supabaseAdmin
+          .from('products')
+          .select('id, name, stock_quantity, status')
+          .eq('id', item.product_id)
+          .single()
+        
+        if (productError || !product) {
+          console.log(`Product not found with ID ${item.product_id}:`, productError)
+          console.log(`Attempting to find by name: ${item.product_name}`)
+          
+          // Try to find by name if ID lookup fails (for fallback products)
+          const { data: productByName, error: nameError } = await supabaseAdmin
+            .from('products')
+            .select('id, name, stock_quantity, status')
+            .ilike('name', `%${item.product_name}%`)
+            .limit(1)
+            .single()
+          
+          if (productByName && !nameError) {
+            console.log(`Found product by name: ${productByName.name} (ID: ${productByName.id})`)
+            // Update the item with the correct database ID
+            item.product_id = productByName.id
+            // Continue with the found product
+            const foundProduct = productByName
+            const isInStock = foundProduct.stock_quantity > 0 && foundProduct.status === 'active'
+            if (!isInStock) {
+              console.log(`Product out of stock: ${foundProduct.name} (stock: ${foundProduct.stock_quantity}, status: ${foundProduct.status})`)
+              return NextResponse.json({ 
+                error: `We're sorry, "${foundProduct.name}" is currently out of stock. Please remove it from your cart or try again later.`,
+                code: 'OUT_OF_STOCK'
+              }, { status: 400 })
+            }
+            
+            if (foundProduct.stock_quantity < quantity) {
+              console.log(`Insufficient stock for ${foundProduct.name}: ${foundProduct.stock_quantity} available, ${quantity} requested`)
+              return NextResponse.json({ 
+                error: `We only have ${foundProduct.stock_quantity} "${foundProduct.name}" available, but you're trying to order ${quantity}. Please adjust the quantity and try again.`,
+                code: 'INSUFFICIENT_STOCK',
+                available_quantity: foundProduct.stock_quantity,
+                requested_quantity: quantity,
+                product_name: foundProduct.name
+              }, { status: 400 })
+            }
+            
+            console.log(`Stock check passed for ${foundProduct.name}: ${foundProduct.stock_quantity} available, ${quantity} requested`)
+            continue // Skip to next item
+          }
+          
+          return NextResponse.json({ 
+            error: `Sorry, we couldn't find the product "${item.product_name || 'Unknown Product'}". It may have been removed or is temporarily unavailable.`,
+            code: 'PRODUCT_NOT_FOUND'
+          }, { status: 400 })
+        }
+        
+        const isInStock = product.stock_quantity > 0 && product.status === 'active'
+        if (!isInStock) {
+          console.log(`Product out of stock: ${product.name} (stock: ${product.stock_quantity}, status: ${product.status})`)
+          return NextResponse.json({ 
+            error: `We're sorry, "${product.name}" is currently out of stock. Please remove it from your cart or try again later.`,
+            code: 'OUT_OF_STOCK'
+          }, { status: 400 })
+        }
+        
+        if (product.stock_quantity < quantity) {
+          console.log(`Insufficient stock for ${product.name}: ${product.stock_quantity} available, ${quantity} requested`)
+          return NextResponse.json({ 
+            error: `We only have ${product.stock_quantity} "${product.name}" available, but you're trying to order ${quantity}. Please adjust the quantity and try again.`,
+            code: 'INSUFFICIENT_STOCK',
+            available_quantity: product.stock_quantity,
+            requested_quantity: quantity,
+            product_name: product.name
+          }, { status: 400 })
+        }
+        
+        console.log(`Stock check passed for ${product.name}: ${product.stock_quantity} available, ${quantity} requested`)
+      }
+    } catch (stockValidationError) {
+      console.error('Stock validation error:', stockValidationError)
+      return NextResponse.json({ 
+        error: 'There was an issue checking product availability. Please try again or contact support if the problem persists.',
+        code: 'STOCK_VALIDATION_ERROR'
+      }, { status: 500 })
+    }
+
     // Create order items with validation
     console.log('Creating order items from:', JSON.stringify(body.items, null, 2))
     
@@ -164,8 +258,8 @@ export async function POST(request: NextRequest) {
       // Validate and ensure all required fields are present
       // Check both 'price' and 'unit_price' fields for compatibility
       const unitPrice = typeof item.price === 'number' ? item.price : 
-                       typeof item.unit_price === 'number' ? item.unit_price : 
-                       parseFloat(item.price || item.unit_price) || 0
+                       typeof (item as any).unit_price === 'number' ? (item as any).unit_price : 
+                       parseFloat(item.price || (item as any).unit_price) || 0
       const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
       const totalPrice = typeof item.total_price === 'number' ? item.total_price : (unitPrice * quantity)
       
@@ -198,8 +292,22 @@ export async function POST(request: NextRequest) {
     if (itemsError) {
       console.error('Order items creation error:', itemsError)
       // Try to clean up the order
-      await supabaseAdmin.from('orders').delete().eq('id', orderData.id)
-      return NextResponse.json({ error: 'Failed to create order items' }, { status: 500 })
+      try {
+        await supabaseAdmin.from('orders').delete().eq('id', orderData.id)
+        console.log('Order cleanup completed after items creation failure')
+      } catch (cleanupError) {
+        console.error('Failed to cleanup order after items creation failure:', cleanupError)
+      }
+      
+      // Provide more specific error message
+      let errorMessage = 'Failed to create order items'
+      if (itemsError.message.includes('check constraint')) {
+        errorMessage = 'Order failed due to insufficient stock. Please check product availability.'
+      } else if (itemsError.message.includes('foreign key')) {
+        errorMessage = 'Order failed due to invalid product references.'
+      }
+      
+      return NextResponse.json({ error: errorMessage }, { status: 500 })
     }
 
     // Return the complete order with items
@@ -212,12 +320,74 @@ export async function POST(request: NextRequest) {
       .eq('id', orderData.id)
       .single()
 
-    if (fetchError) {
-      console.error('Error fetching complete order:', fetchError)
-      return NextResponse.json({ error: 'Order created but failed to fetch details' }, { status: 500 })
-    }
+        if (fetchError) {
+          console.error('Error fetching complete order:', fetchError)
+          return NextResponse.json({ error: 'Order created but failed to fetch details' }, { status: 500 })
+        }
 
-    return NextResponse.json(completeOrder, { status: 201 })
+        // Deduct inventory for each order item
+        console.log('Deducting inventory for order items...')
+        try {
+          for (const item of body.items) {
+            const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
+            
+            // Get current stock first, then deduct
+            const { data: currentProduct, error: getError } = await supabaseAdmin
+              .from('products')
+              .select('stock_quantity')
+              .eq('id', item.product_id)
+              .single()
+            
+            if (getError || !currentProduct) {
+              console.error(`Failed to get current stock for product ${item.product_id}:`, getError)
+              continue
+            }
+            
+            const newStockQuantity = Math.max(0, currentProduct.stock_quantity - quantity)
+            
+            // Deduct stock quantity
+            const { error: stockError } = await supabaseAdmin
+              .from('products')
+              .update({ 
+                stock_quantity: newStockQuantity,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', item.product_id)
+            
+            if (stockError) {
+              console.error(`Failed to deduct inventory for product ${item.product_id}:`, stockError)
+              // Don't fail the order, just log the error
+            } else {
+              console.log(`Successfully deducted ${quantity} units from product ${item.product_id}`)
+            }
+          }
+          
+          // Mark order as having reserved inventory
+          await supabaseAdmin
+            .from('orders')
+            .update({ 
+              inventory_reserved: true,
+              reserved_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', orderData.id)
+            
+          console.log('Inventory deduction completed successfully')
+        } catch (inventoryError) {
+          console.error('Error during inventory deduction:', inventoryError)
+          // Don't fail the order, just log the error
+        }
+
+        // Add success message and metadata
+        const response = {
+          ...completeOrder,
+          message: 'Order created successfully! Your beautiful handcrafted items are being prepared with care.',
+          success: true,
+          estimated_delivery: '3-5 business days',
+          tracking_info: 'You will receive tracking information via email once your order ships.'
+        }
+
+        return NextResponse.json(response, { status: 201 })
 
   } catch (error) {
     console.error('API error:', error)

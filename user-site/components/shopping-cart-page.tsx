@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/contexts/cart-context"
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from "lucide-react"
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Maximize2 } from "lucide-react"
 import Link from "next/link"
 import { CheckoutModal } from "@/components/checkout-modal"
 
@@ -20,9 +20,9 @@ export function ShoppingCartPage() {
     return `UGX ${price.toLocaleString()}`
   }
 
-  const handleQuantityChange = (id: number, newQuantity: number) => {
-    // Validate quantity range
-    const validatedQuantity = Math.max(1, Math.min(99, newQuantity))
+  const handleQuantityChange = (id: string, newQuantity: number) => {
+    // Validate quantity range - only enforce minimum of 1, no maximum limit
+    const validatedQuantity = Math.max(1, newQuantity)
     
     if (validatedQuantity <= 0) {
       removeItem(id)
@@ -85,7 +85,7 @@ export function ShoppingCartPage() {
         <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-gray-100">
           <h2 className="text-lg lg:text-xl font-semibold text-gray-900">Cart Items</h2>
           <p className="text-xs lg:text-sm text-gray-600">Review and modify your selected items</p>
-          <p className="text-xs text-gray-500 mt-1 hidden sm:block">💡 Tip: You can adjust quantities using the +/- buttons or type directly in the input field (1-99)</p>
+          <p className="text-xs text-gray-500 mt-1 hidden sm:block">💡 Tip: You can adjust quantities using the +/- buttons or type directly in the input field (minimum 1)</p>
         </div>
               <div className="p-4 lg:p-6">
                 <div className="space-y-4 lg:space-y-6">
@@ -149,13 +149,16 @@ export function ShoppingCartPage() {
                                 <Input
                                   type="number"
                                   min="1"
-                                  max="99"
                                   value={item.quantity}
                                   onChange={(e) => {
                                     const newQuantity = parseInt(e.target.value) || 1
-                                    if (newQuantity >= 1 && newQuantity <= 99) {
+                                    if (newQuantity >= 1) {
                                       handleQuantityChange(item.id, newQuantity)
                                     }
+                                  }}
+                                  onBlur={(e) => {
+                                    const newQuantity = parseInt(e.target.value) || 1
+                                    handleQuantityChange(item.id, Math.max(1, newQuantity))
                                   }}
                                   className="w-12 lg:w-16 h-8 lg:h-10 text-center font-semibold border-gray-300 focus:border-primary focus:ring-primary text-sm lg:text-base"
                                   disabled={!(item.inStock ?? true)}
@@ -169,13 +172,16 @@ export function ShoppingCartPage() {
                                   e.stopPropagation()
                                   handleQuantityChange(item.id, item.quantity + 1)
                                 }}
-                                disabled={!(item.inStock ?? true) || item.quantity >= 99}
+                                disabled={!(item.inStock ?? true)}
                                 className="h-8 w-8 lg:h-10 lg:w-10 hover:bg-green-50 hover:text-green-600 hover:border-green-300"
                                 title="Increase quantity"
                               >
                                 <Plus className="h-3 w-3 lg:h-4 lg:w-4" />
                               </Button>
                             </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              💡 Type any number above 1
+                            </p>
                           </div>
                           <div className="text-left sm:text-right">
                             <p className="text-base lg:text-lg font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>

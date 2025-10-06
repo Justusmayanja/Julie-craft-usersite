@@ -131,7 +131,22 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
-                    <span className="w-12 text-center font-medium">{quantity}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={quantity}
+                      onChange={(e) => {
+                        const newQuantity = parseInt(e.target.value) || 1
+                        if (newQuantity >= 1) {
+                          setQuantity(newQuantity)
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const newQuantity = parseInt(e.target.value) || 1
+                        setQuantity(Math.max(1, newQuantity))
+                      }}
+                      className="w-16 h-10 text-center font-medium border border-gray-300 rounded-md focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                    />
                     <Button variant="outline" size="icon" onClick={() => handleQuantityChange(1)}>
                       <Plus className="h-4 w-4" />
                     </Button>

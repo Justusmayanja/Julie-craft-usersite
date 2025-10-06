@@ -66,29 +66,36 @@ export async function POST(request: NextRequest) {
       console.error('Error fetching user profile:', profileError)
     }
 
-    // Create session for the user
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
+    // Create session for the user by signing them in
+    const { data: signInData, error: signInError } = await supabaseAdmin.auth.admin.signInWithPassword({
       email: email.toLowerCase(),
       password: password
     })
 
-    if (sessionError) {
-      console.error('Error creating session:', sessionError)
+    if (signInError) {
+      console.error('Error signing in user after registration:', signInError)
+      // Even if sign-in fails, we still created the user successfully
+      return NextResponse.json({
+        message: 'Account created successfully',
+        user: userWithProfile?.[0] || {
+          id: data.user.id,
+          email: data.user.email,
+          full_name: full_name,
+          phone: phone || null,
+          is_verified: true,
+          created_at: data.user.created_at,
+          updated_at: data.user.updated_at
+        },
+        session: null,
+        token: null
+      }, { status: 201 })
     }
 
     return NextResponse.json({
       message: 'Account created successfully',
-      user: userWithProfile?.[0] || {
-        id: data.user.id,
-        email: data.user.email,
-        full_name: full_name,
-        phone: phone || null,
-        is_verified: true,
-        created_at: data.user.created_at,
-        updated_at: data.user.updated_at
-      },
-      session: sessionData
+      user: signInData.user,
+      session: signInData.session,
+      token: signInData.session?.access_token
     }, { status: 201 })
 
   } catch (error) {

@@ -60,48 +60,20 @@ export async function GET(request: NextRequest) {
           id,
           product_name,
           quantity,
-          unit_price,
+          price,
           product_image
         )
       `, { count: 'exact' })
 
-    // Filter by user email or session
+    // Filter by user ID or session
     if (targetUserId) {
-      // For registered users, we need to get the user's email first
-      // Since targetUserId might be an email or UUID, we'll try both approaches
-      
-      // First, check if targetUserId looks like an email
+      // For registered users, filter by user_id (which we now store in orders)
+      // First, check if targetUserId looks like an email (for backward compatibility)
       if (targetUserId.includes('@')) {
         query = query.eq('customer_email', targetUserId)
       } else {
-        // If it's a UUID, we need to get the user's email from auth.users or profiles table
-        let userEmail = null
-        
-        // Try to get email from auth.users first
-        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(targetUserId)
-        
-        if (!authError && authUser?.user?.email) {
-          userEmail = authUser.user.email
-        } else {
-          // Fallback to profiles table
-          const { data: profileData, error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .select('email')
-            .eq('id', targetUserId)
-            .single()
-          
-          if (profileError || !profileData) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 })
-          }
-          
-          userEmail = profileData.email
-        }
-        
-        if (!userEmail) {
-          return NextResponse.json({ error: 'User email not found' }, { status: 404 })
-        }
-        
-        query = query.eq('customer_email', userEmail)
+        // If it's a UUID, filter by user_id column
+        query = query.eq('user_id', targetUserId)
       }
     } else if (sessionId) {
       // For guest sessions, we might need to store session_id with orders

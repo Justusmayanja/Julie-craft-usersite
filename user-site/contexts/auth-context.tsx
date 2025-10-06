@@ -243,8 +243,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         // Store session data in localStorage
-        if (data.session?.access_token) {
-          localStorage.setItem('julie-crafts-token', data.session.access_token)
+        const token = data.session?.access_token || data.token
+        if (token) {
+          localStorage.setItem('julie-crafts-token', token)
+          console.log('JWT token stored in localStorage after registration')
+        } else {
+          console.warn('No token received after registration')
         }
         console.log('User registered and authenticated:', data.user)
         
@@ -252,11 +256,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionManager.convertToRegisteredUser(data.user)
         
         // Migrate guest cart to user cart if needed
-        await migrateGuestCart(data.session?.access_token || data.token)
+        if (token) {
+          await migrateGuestCart(token)
+        }
         
         dispatch({
           type: "AUTH_SUCCESS",
-          payload: { user: data.user, token: data.session?.access_token || data.token }
+          payload: { user: data.user, token: token || '' }
         })
 
         // Dispatch custom event to notify cart context to reload

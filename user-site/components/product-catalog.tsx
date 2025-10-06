@@ -373,7 +373,7 @@ export function ProductCatalog() {
 
         {/* Products Grid/List */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
             {Array.from({ length: 8 }).map((_, index) => (
               <Card key={index} className="animate-pulse">
                 <CardContent className="p-0">
@@ -390,7 +390,7 @@ export function ProductCatalog() {
         ) : (
           <div
             className={
-              viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "space-y-4"
+              viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6" : "space-y-4"
             }
           >
             {filteredAndSortedProducts.map((product) => (
@@ -401,7 +401,7 @@ export function ProductCatalog() {
               }`}
               onClick={() => setSelectedProduct(product)}
             >
-              <CardContent className={`p-0 ${viewMode === "list" ? "flex flex-row w-full" : ""}`}>
+              <CardContent className={`p-0 ${viewMode === "list" ? "flex flex-row w-full" : "h-full flex flex-col"}`}>
                 <div
                   className={`relative overflow-hidden ${
                     viewMode === "list" ? "w-48 h-48 flex-shrink-0" : "aspect-square w-full rounded-t-lg"
@@ -430,7 +430,7 @@ export function ProductCatalog() {
                     )}
                   </div>
                 </div>
-                <div className={`p-4 ${viewMode === "list" ? "flex-1 flex flex-col justify-between" : ""}`}>
+                <div className={`p-4 ${viewMode === "list" ? "flex-1 flex flex-col justify-between" : "flex-1 flex flex-col justify-between"}`}>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1 capitalize">
                       {product.category ? product.category.replace("-", " ") : "General"}

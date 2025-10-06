@@ -49,7 +49,9 @@ export default function ProfilePage() {
 
       try {
         setOrdersLoading(true)
+        console.log('Fetching orders for user:', user.id)
         const response = await getUserOrders(user.id)
+        console.log('Orders response:', response)
         // Extract orders array from the response object
         setOrders(response.orders || [])
       } catch (error) {
@@ -208,15 +210,35 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     if (!user?.id) return
 
+    const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
     console.log('Save Profile - User check:', {
       userId: user?.id,
       userEmail: user?.email,
       isAuthenticated,
-      token: typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') ? 'exists' : 'missing' : 'no-window'
+      token: token ? `${token.substring(0, 20)}...` : 'missing',
+      tokenLength: token?.length || 0
     })
 
     // Clear any previous messages
     setSaveMessage(null)
+
+    // Check if token is missing and try to refresh user data
+    if (!token && isAuthenticated) {
+      console.log('Token missing but user is authenticated, refreshing user data...')
+      try {
+        await refreshUser()
+        // Check again after refresh
+        const newToken = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
+        if (!newToken) {
+          setSaveMessage({ type: 'error', text: 'Authentication token missing. Please log out and log back in.' })
+          return
+        }
+      } catch (error) {
+        console.error('Failed to refresh user data:', error)
+        setSaveMessage({ type: 'error', text: 'Authentication issue. Please log out and log back in.' })
+        return
+      }
+    }
 
     // Basic validation
     if (!editForm.firstName.trim()) {
