@@ -221,27 +221,43 @@ export async function POST(request: NextRequest) {
           }, { status: 400 })
         }
         
-        const isInStock = product.stock_quantity > 0 && product.status === 'active'
-        if (!isInStock) {
-          console.log(`Product out of stock: ${product.name} (stock: ${product.stock_quantity}, status: ${product.status})`)
+        // Check if product is active
+        if (product.status !== 'active') {
+          console.log(`Product inactive: ${product.name} (status: ${product.status})`)
           return NextResponse.json({ 
-            error: `We're sorry, "${product.name}" is currently out of stock. Please remove it from your cart or try again later.`,
-            code: 'OUT_OF_STOCK'
+            error: `We're sorry, "${product.name}" is currently not available. Please remove it from your cart or try again later.`,
+            code: 'PRODUCT_INACTIVE'
           }, { status: 400 })
         }
         
-        if (product.stock_quantity < quantity) {
-          console.log(`Insufficient stock for ${product.name}: ${product.stock_quantity} available, ${quantity} requested`)
+        // Check available stock (considering existing reservations)
+        const { data: existingReservations, error: reservationError } = await supabaseAdmin
+          .from('order_item_reservations')
+          .select('reserved_quantity')
+          .eq('product_id', product.id)
+          .eq('status', 'active')
+
+        if (reservationError) {
+          console.error('Error checking existing reservations:', reservationError)
+        }
+
+        const reservedQuantity = existingReservations?.reduce((sum, r) => sum + r.reserved_quantity, 0) || 0
+        const availableStock = Math.max(0, product.stock_quantity - reservedQuantity)
+        
+        if (availableStock < quantity) {
+          console.log(`Insufficient available stock for ${product.name}: ${availableStock} available (${product.stock_quantity} total - ${reservedQuantity} reserved), ${quantity} requested`)
           return NextResponse.json({ 
-            error: `We only have ${product.stock_quantity} "${product.name}" available, but you're trying to order ${quantity}. Please adjust the quantity and try again.`,
+            error: `We only have ${availableStock} "${product.name}" available right now, but you're trying to order ${quantity}. Please adjust the quantity and try again.`,
             code: 'INSUFFICIENT_STOCK',
-            available_quantity: product.stock_quantity,
+            available_quantity: availableStock,
             requested_quantity: quantity,
-            product_name: product.name
+            product_name: product.name,
+            total_stock: product.stock_quantity,
+            reserved_quantity: reservedQuantity
           }, { status: 400 })
         }
         
-        console.log(`Stock check passed for ${product.name}: ${product.stock_quantity} available, ${quantity} requested`)
+        console.log(`Stock check passed for ${product.name}: ${availableStock} available (${product.stock_quantity} total - ${reservedQuantity} reserved), ${quantity} requested`)
       }
     } catch (stockValidationError) {
       console.error('Stock validation error:', stockValidationError)
@@ -334,7 +350,7 @@ export async function POST(request: NextRequest) {
             // Get current stock first, then deduct
             const { data: currentProduct, error: getError } = await supabaseAdmin
               .from('products')
-              .select('stock_quantity')
+              .select('stock_quantity, name')
               .eq('id', item.product_id)
               .single()
             
@@ -358,7 +374,26 @@ export async function POST(request: NextRequest) {
               console.error(`Failed to deduct inventory for product ${item.product_id}:`, stockError)
               // Don't fail the order, just log the error
             } else {
-              console.log(`Successfully deducted ${quantity} units from product ${item.product_id}`)
+              console.log(`Successfully deducted ${quantity} units from product ${item.product_id} (${currentProduct.name})`)
+              
+              // Create stock movement record if table exists
+              try {
+                await supabaseAdmin
+                  .from('stock_movements')
+                  .insert({
+                    product_id: item.product_id,
+                    movement_type: 'sale',
+                    quantity: -quantity, // Negative for deduction
+                    previous_quantity: currentProduct.stock_quantity,
+                    new_quantity: newStockQuantity,
+                    reference_type: 'order',
+                    reference_id: orderData.id,
+                    notes: `Order ${orderNumber} - ${quantity} units sold`,
+                    created_at: new Date().toISOString()
+                  })
+              } catch (stockMovementError) {
+                console.log('Stock movements table not available, skipping movement record:', stockMovementError)
+              }
             }
           }
           

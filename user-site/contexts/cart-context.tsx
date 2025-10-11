@@ -14,6 +14,8 @@ export interface CartItem {
   category: string
   quantity: number
   inStock: boolean
+  reservationId?: string
+  availableQuantity?: number
 }
 
 interface CartState {
@@ -32,6 +34,9 @@ type CartAction =
   | { type: "LOAD_CART"; payload: CartItem[] }
   | { type: "SET_PLACING_ORDER"; payload: boolean }
   | { type: "SET_LAST_ORDER"; payload: OrderConfirmation }
+  | { type: "UPDATE_STOCK_INFO"; payload: { id: string; availableQuantity: number; inStock: boolean } }
+  | { type: "SET_RESERVATION"; payload: { id: string; reservationId: string } }
+  | { type: "CLEAR_RESERVATIONS" }
 
 const initialState: CartState = {
   items: [],
@@ -97,6 +102,36 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     case "SET_LAST_ORDER":
       return { ...state, lastOrder: action.payload }
 
+    case "UPDATE_STOCK_INFO": {
+      const newItems = state.items.map((item) =>
+        item.id === action.payload.id 
+          ? { 
+              ...item, 
+              availableQuantity: action.payload.availableQuantity,
+              inStock: action.payload.inStock 
+            } 
+          : item
+      )
+      return { ...state, items: newItems }
+    }
+
+    case "SET_RESERVATION": {
+      const newItems = state.items.map((item) =>
+        item.id === action.payload.id 
+          ? { ...item, reservationId: action.payload.reservationId }
+          : item
+      )
+      return { ...state, items: newItems }
+    }
+
+    case "CLEAR_RESERVATIONS": {
+      const newItems = state.items.map((item) => ({
+        ...item,
+        reservationId: undefined
+      }))
+      return { ...state, items: newItems }
+    }
+
     default:
       return state
   }
@@ -104,12 +139,15 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
 const CartContext = createContext<{
   state: CartState
-  addItem: (item: Omit<CartItem, "quantity">) => void
+  addItem: (item: Omit<CartItem, "quantity">) => Promise<boolean>
   removeItem: (id: string) => void
-  updateQuantity: (id: string, quantity: number) => void
+  updateQuantity: (id: string, quantity: number) => Promise<boolean>
   clearCart: () => void
   placeOrder: (orderData: CartOrder) => Promise<OrderConfirmation>
   reloadCart: () => Promise<boolean>
+  checkStockAvailability: () => Promise<boolean>
+  reserveItems: () => Promise<boolean>
+  releaseReservations: () => Promise<void>
   dispatch: React.Dispatch<CartAction>
 } | null>(null)
 
@@ -199,6 +237,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Cleanup reservations when component unmounts
+  useEffect(() => {
+    return () => {
+      // Release any active reservations when the component unmounts
+      if (state.items.some(item => item.reservationId)) {
+        releaseReservations()
+      }
+    }
+  }, [])
+
+  // Release reservations when cart is cleared
+  useEffect(() => {
+    if (state.items.length === 0 && state.itemCount === 0) {
+      // Cart was cleared, release any reservations
+      const reservationIds = state.items
+        .filter(item => item.reservationId)
+        .map(item => item.reservationId!)
+
+      if (reservationIds.length > 0) {
+        releaseReservations()
+      }
+    }
+  }, [state.items.length, state.itemCount])
+
   // Save cart to both localStorage and API whenever it changes
   useEffect(() => {
     const saveCart = async () => {
@@ -227,25 +289,212 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [state.items])
 
-  const addItem = (item: Omit<CartItem, "quantity">) => {
+  const addItem = async (item: Omit<CartItem, "quantity">): Promise<boolean> => {
+    // First check if we can add this item
+    const stockCheck = await checkStockAvailability()
+    if (!stockCheck) {
+      // Check specifically for this item
+      try {
+        const response = await fetch('/api/inventory/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: [{ product_id: item.id, quantity: 1 }]
+          })
+        })
+        const result = await response.json()
+        const itemAvailability = result.availability.find((a: any) => a.product_id === item.id)
+        
+        if (!itemAvailability?.available) {
+          console.warn(`Cannot add item ${item.name}: ${itemAvailability?.reason}`)
+          return false
+        }
+      } catch (error) {
+        console.error('Error checking item availability:', error)
+        return false
+      }
+    }
+
     dispatch({ type: "ADD_ITEM", payload: item })
+    return true
   }
 
   const removeItem = (id: string) => {
     dispatch({ type: "REMOVE_ITEM", payload: id })
   }
 
-  const updateQuantity = (id: string, quantity: number) => {
+  const updateQuantity = async (id: string, quantity: number): Promise<boolean> => {
+    if (quantity <= 0) {
+      dispatch({ type: "REMOVE_ITEM", payload: id })
+      return true
+    }
+
+    // Check stock availability for the new quantity
+    try {
+      const response = await fetch('/api/inventory/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ product_id: id, quantity }]
+        })
+      })
+      const result = await response.json()
+      const itemAvailability = result.availability.find((a: any) => a.product_id === id)
+      
+      if (!itemAvailability?.available) {
+        console.warn(`Cannot update quantity for item ${id}: ${itemAvailability?.reason}`)
+        return false
+      }
+    } catch (error) {
+      console.error('Error checking quantity availability:', error)
+      return false
+    }
+
     dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } })
+    return true
   }
 
   const clearCart = () => {
     dispatch({ type: "CLEAR_CART" })
   }
 
+  // Helper function to check stock availability
+  const checkStockAvailability = async (): Promise<boolean> => {
+    if (state.items.length === 0) return true
+
+    try {
+      const response = await fetch('/api/inventory/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: state.items.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity
+          }))
+        })
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Update stock info for each item
+        result.availability.forEach((availability: any) => {
+          dispatch({
+            type: "UPDATE_STOCK_INFO",
+            payload: {
+              id: availability.product_id,
+              availableQuantity: availability.available_quantity,
+              inStock: availability.available
+            }
+          })
+        })
+        return true
+      } else {
+        // Update stock info and show which items are unavailable
+        result.availability.forEach((availability: any) => {
+          dispatch({
+            type: "UPDATE_STOCK_INFO",
+            payload: {
+              id: availability.product_id,
+              availableQuantity: availability.available_quantity,
+              inStock: availability.available
+            }
+          })
+        })
+        return false
+      }
+    } catch (error) {
+      console.error('Error checking stock availability:', error)
+      return false
+    }
+  }
+
+  // Helper function to reserve items
+  const reserveItems = async (): Promise<boolean> => {
+    if (state.items.length === 0) return true
+
+    try {
+      const sessionInfo = sessionManager.getSessionInfo()
+      const response = await fetch('/api/inventory/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: state.items.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity
+          })),
+          session_id: sessionInfo.session_id,
+          user_id: sessionInfo.user_id,
+          reservation_type: 'cart'
+        })
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Update reservation IDs for each item
+        result.reservations.forEach((reservation: any) => {
+          dispatch({
+            type: "SET_RESERVATION",
+            payload: {
+              id: reservation.product_id,
+              reservationId: reservation.reservation_id
+            }
+          })
+        })
+        return true
+      } else {
+        console.error('Reservation failed:', result.errors)
+        return false
+      }
+    } catch (error) {
+      console.error('Error reserving items:', error)
+      return false
+    }
+  }
+
+  // Helper function to release reservations
+  const releaseReservations = async (): Promise<void> => {
+    const reservationIds = state.items
+      .filter(item => item.reservationId)
+      .map(item => item.reservationId!)
+
+    if (reservationIds.length === 0) return
+
+    try {
+      const sessionInfo = sessionManager.getSessionInfo()
+      await fetch('/api/inventory/reserve', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reservation_ids: reservationIds,
+          session_id: sessionInfo.session_id,
+          user_id: sessionInfo.user_id
+        })
+      })
+
+      // Clear reservation IDs from state
+      dispatch({ type: "CLEAR_RESERVATIONS" })
+    } catch (error) {
+      console.error('Error releasing reservations:', error)
+    }
+  }
+
   const placeOrder = async (orderData: CartOrder): Promise<OrderConfirmation> => {
     try {
       dispatch({ type: "SET_PLACING_ORDER", payload: true })
+
+      // Check stock availability before placing order
+      const stockAvailable = await checkStockAvailability()
+      if (!stockAvailable) {
+        throw new Error('Some items are no longer available. Please review your cart.')
+      }
+
+      // Reserve items before creating order
+      const reservationSuccess = await reserveItems()
+      if (!reservationSuccess) {
+        throw new Error('Unable to reserve items. Please try again.')
+      }
 
       // Generate order items from cart
       const orderItems = generateOrderItemsFromCart(state.items)
@@ -276,6 +525,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       
       return orderConfirmation
     } catch (error) {
+      // Release reservations if order fails
+      await releaseReservations()
       throw error
     } finally {
       dispatch({ type: "SET_PLACING_ORDER", payload: false })
@@ -291,6 +542,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clearCart, 
       placeOrder,
       reloadCart,
+      checkStockAvailability,
+      reserveItems,
+      releaseReservations,
       dispatch 
     }}>
       {children}
