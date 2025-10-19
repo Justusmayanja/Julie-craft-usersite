@@ -96,7 +96,7 @@ export function StockAlertSettings({ isOpen, onClose }: StockAlertSettingsProps)
   const [error, setError] = useState<string | null>(null)
   const [newEmail, setNewEmail] = useState("")
 
-  const { addToast } = useToast()
+  const { toast } = useToast()
 
   useEffect(() => {
     if (isOpen) {
@@ -126,10 +126,10 @@ export function StockAlertSettings({ isOpen, onClose }: StockAlertSettingsProps)
     } catch (err) {
       console.error('Error fetching alert settings:', err)
       setError(err instanceof Error ? err.message : 'Failed to load alert settings')
-      addToast({
-        type: 'error',
+      toast({
         title: 'Error',
-        description: 'Failed to load alert settings'
+        description: 'Failed to load alert settings',
+        variant: 'destructive'
       })
     } finally {
       setLoading(false)
@@ -152,8 +152,7 @@ export function StockAlertSettings({ isOpen, onClose }: StockAlertSettingsProps)
         throw new Error('Failed to save alert settings')
       }
 
-      addToast({
-        type: 'success',
+      toast({
         title: 'Settings Saved',
         description: 'Stock alert settings have been updated successfully'
       })
@@ -163,10 +162,10 @@ export function StockAlertSettings({ isOpen, onClose }: StockAlertSettingsProps)
     } catch (err) {
       console.error('Error saving alert settings:', err)
       setError(err instanceof Error ? err.message : 'Failed to save alert settings')
-      addToast({
-        type: 'error',
+      toast({
         title: 'Error',
-        description: 'Failed to save alert settings'
+        description: 'Failed to save alert settings',
+        variant: 'destructive'
       })
     } finally {
       setSaving(false)

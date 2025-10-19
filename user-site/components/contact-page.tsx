@@ -95,7 +95,7 @@ export function ContactPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Contact Form */}
           <div>
             <Card>
@@ -190,38 +190,36 @@ export function ContactPage() {
             </Card>
           </div>
 
-          {/* Contact Information */}
-          <div className="space-y-6">
+          {/* Contact Information - Compact Cards */}
+          <div className="space-y-4">
             {contactInfo.map((info, index) => (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full flex-shrink-0">
-                      <info.icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-2">{info.title}</h3>
-                      <div className="space-y-1 mb-3">
-                        {info.details.map((detail, idx) => (
-                          <p key={idx} className="text-muted-foreground">
-                            {detail}
-                          </p>
-                        ))}
-                      </div>
-                      {info.action && info.actionHandler && (
-                        <Button variant="outline" size="sm" onClick={info.actionHandler}>
-                          {info.action}
-                        </Button>
-                      )}
-                    </div>
+              <Card key={index} className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="inline-flex items-center justify-center w-8 h-8 bg-primary/10 rounded-full flex-shrink-0">
+                    <info.icon className="h-4 w-4 text-primary" />
                   </div>
-                </CardContent>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm mb-1">{info.title}</h3>
+                    <div className="space-y-0.5 mb-2">
+                      {info.details.map((detail, idx) => (
+                        <p key={idx} className="text-xs text-muted-foreground">
+                          {detail}
+                        </p>
+                      ))}
+                    </div>
+                    {info.action && info.actionHandler && (
+                      <Button variant="outline" size="sm" onClick={info.actionHandler} className="text-xs h-7">
+                        {info.action}
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </Card>
             ))}
           </div>
         </div>
 
-        {/* Map Section */}
+        {/* Map Section - Full Width */}
         <Card className="mb-12">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -233,7 +231,9 @@ export function ContactPage() {
             </p>
           </CardHeader>
           <CardContent className="p-0">
-            <InteractiveMap />
+            <div className="h-96">
+              <InteractiveMap />
+            </div>
           </CardContent>
         </Card>
 

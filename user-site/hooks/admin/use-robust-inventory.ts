@@ -577,6 +577,13 @@ export function useRobustInventory(): UseRobustInventoryReturn {
       if (includeAuditLog) params.append('include_audit_log', 'true')
 
       const response = await fetch(`/api/inventory/robust?${params}`)
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`)
+      }
+      
       const data = await response.json()
 
       if (!response.ok) {
@@ -618,6 +625,13 @@ export function useRobustInventory(): UseRobustInventoryReturn {
       if (filters?.offset) params.append('offset', filters.offset.toString())
 
       const response = await fetch(`/api/inventory/audit?${params}`)
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`)
+      }
+      
       const data = await response.json()
 
       if (!response.ok) {
@@ -652,6 +666,13 @@ export function useRobustInventory(): UseRobustInventoryReturn {
       if (filters?.offset) params.append('offset', filters.offset.toString())
 
       const response = await fetch(`/api/inventory/adjustments?${params}`)
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`)
+      }
+      
       const data = await response.json()
 
       if (!response.ok) {
@@ -688,6 +709,13 @@ export function useRobustInventory(): UseRobustInventoryReturn {
       if (filters?.offset) params.append('offset', filters.offset.toString())
 
       const response = await fetch(`/api/inventory/reorder-alerts?${params}`)
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`)
+      }
+      
       const data = await response.json()
 
       if (!response.ok) {

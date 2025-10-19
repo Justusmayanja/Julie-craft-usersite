@@ -41,7 +41,7 @@ import { StockAdjustmentModal } from "@/components/admin/inventory/stock-adjustm
 import { InventoryHistoryModal } from "@/components/admin/inventory/inventory-history-modal"
 import { StockAlertSettings } from "@/components/admin/inventory/stock-alert-settings"
 import { RobustInventoryDashboard } from "@/components/admin/inventory/robust-inventory-dashboard"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/use-toast"
 import { format } from "date-fns"
 
 // Status and filter options
@@ -119,7 +119,7 @@ export default function InventoryPage() {
     validateStock
   } = useRobustInventory()
 
-  const { addToast } = useToast()
+  const { toast } = useToast()
 
   // Computed values
   const inventory = products || []
@@ -190,8 +190,7 @@ export default function InventoryPage() {
 
   const handleRefresh = () => {
     refreshData()
-    addToast({
-      type: 'success',
+    toast({
       title: "Inventory Refreshed",
       description: "Latest inventory data has been loaded.",
     })
@@ -220,25 +219,24 @@ export default function InventoryPage() {
       const result = await response.json()
 
       if (response.ok) {
-        addToast({
+        toast({
           title: 'Database Initialized',
           description: result.message || 'Database setup completed successfully!',
-          type: 'success',
         })
         // Refresh the data
         await refreshData()
       } else {
-        addToast({
+        toast({
           title: 'Initialization Failed',
           description: result.error || 'Failed to initialize database',
-          type: 'error',
+          variant: 'destructive',
         })
       }
     } catch (error) {
-      addToast({
+      toast({
         title: 'Initialization Error',
         description: 'Failed to initialize database',
-        type: 'error',
+        variant: 'destructive',
       })
     } finally {
       setIsInitializingDatabase(false)
@@ -258,25 +256,24 @@ export default function InventoryPage() {
       const result = await response.json()
 
       if (response.ok) {
-        addToast({
+        toast({
           title: 'Stock Data Migrated',
           description: result.message || 'Stock data migrated successfully! Your inventory should now show correct values.',
-          type: 'success',
         })
         // Refresh the data
         await refreshData()
       } else {
-        addToast({
+        toast({
           title: 'Migration Failed',
           description: result.error || 'Failed to migrate stock data',
-          type: 'error',
+          variant: 'destructive',
         })
       }
     } catch (error) {
-      addToast({
+      toast({
         title: 'Migration Error',
         description: 'Failed to migrate stock data',
-        type: 'error',
+        variant: 'destructive',
       })
     } finally {
       setIsMigratingStock(false)
@@ -285,8 +282,7 @@ export default function InventoryPage() {
 
   const handleAdjustmentSuccess = () => {
     refreshData()
-    addToast({
-      type: 'success',
+    toast({
       title: "Stock Adjusted",
       description: "Inventory has been updated successfully.",
     })
@@ -333,8 +329,7 @@ export default function InventoryPage() {
                 <Button 
                   size="sm" 
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-                  onClick={() => addToast({
-                    type: 'info',
+                  onClick={() => toast({
                     title: "Sync Initiated",
                     description: "Inventory sync with products table started. This may take a moment.",
                   })}

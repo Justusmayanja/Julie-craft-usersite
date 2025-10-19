@@ -225,13 +225,14 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
       <div className="flex-shrink-0 p-4 bg-slate-800/95 backdrop-blur-sm border-b border-slate-600">
         <div className="flex items-center justify-between min-w-0">
           <div className="flex items-center space-x-3 min-w-0">
-            <div className="relative w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-white/10">
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-400/30">
               <Image 
                 src="/julie-logo.jpeg" 
                 alt="JulieCraft Logo" 
                 fill
                 sizes="40px"
-                className="object-contain p-1"
+                className="object-contain p-1.5"
+                priority
                 onError={(e) => {
                   // Fallback to a simple icon if image fails to load
                   e.currentTarget.style.display = 'none'

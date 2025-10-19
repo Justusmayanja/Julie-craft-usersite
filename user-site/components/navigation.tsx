@@ -67,21 +67,25 @@ export function Navigation() {
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-white/10">
+            <Link href="/" className="flex items-center space-x-3 group">
+              <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 group-hover:border-primary/30 transition-all duration-300">
                 <Image 
                   src="/julie-logo.jpeg" 
                   alt="JulieCraft Logo" 
                   fill
                   sizes="40px"
-                  className="object-contain p-1"
+                  className="object-contain p-1.5 group-hover:scale-105 transition-transform duration-300"
+                  priority
                   onError={(e) => {
                     // Fallback to a simple icon if image fails to load
                     e.currentTarget.style.display = 'none'
                   }}
                 />
               </div>
-              <span className="font-bold text-xl text-foreground">Julie Crafts</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-xl text-foreground group-hover:text-primary transition-colors duration-300">Julie Crafts</span>
+                <span className="text-xs text-muted-foreground -mt-1">Handmade Excellence</span>
+              </div>
             </Link>
 
             {/* Desktop Navigation */}

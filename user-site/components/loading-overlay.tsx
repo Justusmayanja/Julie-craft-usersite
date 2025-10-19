@@ -38,13 +38,14 @@ export function LoadingOverlay() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
       <div className="flex flex-col items-center space-y-6">
         {/* Logo */}
-        <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-white/10">
+        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 shadow-lg">
           <Image 
             src="/julie-logo.jpeg" 
             alt="JulieCraft Logo" 
             fill
-            sizes="64px"
-            className="object-contain p-2"
+            sizes="80px"
+            className="object-contain p-3"
+            priority
             onError={(e) => {
               e.currentTarget.style.display = 'none'
             }}

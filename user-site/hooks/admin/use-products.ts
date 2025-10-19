@@ -121,13 +121,31 @@ export function useCategories(): UseCategoriesResult {
       const response = await fetch('/api/categories')
       
       if (!response.ok) {
-        throw new Error('Failed to fetch categories')
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch categories')
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+      }
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format - expected JSON')
       }
 
       const data = await response.json()
-      setCategories(data)
+      setCategories(data.categories || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
+      setError(errorMessage)
+      console.error('Error fetching categories:', err)
+      
+      // Set fallback empty array on error
+      setCategories([])
     } finally {
       setLoading(false)
     }

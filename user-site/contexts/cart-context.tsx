@@ -378,29 +378,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
       
       if (result.success) {
         // Update stock info for each item
-        result.availability.forEach((availability: any) => {
-          dispatch({
-            type: "UPDATE_STOCK_INFO",
-            payload: {
-              id: availability.product_id,
-              availableQuantity: availability.available_quantity,
-              inStock: availability.available
-            }
+        if (result.availability && Array.isArray(result.availability)) {
+          result.availability.forEach((availability: any) => {
+            dispatch({
+              type: "UPDATE_STOCK_INFO",
+              payload: {
+                id: availability.product_id,
+                availableQuantity: availability.available_quantity,
+                inStock: availability.available
+              }
+            })
           })
-        })
+        }
         return true
       } else {
         // Update stock info and show which items are unavailable
-        result.availability.forEach((availability: any) => {
-          dispatch({
-            type: "UPDATE_STOCK_INFO",
-            payload: {
-              id: availability.product_id,
-              availableQuantity: availability.available_quantity,
-              inStock: availability.available
-            }
+        if (result.availability && Array.isArray(result.availability)) {
+          result.availability.forEach((availability: any) => {
+            dispatch({
+              type: "UPDATE_STOCK_INFO",
+              payload: {
+                id: availability.product_id,
+                availableQuantity: availability.available_quantity,
+                inStock: availability.available
+              }
+            })
           })
-        })
+        }
         return false
       }
     } catch (error) {

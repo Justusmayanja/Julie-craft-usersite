@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Bell, Search, User, Settings, LogOut, Menu, ChevronDown, Home, AlertTriangle, ShoppingCart, Banknote } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar } from "@/components/ui/avatar"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -142,29 +142,22 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           >
             <div className="hidden xl:block text-right min-w-0">
               <p className="text-sm font-bold text-gray-900 truncate">
-                {user?.first_name && user?.last_name 
-                  ? `${user.first_name} ${user.last_name}`.trim()
-                  : user?.first_name || user?.full_name || 'Admin User'
-                }
+                {user?.name || 'Admin User'}
               </p>
               <p className="text-xs text-gray-500 font-medium truncate">
                 {user?.email || 'admin@juliecraft.com'}
               </p>
             </div>
             <div className="relative flex-shrink-0">
-              <Avatar
-                src={user?.avatar_url}
-                alt={user?.first_name && user?.last_name 
-                  ? `${user.first_name} ${user.last_name}`.trim()
-                  : user?.first_name || user?.full_name || 'Admin User'
-                }
-                fallback={user?.first_name && user?.last_name 
-                  ? `${user.first_name} ${user.last_name}`.trim()
-                  : user?.first_name || user?.full_name || 'Admin User'
-                }
-                size="md"
-                className="border-2 border-blue-200/50 shadow-md group-hover:shadow-lg transition-shadow"
-              />
+              <Avatar className="w-10 h-10 border-2 border-blue-200/50 shadow-md group-hover:shadow-lg transition-shadow">
+                <AvatarImage 
+                  src={user?.avatar_url} 
+                  alt={user?.name || 'Admin User'}
+                />
+                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'AU'}
+                </AvatarFallback>
+              </Avatar>
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm">
                 <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
               </div>
@@ -177,13 +170,15 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-gray-200/50 py-3 z-50 backdrop-blur-sm">
               <div className="px-5 py-4 border-b border-gray-100/80">
                 <div className="flex items-center space-x-3">
-                  <Avatar
-                    src={user?.avatar_url}
-                    alt={user?.name || 'Admin User'}
-                    fallback={user?.name || 'Admin User'}
-                    size="md"
-                    className="shadow-md"
-                  />
+                  <Avatar className="w-12 h-12 shadow-md">
+                    <AvatarImage 
+                      src={user?.avatar_url} 
+                      alt={user?.name || 'Admin User'}
+                    />
+                    <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+                      {user?.name ? user.name.charAt(0).toUpperCase() : 'AU'}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
                     <p className="font-bold text-gray-900">
                       {user?.name || 'Admin User'}

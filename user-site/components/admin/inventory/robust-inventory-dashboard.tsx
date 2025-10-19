@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/use-toast"
 import { 
   Package, 
   AlertTriangle, 
@@ -62,7 +62,7 @@ export function RobustInventoryDashboard({ className }: RobustInventoryDashboard
     clearError
   } = useRobustInventory()
 
-  const { addToast } = useToast()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
@@ -94,17 +94,16 @@ export function RobustInventoryDashboard({ className }: RobustInventoryDashboard
   const handleStockAdjustment = async (adjustmentData: any) => {
     try {
       await createAdjustment(adjustmentData)
-      addToast({
-        type: 'success',
+      toast({
         title: 'Adjustment Created',
         description: 'Inventory adjustment has been created and is pending approval.'
       })
       setShowAdjustmentModal(false)
     } catch (error) {
-      addToast({
-        type: 'error',
+      toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create adjustment'
+        description: error instanceof Error ? error.message : 'Failed to create adjustment',
+        variant: 'destructive'
       })
     }
   }
@@ -113,16 +112,15 @@ export function RobustInventoryDashboard({ className }: RobustInventoryDashboard
   const handleAlertUpdate = async (alertId: string, status: string, notes?: string) => {
     try {
       await updateAlertStatus(alertId, status as any, notes)
-      addToast({
-        type: 'success',
+      toast({
         title: 'Alert Updated',
         description: `Alert has been ${status} successfully.`
       })
     } catch (error) {
-      addToast({
-        type: 'error',
+      toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update alert'
+        description: error instanceof Error ? error.message : 'Failed to update alert',
+        variant: 'destructive'
       })
     }
   }

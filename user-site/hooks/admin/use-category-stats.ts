@@ -45,8 +45,20 @@ export function useCategoryStats() {
       const response = await fetch('/api/categories/stats')
       
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch category stats')
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch category stats')
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+      }
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format - expected JSON')
       }
       
       const data = await response.json()
@@ -56,6 +68,20 @@ export function useCategoryStats() {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred'
       setError(errorMessage)
       console.error('Error fetching category stats:', err)
+      
+      // Set fallback stats on error
+      setStats({
+        categories: [],
+        summary: {
+          total_categories: 0,
+          active_categories: 0,
+          inactive_categories: 0,
+          total_products: 0,
+          total_revenue: 0,
+          total_inventory_value: 0,
+          average_products_per_category: 0
+        }
+      })
     } finally {
       setLoading(false)
     }

@@ -93,8 +93,13 @@ export function HeroCarousel() {
             className="w-full flex-shrink-0 relative"
           >
             <div
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-              style={{ backgroundImage: `url(${slide.image})` }}
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-gradient-to-br from-blue-600 to-purple-600"
+              style={{ 
+                backgroundImage: `url(${slide.image})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
 

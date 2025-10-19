@@ -8,6 +8,7 @@ import { LoadingOverlay } from "@/components/loading-overlay"
 import { useAuth } from "@/contexts/auth-context"
 import { useRole } from "@/contexts/role-context"
 import { Loader2 } from "lucide-react"
+import { Toaster } from "@/components/ui/toaster"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -100,6 +101,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </main>
         </div>
       </div>
+      <Toaster />
     </>
   )
 }

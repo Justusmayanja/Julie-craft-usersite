@@ -14,20 +14,24 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-6">
             <div className="flex items-center space-x-3">
-              <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-white/20">
+              <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-400/30 shadow-lg">
                 <Image 
                   src="/julie-logo.jpeg" 
                   alt="JulieCraft Logo" 
                   fill
                   sizes="48px"
-                  className="object-contain p-1.5"
+                  className="object-contain p-2"
+                  priority
                   onError={(e) => {
                     // Fallback to a simple icon if image fails to load
                     e.currentTarget.style.display = 'none'
                   }}
                 />
               </div>
-              <span className="font-bold text-2xl">Julie Crafts</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-2xl text-amber-900">Julie Crafts</span>
+                <span className="text-sm text-amber-700 -mt-1">Authentic Handmade</span>
+              </div>
             </div>
             <p className="text-amber-800 leading-relaxed">
               Authentic handmade crafts from the heart of Uganda, celebrating traditional artistry and contemporary
