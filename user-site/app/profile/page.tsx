@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { User, Mail, Phone, Calendar, MapPin, ShoppingBag, Package, CreditCard } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { User, Mail, Phone, Calendar, MapPin, ShoppingBag, Package, CreditCard, Edit, Save, X } from "lucide-react"
 
 interface UserProfile {
   id: string
@@ -25,6 +28,14 @@ export default function ProfilePage() {
   const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    phone: '',
+    address: ''
+  })
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   useEffect(() => {
     if (!isLoading) {
@@ -57,6 +68,84 @@ export default function ProfilePage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleEditProfile = () => {
+    if (profile) {
+      setEditForm({
+        name: profile.name || '',
+        phone: profile.phone || '',
+        address: profile.address || ''
+      })
+      setIsEditModalOpen(true)
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    if (!user?.id) return
+
+    setIsSaving(true)
+    try {
+      const token = localStorage.getItem('julie-crafts-token')
+      if (!token) {
+        throw new Error('No authentication token found')
+      }
+
+      // Split name into first and last name for the API
+      const nameParts = editForm.name.trim().split(' ')
+      const firstName = nameParts[0] || ''
+      const lastName = nameParts.slice(1).join(' ') || ''
+
+      const response = await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          phone: editForm.phone.trim() || undefined,
+          address: editForm.address.trim() || undefined
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update profile')
+      }
+
+      // Update local profile state
+      setProfile(prev => prev ? {
+        ...prev,
+        name: editForm.name,
+        phone: editForm.phone,
+        address: editForm.address
+      } : null)
+
+      setIsEditModalOpen(false)
+      setSaveMessage({ type: 'success', text: 'Profile updated successfully!' })
+      
+      // Clear message after 3 seconds
+      setTimeout(() => setSaveMessage(null), 3000)
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      setSaveMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Failed to update profile' 
+      })
+      setTimeout(() => setSaveMessage(null), 5000)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setEditForm(prev => ({
+      ...prev,
+      [name]: value
+    }))
   }
 
   if (isLoading || loading) {
@@ -226,7 +315,12 @@ export default function ProfilePage() {
                 <CardTitle>Account Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleEditProfile}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
                   Edit Profile
                 </Button>
                 <Button variant="outline" className="w-full">
@@ -240,6 +334,98 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your profile information. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="name"
+                name="name"
+                value={editForm.name}
+                onChange={handleInputChange}
+                className="col-span-3"
+                placeholder="Enter your full name"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="phone" className="text-right">
+                Phone
+              </Label>
+              <Input
+                id="phone"
+                name="phone"
+                value={editForm.phone}
+                onChange={handleInputChange}
+                className="col-span-3"
+                placeholder="Enter your phone number"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="address" className="text-right">
+                Address
+              </Label>
+              <Input
+                id="address"
+                name="address"
+                value={editForm.address}
+                onChange={handleInputChange}
+                className="col-span-3"
+                placeholder="Enter your address"
+              />
+            </div>
+          </div>
+
+          {/* Save Message */}
+          {saveMessage && (
+            <div className={`p-3 rounded-md text-sm ${
+              saveMessage.type === 'success' 
+                ? 'bg-green-50 text-green-700 border border-green-200' 
+                : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              {saveMessage.text}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditModalOpen(false)}
+              disabled={isSaving}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveProfile}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

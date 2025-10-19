@@ -40,8 +40,78 @@ export function FeaturedProducts() {
           throw new Error('Failed to fetch products')
         }
         const data = await response.json()
-        setProducts(data.products || [])
-      } catch (err) {
+        
+        // Check if we got products from the API, otherwise use fallback data
+        if (data.products && data.products.length > 0) {
+          setProducts(data.products)
+        } else {
+          // Use fallback data when API returns empty results
+          console.log('API returned empty products, using fallback data')
+          setProducts([
+          {
+            id: '1',
+            name: 'Handmade Ceramic Vase',
+            price: 45000,
+            description: 'Beautiful handcrafted ceramic vase with traditional Ugandan patterns',
+            image: '/placeholder-product.jpg',
+            category: 'ceramics',
+            stock_quantity: 10,
+            featured: true
+          },
+          {
+            id: '2',
+            name: 'Traditional Beaded Necklace',
+            price: 25000,
+            description: 'Exquisite beaded necklace made with traditional techniques',
+            image: '/placeholder-product.jpg',
+            category: 'jewelry',
+            stock_quantity: 15,
+            featured: true
+          },
+          {
+            id: '3',
+            name: 'Woven Textile Wall Hanging',
+            price: 35000,
+            description: 'Colorful woven textile perfect for home decoration',
+            image: '/placeholder-product.jpg',
+            category: 'textiles',
+            stock_quantity: 8,
+            featured: true
+          },
+          {
+            id: '4',
+            name: 'Wooden Carved Bowl',
+            price: 30000,
+            description: 'Hand-carved wooden bowl from local artisans',
+            image: '/placeholder-product.jpg',
+            category: 'woodwork',
+            stock_quantity: 12,
+            featured: true
+          },
+          {
+            id: '5',
+            name: 'Batik Print Scarf',
+            price: 20000,
+            description: 'Beautiful batik print scarf with African motifs',
+            image: '/placeholder-product.jpg',
+            category: 'textiles',
+            stock_quantity: 20,
+            featured: true
+          },
+          {
+            id: '6',
+            name: 'Clay Pottery Set',
+            price: 55000,
+            description: 'Complete set of traditional clay pottery for cooking',
+            image: '/placeholder-product.jpg',
+            category: 'ceramics',
+            stock_quantity: 6,
+            featured: true
+          }
+        ])
+        setError('Using sample data - database not configured')
+      }
+    } catch (err) {
         console.error('Error fetching products:', err)
         // Fallback to sample products when API fails
         setProducts([
@@ -106,7 +176,7 @@ export function FeaturedProducts() {
             featured: true
           }
         ])
-        setError(null) // Clear error since we have fallback data
+        setError('Using sample data - API error occurred')
       } finally {
         setLoading(false)
       }

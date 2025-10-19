@@ -70,15 +70,22 @@ export function Categories() {
 
   if (loading) {
     return (
-      <div className="py-16">
+      <div className="py-20 bg-gradient-to-br from-gray-50 to-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Shop by Category</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          {/* Section Header Skeleton */}
+          <div className="text-center mb-16">
+            <div className="h-10 bg-gray-200 rounded-lg w-80 mx-auto mb-4 animate-pulse"></div>
+            <div className="h-6 bg-gray-200 rounded w-96 mx-auto animate-pulse"></div>
+          </div>
+          
+          {/* Categories Grid Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {[...Array(6)].map((_, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md p-6 text-center animate-pulse">
-                <div className="w-20 h-20 bg-gray-200 rounded-lg mx-auto mb-4"></div>
-                <div className="h-6 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+              <div key={index} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center animate-pulse">
+                <div className="w-24 h-24 bg-gray-200 rounded-2xl mx-auto mb-6"></div>
+                <div className="h-6 bg-gray-200 rounded w-3/4 mx-auto mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mx-auto mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3 mx-auto"></div>
               </div>
             ))}
           </div>
@@ -89,12 +96,15 @@ export function Categories() {
 
   if (error && categories.length === 0) {
     return (
-      <div className="py-16">
+      <div className="py-20 bg-gradient-to-br from-gray-50 to-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Shop by Category</h2>
-          <div className="text-center text-gray-500">
-            <Package className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <p>Unable to load categories at the moment.</p>
+          <div className="text-center">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Shop by Category</h2>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 max-w-md mx-auto">
+              <Package className="w-16 h-16 mx-auto mb-6 text-gray-300" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to load categories</h3>
+              <p className="text-gray-600">Please try again later or refresh the page.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -102,10 +112,18 @@ export function Categories() {
   }
 
   return (
-    <div className="py-16">
+    <div className="py-20 bg-gradient-to-br from-gray-50 to-white">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold text-center mb-12">Shop by Category</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        {/* Section Header */}
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">Shop by Category</h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Discover our carefully curated collection of handmade crafts, each category representing the finest in traditional artistry
+          </p>
+        </div>
+
+        {/* Categories Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {categories.map((category) => {
             const IconComponent = getCategoryIcon(category.name)
             const colorClasses = getCategoryColor(category.name)
@@ -114,39 +132,55 @@ export function Categories() {
               <Link 
                 key={category.id} 
                 href={`/products?category=${encodeURIComponent(category.name)}`}
-                className="group"
+                className="group block"
               >
-                <div className="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer h-full">
+                <div className="relative bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full overflow-hidden">
+                  {/* Background Gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  
                   {/* Category Image or Icon */}
-                  <div className="w-20 h-20 mx-auto mb-4 relative">
+                  <div className="relative w-24 h-24 mx-auto mb-6">
                     {category.image_url ? (
-                      <div className="relative w-full h-full rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 group-hover:border-primary/20 transition-colors duration-300">
+                      <div className="relative w-full h-full rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-100 group-hover:border-primary/20 transition-all duration-500 shadow-sm">
                         <Image
                           src={category.image_url}
                           alt={category.name}
                           fill
-                          sizes="80px"
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="96px"
+                          className="object-cover group-hover:scale-110 transition-transform duration-500"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'
                           }}
                         />
                       </div>
                     ) : (
-                      <div className={`w-full h-full ${colorClasses} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300 border border-gray-200`}>
-                        <IconComponent className="w-10 h-10" />
+                      <div className={`w-full h-full ${colorClasses} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 border-2 border-gray-100 shadow-sm group-hover:shadow-md`}>
+                        <IconComponent className="w-12 h-12" />
                       </div>
                     )}
                   </div>
                   
-                  <h3 className="text-lg font-semibold group-hover:text-primary transition-colors duration-300 mb-2">
-                    {category.name}
-                  </h3>
-                  {category.description && (
-                    <p className="text-sm text-gray-500 line-clamp-2">
-                      {category.description}
-                    </p>
-                  )}
+                  {/* Category Content */}
+                  <div className="relative z-10">
+                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300 mb-3">
+                      {category.name}
+                    </h3>
+                    {category.description && (
+                      <p className="text-gray-600 leading-relaxed line-clamp-2 text-sm">
+                        {category.description}
+                      </p>
+                    )}
+                    
+                    {/* Explore Button */}
+                    <div className="mt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="inline-flex items-center text-sm font-medium text-primary group-hover:text-primary/80 transition-colors duration-300">
+                        Explore Collection
+                        <svg className="ml-2 w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </Link>
             )

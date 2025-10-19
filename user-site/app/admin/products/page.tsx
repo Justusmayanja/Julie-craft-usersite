@@ -267,10 +267,11 @@ export default function AdminProductsPage() {
     <div className="h-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-3">
-                <h1 className="text-3xl font-bold text-gray-900">Products</h1>
+          {/* Header Section - Responsive */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">Products</h1>
                 {refreshing && (
                   <div className="flex items-center space-x-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
@@ -278,48 +279,57 @@ export default function AdminProductsPage() {
                   </div>
                 )}
               </div>
-              <p className="text-gray-600">Manage your product catalog</p>
+              <p className="text-gray-600 text-sm sm:text-base">Manage your product catalog</p>
             </div>
-            <div className="flex items-center space-x-3">
+            
+            {/* Action Buttons - Responsive */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => loadProducts(true)}
                 disabled={refreshing}
-                className="flex items-center space-x-2"
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto"
               >
                 <div className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                 </div>
-                <span>Refresh</span>
+                <span className="hidden xs:inline">Refresh</span>
               </Button>
-              <Button onClick={handleAddProduct}>
+              <Button 
+                onClick={handleAddProduct}
+                className="w-full sm:w-auto"
+              >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Product
+                <span className="hidden xs:inline">Add Product</span>
+                <span className="xs:hidden">Add</span>
               </Button>
             </div>
           </div>
 
-        {/* Filters and Search */}
+        {/* Filters and Search - Responsive */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
+            <div className="flex flex-col gap-4">
+              {/* Search Bar */}
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
-              <div className="flex gap-2">
+              
+              {/* Filter Dropdowns */}
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 >
                   <option value="all">All Categories</option>
                   {categories.map(category => (
@@ -331,7 +341,7 @@ export default function AdminProductsPage() {
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="flex-1 sm:flex-none sm:w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -343,17 +353,17 @@ export default function AdminProductsPage() {
           </CardContent>
         </Card>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Products Grid - Responsive */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           {filteredProducts.map((product) => {
             const stockInfo = getStockStatus(product)
             const StockIcon = stockInfo.icon
 
             return (
-              <Card key={product.id} className="group hover:shadow-lg transition-all duration-200 overflow-hidden border border-gray-200">
-                <div className="flex flex-col lg:flex-row h-full">
+              <Card key={product.id} className="group hover:shadow-lg transition-all duration-200 overflow-hidden border border-gray-200 h-full">
+                <div className="flex flex-col xl:flex-row h-full">
                   {/* Image Section */}
-                  <div className="relative w-full lg:w-1/3 h-44 lg:h-auto bg-gradient-to-br from-gray-50 to-gray-100 flex-shrink-0">
+                  <div className="relative w-full xl:w-1/3 h-48 xl:h-auto bg-gradient-to-br from-gray-50 to-gray-100 flex-shrink-0">
                     {product.image ? (
                       <div className="relative w-full h-full overflow-hidden">
                         <Image
@@ -389,25 +399,25 @@ export default function AdminProductsPage() {
                   </div>
                   
                   {/* Content Section */}
-                  <div className="flex flex-col flex-1 p-4 min-h-0">
+                  <div className="flex flex-col flex-1 p-3 sm:p-4 min-h-0">
                     {/* Title and Description */}
                     <div className="mb-3 flex-shrink-0">
-                      <h3 className="font-semibold text-base mb-1 line-clamp-1 leading-tight text-gray-900">
+                      <h3 className="font-semibold text-sm sm:text-base mb-1 line-clamp-1 leading-tight text-gray-900">
                         {product.name}
                       </h3>
-                      <p className="text-sm text-gray-600 line-clamp-1 leading-tight">
+                      <p className="text-xs sm:text-sm text-gray-600 line-clamp-1 leading-tight">
                         {product.description || 'No description available'}
                       </p>
                     </div>
                     
                     {/* Price and Status */}
-                    <div className="flex items-center justify-between mb-3 flex-shrink-0">
-                      <span className="text-lg font-bold text-orange-600">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 flex-shrink-0">
+                      <span className="text-base sm:text-lg font-bold text-orange-600">
                         UGX {product.price.toLocaleString()}
                       </span>
                       <Badge 
                         variant={stockInfo.color as any} 
-                        className="flex items-center text-xs px-2 py-1 bg-orange-100 text-orange-800 border-orange-200"
+                        className="flex items-center text-xs px-2 py-1 bg-orange-100 text-orange-800 border-orange-200 w-fit"
                       >
                         <StockIcon className="w-3 h-3 mr-1" />
                         {stockInfo.status}
@@ -415,17 +425,17 @@ export default function AdminProductsPage() {
                     </div>
 
                     {/* Stock and Category Info */}
-                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4 flex-shrink-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs sm:text-sm text-gray-500 mb-4 flex-shrink-0">
                       <span className="truncate">Stock: {product.stock_quantity}</span>
-                      <span className="capitalize truncate ml-2">{product.category}</span>
+                      <span className="capitalize truncate">{product.category}</span>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 mt-auto flex-shrink-0">
+                    <div className="flex flex-col sm:flex-row gap-2 mt-auto flex-shrink-0">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1 text-xs h-8"
+                        className="flex-1 text-xs h-8 sm:h-7"
                         onClick={() => handleViewProduct(product)}
                       >
                         <Eye className="w-3 h-3 mr-1" />
@@ -434,7 +444,7 @@ export default function AdminProductsPage() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1 text-xs h-8"
+                        className="flex-1 text-xs h-8 sm:h-7"
                         onClick={() => handleEditProduct(product)}
                       >
                         <Edit className="w-3 h-3 mr-1" />

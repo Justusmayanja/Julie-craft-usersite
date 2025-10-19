@@ -6,20 +6,111 @@ export async function GET(request: NextRequest) {
   try {
     // Check if Supabase is configured
     if (!isSupabaseConfigured || !supabaseAdmin) {
-      console.log('Supabase not configured, returning empty products array')
-      console.log('Environment check:', {
-        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        isConfigured: isSupabaseConfigured,
-        hasAdmin: !!supabaseAdmin
-      })
+      console.log('Supabase not configured, returning mock products')
+      
+      // Get query parameters for mock data
+      const { searchParams } = new URL(request.url)
+      const featured = searchParams.get('featured') === 'true'
+      const limit = searchParams.get('limit') ? Number(searchParams.get('limit')) : 50
+      
+      // Mock featured products
+      const mockProducts = [
+        {
+          id: '1',
+          name: 'Handmade Ceramic Vase',
+          price: 45000,
+          description: 'Beautiful handcrafted ceramic vase with traditional Ugandan patterns',
+          image: '/placeholder-product.jpg',
+          category: 'ceramics',
+          stock_quantity: 10,
+          featured: true,
+          status: 'active',
+          sku: 'CER-VASE-001',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          name: 'Traditional Beaded Necklace',
+          price: 25000,
+          description: 'Exquisite beaded necklace made with traditional techniques',
+          image: '/placeholder-product.jpg',
+          category: 'jewelry',
+          stock_quantity: 15,
+          featured: true,
+          status: 'active',
+          sku: 'JEW-NECK-002',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '3',
+          name: 'Woven Textile Wall Hanging',
+          price: 35000,
+          description: 'Colorful woven textile perfect for home decoration',
+          image: '/placeholder-product.jpg',
+          category: 'textiles',
+          stock_quantity: 8,
+          featured: true,
+          status: 'active',
+          sku: 'TEX-HANG-003',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '4',
+          name: 'Wooden Carved Bowl',
+          price: 30000,
+          description: 'Hand-carved wooden bowl from local artisans',
+          image: '/placeholder-product.jpg',
+          category: 'woodwork',
+          stock_quantity: 12,
+          featured: true,
+          status: 'active',
+          sku: 'WD-BOWL-004',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '5',
+          name: 'Batik Print Scarf',
+          price: 20000,
+          description: 'Beautiful batik print scarf with African motifs',
+          image: '/placeholder-product.jpg',
+          category: 'textiles',
+          stock_quantity: 20,
+          featured: true,
+          status: 'active',
+          sku: 'TEX-SCARF-005',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '6',
+          name: 'Clay Pottery Set',
+          price: 55000,
+          description: 'Complete set of traditional clay pottery for cooking',
+          image: '/placeholder-product.jpg',
+          category: 'ceramics',
+          stock_quantity: 6,
+          featured: true,
+          status: 'active',
+          sku: 'CER-SET-006',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ]
+      
+      // Filter by featured if requested
+      const filteredProducts = featured ? mockProducts.filter(p => p.featured) : mockProducts
+      const limitedProducts = filteredProducts.slice(0, limit)
+      
       return NextResponse.json({
-        products: [],
-        total: 0,
-        limit: 50,
+        products: limitedProducts,
+        total: filteredProducts.length,
+        limit,
         offset: 0,
-        message: 'Database not configured - using fallback data',
+        message: 'Mock data - database not configured',
         debug: {
           hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
           hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

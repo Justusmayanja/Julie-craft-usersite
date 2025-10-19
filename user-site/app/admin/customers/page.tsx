@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
   Table,
   TableBody,
@@ -128,6 +130,9 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("All")
   const [customers] = useState(mockCustomers)
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,6 +141,16 @@ export default function CustomersPage() {
     const matchesStatus = selectedStatus === "All" || customer.status === selectedStatus
     return matchesSearch && matchesStatus
   })
+
+  const handleViewCustomer = (customer: any) => {
+    setSelectedCustomer(customer)
+    setIsViewModalOpen(true)
+  }
+
+  const handleEditCustomer = (customer: any) => {
+    setSelectedCustomer(customer)
+    setIsEditModalOpen(true)
+  }
 
   const totalCustomers = customers.length
   const activeCustomers = customers.filter(c => c.status === "active").length
@@ -348,10 +363,22 @@ export default function CustomersPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-1">
-                        <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-blue-50 hover:text-blue-700">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+                          onClick={() => handleViewCustomer(customer)}
+                          title="View Customer Details"
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-blue-50 hover:text-blue-700">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+                          onClick={() => handleEditCustomer(customer)}
+                          title="Edit Customer"
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
                       </div>
@@ -373,6 +400,169 @@ export default function CustomersPage() {
       </Card>
         </div>
       </div>
+
+      {/* View Customer Modal */}
+      {selectedCustomer && (
+        <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Customer Details</DialogTitle>
+              <DialogDescription>
+                View detailed information about {selectedCustomer.name}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Customer ID</Label>
+                  <p className="text-sm font-semibold">{selectedCustomer.id}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                  <Badge className={getStatusBadgeClass(selectedCustomer.status)}>
+                    {selectedCustomer.status}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Name</Label>
+                  <p className="text-sm font-semibold">{selectedCustomer.name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Email</Label>
+                  <p className="text-sm">{selectedCustomer.email}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Phone</Label>
+                  <p className="text-sm">{selectedCustomer.phone}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Total Orders</Label>
+                  <p className="text-sm font-semibold">{selectedCustomer.totalOrders}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Total Spent</Label>
+                  <p className="text-sm font-semibold">${selectedCustomer.totalSpent.toFixed(2)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Member Since</Label>
+                  <p className="text-sm">{new Date(selectedCustomer.joinDate).toLocaleDateString()}</p>
+                </div>
+              </div>
+              
+              {selectedCustomer.address && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Address</Label>
+                  <p className="text-sm">
+                    {selectedCustomer.address.street}<br />
+                    {selectedCustomer.address.city}, {selectedCustomer.address.state} {selectedCustomer.address.zip}
+                  </p>
+                </div>
+              )}
+              
+              {selectedCustomer.tags && selectedCustomer.tags.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Tags</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedCustomer.tags.map((tag: string, index: number) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+                Close
+              </Button>
+              <Button onClick={() => {
+                setIsViewModalOpen(false)
+                handleEditCustomer(selectedCustomer)
+              }}>
+                Edit Customer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Customer Modal */}
+      {selectedCustomer && (
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit Customer</DialogTitle>
+              <DialogDescription>
+                Update customer information for {selectedCustomer.name}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="edit-name"
+                  defaultValue={selectedCustomer.name}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-email" className="text-right">
+                  Email
+                </Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  defaultValue={selectedCustomer.email}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-phone" className="text-right">
+                  Phone
+                </Label>
+                <Input
+                  id="edit-phone"
+                  defaultValue={selectedCustomer.phone}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-status" className="text-right">
+                  Status
+                </Label>
+                <select
+                  id="edit-status"
+                  defaultValue={selectedCustomer.status}
+                  className="col-span-3 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                // TODO: Implement actual customer update logic
+                console.log('Update customer:', selectedCustomer)
+                setIsEditModalOpen(false)
+              }}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
