@@ -12,7 +12,7 @@ import Link from "next/link"
 import { CheckoutModal } from "@/components/checkout-modal"
 
 export function ShoppingCartPage() {
-  const { state, removeItem, updateQuantity, clearCart } = useCart()
+  const { state, removeItem, updateQuantity, clearCart, hasOutOfStockItems, removeOutOfStockItems } = useCart()
   const [promoCode, setPromoCode] = useState("")
   const [showCheckout, setShowCheckout] = useState(false)
 
@@ -193,8 +193,18 @@ export function ShoppingCartPage() {
                   ))}
                 </div>
 
-                {/* Clear Cart Button */}
-                <div className="flex justify-center sm:justify-end mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-gray-200">
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row justify-center sm:justify-end gap-3 mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-gray-200">
+                  {hasOutOfStockItems() && (
+                    <Button
+                      variant="outline"
+                      onClick={removeOutOfStockItems}
+                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-300 text-sm lg:text-base"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove Out of Stock Items
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     onClick={clearCart}
@@ -261,8 +271,9 @@ export function ShoppingCartPage() {
                   <Button 
                     className="w-full h-10 lg:h-12 text-sm lg:text-base font-semibold" 
                     onClick={() => setShowCheckout(true)}
+                    disabled={hasOutOfStockItems() || state.items.length === 0}
                   >
-                    Proceed to Checkout
+                    {hasOutOfStockItems() ? 'Remove Out of Stock Items First' : 'Proceed to Checkout'}
                   </Button>
 
                   <div className="text-center">

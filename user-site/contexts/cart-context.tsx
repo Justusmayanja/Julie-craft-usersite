@@ -148,6 +148,8 @@ const CartContext = createContext<{
   checkStockAvailability: () => Promise<boolean>
   reserveItems: () => Promise<boolean>
   releaseReservations: () => Promise<void>
+  hasOutOfStockItems: () => boolean
+  removeOutOfStockItems: () => void
   dispatch: React.Dispatch<CartAction>
 } | null>(null)
 
@@ -358,6 +360,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "CLEAR_CART" })
   }
 
+  // Helper function to check if cart has out-of-stock items
+  const hasOutOfStockItems = (): boolean => {
+    return state.items.some(item => !item.inStock || (item.availableQuantity && item.availableQuantity < item.quantity))
+  }
+
+  // Helper function to remove out-of-stock items from cart
+  const removeOutOfStockItems = () => {
+    const availableItems = state.items.filter(item => item.inStock && (!item.availableQuantity || item.availableQuantity >= item.quantity))
+    dispatch({ type: "LOAD_CART", payload: availableItems })
+  }
+
   // Helper function to check stock availability
   const checkStockAvailability = async (): Promise<boolean> => {
     if (state.items.length === 0) return true
@@ -497,6 +510,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       console.log('Checking stock availability before order placement...')
       const stockAvailable = await checkStockAvailability()
       if (!stockAvailable) {
+        // Automatically remove out-of-stock items from cart
+        const outOfStockItems = state.items.filter(item => !item.inStock || (item.availableQuantity && item.availableQuantity < item.quantity))
+        if (outOfStockItems.length > 0) {
+          const itemNames = outOfStockItems.map(item => item.name).join(', ')
+          
+          // Remove out-of-stock items from cart
+          const availableItems = state.items.filter(item => item.inStock && (!item.availableQuantity || item.availableQuantity >= item.quantity))
+          dispatch({ type: "LOAD_CART", payload: availableItems })
+          
+          throw new Error(`The following items are no longer available and have been removed from your cart: ${itemNames}. Please review your cart and try again.`)
+        }
+        
         throw new Error('Some items are no longer available. Please review your cart and remove unavailable items.')
       }
 
@@ -504,7 +529,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const outOfStockItems = state.items.filter(item => !item.inStock || (item.availableQuantity && item.availableQuantity < item.quantity))
       if (outOfStockItems.length > 0) {
         const itemNames = outOfStockItems.map(item => item.name).join(', ')
-        throw new Error(`The following items are no longer available: ${itemNames}. Please remove them from your cart.`)
+        
+        // Remove out-of-stock items from cart
+        const availableItems = state.items.filter(item => item.inStock && (!item.availableQuantity || item.availableQuantity >= item.quantity))
+        dispatch({ type: "LOAD_CART", payload: availableItems })
+        
+        throw new Error(`The following items are no longer available and have been removed from your cart: ${itemNames}. Please review your cart and try again.`)
       }
 
       // Reserve items before creating order
@@ -566,6 +596,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       checkStockAvailability,
       reserveItems,
       releaseReservations,
+      hasOutOfStockItems,
+      removeOutOfStockItems,
       dispatch 
     }}>
       {children}
