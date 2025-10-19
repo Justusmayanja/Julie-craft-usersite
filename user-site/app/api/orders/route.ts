@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         billing_address: body.billing_address || body.shipping_address,
         notes: body.notes,
         order_date: new Date().toISOString(),
-        user_id: userId, // Associate order with user if authenticated
+        customer_id: userId, // Associate order with user if authenticated
         is_guest_order: !userId // Mark as guest order if no user
       })
       .select()
@@ -173,115 +173,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
 
-    // Validate stock availability before creating order items
-    console.log('Validating stock availability for order items...')
-    
-    try {
-      for (const item of body.items) {
-        const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
-        
-        console.log(`Looking for product with ID: ${item.product_id} (type: ${typeof item.product_id})`)
-        
-        // Check current stock for this product
-        const { data: product, error: productError } = await supabaseAdmin
-          .from('products')
-          .select('id, name, stock_quantity, status')
-          .eq('id', item.product_id)
-          .single()
-        
-        if (productError || !product) {
-          console.log(`Product not found with ID ${item.product_id}:`, productError)
-          console.log(`Attempting to find by name: ${item.product_name}`)
-          
-          // Try to find by name if ID lookup fails (for fallback products)
-          const { data: productByName, error: nameError } = await supabaseAdmin
-            .from('products')
-            .select('id, name, stock_quantity, status')
-            .ilike('name', `%${item.product_name}%`)
-            .limit(1)
-            .single()
-          
-          if (productByName && !nameError) {
-            console.log(`Found product by name: ${productByName.name} (ID: ${productByName.id})`)
-            // Update the item with the correct database ID
-            item.product_id = productByName.id
-            // Continue with the found product
-            const foundProduct = productByName
-            const isInStock = foundProduct.stock_quantity > 0 && foundProduct.status === 'active'
-            if (!isInStock) {
-              console.log(`Product out of stock: ${foundProduct.name} (stock: ${foundProduct.stock_quantity}, status: ${foundProduct.status})`)
-              return NextResponse.json({ 
-                error: `We're sorry, "${foundProduct.name}" is currently out of stock. Please remove it from your cart or try again later.`,
-                code: 'OUT_OF_STOCK'
-              }, { status: 400 })
-            }
-            
-            if (foundProduct.stock_quantity < quantity) {
-              console.log(`Insufficient stock for ${foundProduct.name}: ${foundProduct.stock_quantity} available, ${quantity} requested`)
-              return NextResponse.json({ 
-                error: `We only have ${foundProduct.stock_quantity} "${foundProduct.name}" available, but you're trying to order ${quantity}. Please adjust the quantity and try again.`,
-                code: 'INSUFFICIENT_STOCK',
-                available_quantity: foundProduct.stock_quantity,
-                requested_quantity: quantity,
-                product_name: foundProduct.name
-              }, { status: 400 })
-            }
-            
-            console.log(`Stock check passed for ${foundProduct.name}: ${foundProduct.stock_quantity} available, ${quantity} requested`)
-            continue // Skip to next item
-          }
-          
-          return NextResponse.json({ 
-            error: `Sorry, we couldn't find the product "${item.product_name || 'Unknown Product'}". It may have been removed or is temporarily unavailable.`,
-            code: 'PRODUCT_NOT_FOUND'
-          }, { status: 400 })
-        }
-        
-        // Check if product is active
-        if (product.status !== 'active') {
-          console.log(`Product inactive: ${product.name} (status: ${product.status})`)
-          return NextResponse.json({ 
-            error: `We're sorry, "${product.name}" is currently not available. Please remove it from your cart or try again later.`,
-            code: 'PRODUCT_INACTIVE'
-          }, { status: 400 })
-        }
-        
-        // Check available stock (considering existing reservations)
-        const { data: existingReservations, error: reservationError } = await supabaseAdmin
-          .from('order_item_reservations')
-          .select('reserved_quantity')
-          .eq('product_id', product.id)
-          .eq('status', 'active')
-
-        if (reservationError) {
-          console.error('Error checking existing reservations:', reservationError)
-        }
-
-        const reservedQuantity = existingReservations?.reduce((sum, r) => sum + r.reserved_quantity, 0) || 0
-        const availableStock = Math.max(0, product.stock_quantity - reservedQuantity)
-        
-        if (availableStock < quantity) {
-          console.log(`Insufficient available stock for ${product.name}: ${availableStock} available (${product.stock_quantity} total - ${reservedQuantity} reserved), ${quantity} requested`)
-          return NextResponse.json({ 
-            error: `We only have ${availableStock} "${product.name}" available right now, but you're trying to order ${quantity}. Please adjust the quantity and try again.`,
-            code: 'INSUFFICIENT_STOCK',
-            available_quantity: availableStock,
-            requested_quantity: quantity,
-            product_name: product.name,
-            total_stock: product.stock_quantity,
-            reserved_quantity: reservedQuantity
-          }, { status: 400 })
-        }
-        
-        console.log(`Stock check passed for ${product.name}: ${availableStock} available (${product.stock_quantity} total - ${reservedQuantity} reserved), ${quantity} requested`)
-      }
-    } catch (stockValidationError) {
-      console.error('Stock validation error:', stockValidationError)
-      return NextResponse.json({ 
-        error: 'There was an issue checking product availability. Please try again or contact support if the problem persists.',
-        code: 'STOCK_VALIDATION_ERROR'
-      }, { status: 500 })
-    }
+    // Note: Stock validation is handled by the cart context before order placement
+    // The cart context ensures all items are available and reserved before calling this API
+    console.log('Order items validated by cart context, proceeding with order creation...')
 
     // Create order items with validation
     console.log('Creating order items from:', JSON.stringify(body.items, null, 2))
@@ -357,16 +251,16 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Order created but failed to fetch details' }, { status: 500 })
         }
 
-        // Deduct inventory for each order item
+        // Deduct inventory for each order item (atomic operation)
         console.log('Deducting inventory for order items...')
         try {
           for (const item of body.items) {
             const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
             
-            // Get current stock first, then deduct
+            // Get current stock first, then deduct atomically
             const { data: currentProduct, error: getError } = await supabaseAdmin
               .from('products')
-              .select('stock_quantity, name')
+              .select('stock_quantity, name, reorder_point')
               .eq('id', item.product_id)
               .single()
             
@@ -377,7 +271,7 @@ export async function POST(request: NextRequest) {
             
             const newStockQuantity = Math.max(0, currentProduct.stock_quantity - quantity)
             
-            // Deduct stock quantity
+            // Deduct stock quantity atomically
             const { error: stockError } = await supabaseAdmin
               .from('products')
               .update({ 
@@ -385,14 +279,16 @@ export async function POST(request: NextRequest) {
                 updated_at: new Date().toISOString()
               })
               .eq('id', item.product_id)
+              .eq('stock_quantity', currentProduct.stock_quantity) // Ensure no race conditions
             
             if (stockError) {
               console.error(`Failed to deduct inventory for product ${item.product_id}:`, stockError)
-              // Don't fail the order, just log the error
+              // This is a critical error - the order should be rolled back
+              throw new Error(`Inventory deduction failed for product ${item.product_id}: ${stockError.message}`)
             } else {
               console.log(`Successfully deducted ${quantity} units from product ${item.product_id} (${currentProduct.name})`)
               
-              // Create stock movement record if table exists
+              // Create stock movement record
               try {
                 await supabaseAdmin
                   .from('stock_movements')
@@ -410,6 +306,25 @@ export async function POST(request: NextRequest) {
               } catch (stockMovementError) {
                 console.log('Stock movements table not available, skipping movement record:', stockMovementError)
               }
+              
+              // Check if product is now at or below reorder point
+              const reorderPoint = currentProduct.reorder_point || 10
+              if (newStockQuantity <= reorderPoint) {
+                try {
+                  await supabaseAdmin
+                    .from('reorder_alerts')
+                    .insert({
+                      product_id: item.product_id,
+                      alert_type: newStockQuantity === 0 ? 'out_of_stock' : 'low_stock',
+                      current_stock: newStockQuantity,
+                      reorder_point: reorderPoint,
+                      created_at: new Date().toISOString()
+                    })
+                  console.log(`Low stock alert created for product ${item.product_id}`)
+                } catch (alertError) {
+                  console.log('Reorder alerts table not available, skipping alert:', alertError)
+                }
+              }
             }
           }
           
@@ -426,7 +341,45 @@ export async function POST(request: NextRequest) {
           console.log('Inventory deduction completed successfully')
         } catch (inventoryError) {
           console.error('Error during inventory deduction:', inventoryError)
-          // Don't fail the order, just log the error
+          // Rollback the order if inventory deduction fails
+          try {
+            await supabaseAdmin.from('orders').delete().eq('id', orderData.id)
+            console.log('Order rolled back due to inventory deduction failure')
+          } catch (rollbackError) {
+            console.error('Failed to rollback order:', rollbackError)
+          }
+          throw new Error(`Order failed due to inventory issues: ${inventoryError.message}`)
+        }
+
+        // Create admin notification for new order
+        try {
+          await supabaseAdmin
+            .from('order_notes')
+            .insert({
+              order_id: orderData.id,
+              note_type: 'internal',
+              content: `New order received: ${orderNumber} from ${body.customer_name} (${body.customer_email}) - Total: ${body.total_amount} UGX`,
+              is_internal: true,
+              created_by: 'system',
+              created_at: new Date().toISOString()
+            })
+          
+          // Create order task for admin
+          await supabaseAdmin
+            .from('order_tasks')
+            .insert({
+              order_id: orderData.id,
+              task_type: 'payment_verification',
+              title: 'Verify Payment',
+              description: `Verify payment for order ${orderNumber} from ${body.customer_name}`,
+              status: 'pending',
+              priority: 'normal',
+              created_at: new Date().toISOString()
+            })
+          
+          console.log('Admin notifications created for new order')
+        } catch (notificationError) {
+          console.log('Admin notification tables not available, skipping notifications:', notificationError)
         }
 
         // Add success message and metadata

@@ -28,21 +28,30 @@ export async function GET(request: NextRequest) {
         }, { status: 401 })
       }
 
-      // Get user with profile data
-      const { data: userWithProfile, error: profileError } = await supabaseAdmin
-        .rpc('get_user_with_profile', { user_uuid: user.id })
+      // Get user profile data from profiles table (optional)
+      let profile = null
+      try {
+        const { data: profileData, error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
 
-      if (profileError) {
-        console.error('Error fetching user profile:', profileError)
+        if (!profileError && profileData) {
+          profile = profileData
+        }
+      } catch (profileError) {
+        console.log('Profile not found for user, using auth metadata:', profileError)
       }
 
       return NextResponse.json({
         valid: true,
-        user: userWithProfile?.[0] || {
+        user: {
           id: user.id,
           email: user.email,
-          full_name: user.user_metadata?.full_name || 'User',
-          phone: user.user_metadata?.phone || null,
+          name: profile?.name || user.user_metadata?.full_name || user.user_metadata?.name || 'User',
+          phone: profile?.phone || user.user_metadata?.phone || null,
+          avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || null,
           is_verified: !!user.email_confirmed_at,
           created_at: user.created_at,
           updated_at: user.updated_at

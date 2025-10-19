@@ -72,8 +72,8 @@ export async function GET(request: NextRequest) {
       if (targetUserId.includes('@')) {
         query = query.eq('customer_email', targetUserId)
       } else {
-        // If it's a UUID, filter by user_id column
-        query = query.eq('user_id', targetUserId)
+        // If it's a UUID, filter by customer_id column
+        query = query.eq('customer_id', targetUserId)
       }
     } else if (sessionId) {
       // For guest sessions, we might need to store session_id with orders

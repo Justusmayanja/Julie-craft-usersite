@@ -81,10 +81,12 @@ export async function PUT(request: NextRequest) {
       firstName, 
       lastName, 
       phone, 
+      address,
       bio, 
       location, 
       website, 
-      preferences 
+      preferences,
+      avatar_url
     } = body
     
     // Handle both camelCase and snake_case formats
@@ -96,7 +98,9 @@ export async function PUT(request: NextRequest) {
       body,
       finalFirstName,
       finalLastName,
-      phone
+      phone,
+      address,
+      avatar_url
     })
 
     // Update profile
@@ -105,11 +109,14 @@ export async function PUT(request: NextRequest) {
       .update({
         first_name: finalFirstName,
         last_name: finalLastName,
+        name: finalFirstName && finalLastName ? `${finalFirstName} ${finalLastName}` : undefined,
         phone,
+        address,
         bio,
         location,
         website,
         preferences,
+        avatar_url,
         updated_at: new Date().toISOString()
       })
       .eq('id', decoded.userId)

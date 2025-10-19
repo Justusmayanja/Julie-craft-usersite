@@ -488,16 +488,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: "SET_PLACING_ORDER", payload: true })
 
+      // Validate cart is not empty
+      if (state.items.length === 0) {
+        throw new Error('Your cart is empty. Please add items before placing an order.')
+      }
+
       // Check stock availability before placing order
+      console.log('Checking stock availability before order placement...')
       const stockAvailable = await checkStockAvailability()
       if (!stockAvailable) {
-        throw new Error('Some items are no longer available. Please review your cart.')
+        throw new Error('Some items are no longer available. Please review your cart and remove unavailable items.')
+      }
+
+      // Double-check that all items are still in stock
+      const outOfStockItems = state.items.filter(item => !item.inStock || (item.availableQuantity && item.availableQuantity < item.quantity))
+      if (outOfStockItems.length > 0) {
+        const itemNames = outOfStockItems.map(item => item.name).join(', ')
+        throw new Error(`The following items are no longer available: ${itemNames}. Please remove them from your cart.`)
       }
 
       // Reserve items before creating order
+      console.log('Reserving items for order...')
       const reservationSuccess = await reserveItems()
       if (!reservationSuccess) {
-        throw new Error('Unable to reserve items. Please try again.')
+        throw new Error('Unable to reserve items. Some items may have become unavailable. Please try again.')
       }
 
       // Generate order items from cart
@@ -520,6 +534,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         payment_method: orderData.payment_method
       }
 
+      console.log('Submitting order to API...')
       // Submit order
       const orderConfirmation = await createOrder(createOrderData)
       
@@ -527,8 +542,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "SET_LAST_ORDER", payload: orderConfirmation })
       dispatch({ type: "CLEAR_CART" })
       
+      console.log('Order placed successfully:', orderConfirmation.order_number)
       return orderConfirmation
     } catch (error) {
+      console.error('Order placement failed:', error)
       // Release reservations if order fails
       await releaseReservations()
       throw error

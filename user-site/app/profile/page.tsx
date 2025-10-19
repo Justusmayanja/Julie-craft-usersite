@@ -36,6 +36,9 @@ export default function ProfilePage() {
     address: ''
   })
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   useEffect(() => {
     if (!isLoading) {
@@ -77,24 +80,92 @@ export default function ProfilePage() {
         phone: profile.phone || '',
         address: profile.address || ''
       })
+      setSelectedFile(null)
+      setPreviewUrl(null)
       setIsEditModalOpen(true)
     }
+  }
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setSaveMessage({ type: 'error', text: 'Please select a valid image file' })
+        return
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setSaveMessage({ type: 'error', text: 'Image size must be less than 5MB' })
+        return
+      }
+      
+      setSelectedFile(file)
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
+    }
+  }
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'profile')
+    
+    const token = localStorage.getItem('julie-crafts-token')
+    const response = await fetch('/api/media/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to upload image')
+    }
+    
+    const data = await response.json()
+    return data.url
   }
 
   const handleSaveProfile = async () => {
     if (!user?.id) return
 
     setIsSaving(true)
+    setSaveMessage(null)
+
     try {
       const token = localStorage.getItem('julie-crafts-token')
       if (!token) {
-        throw new Error('No authentication token found')
+        setSaveMessage({ type: 'error', text: 'Authentication token missing. Please log in again.' })
+        return
       }
 
       // Split name into first and last name for the API
       const nameParts = editForm.name.trim().split(' ')
       const firstName = nameParts[0] || ''
       const lastName = nameParts.slice(1).join(' ') || ''
+
+      let avatarUrl = profile?.avatar_url
+
+      // Upload image if selected
+      if (selectedFile) {
+        setIsUploadingImage(true)
+        try {
+          avatarUrl = await uploadImage(selectedFile)
+        } catch (error) {
+          console.error('Error uploading image:', error)
+          setSaveMessage({ 
+            type: 'error', 
+            text: 'Failed to upload profile picture. Please try again.' 
+          })
+          return
+        } finally {
+          setIsUploadingImage(false)
+        }
+      }
 
       const response = await fetch('/api/users/profile', {
         method: 'PUT',
@@ -106,7 +177,8 @@ export default function ProfilePage() {
           firstName,
           lastName,
           phone: editForm.phone.trim() || undefined,
-          address: editForm.address.trim() || undefined
+          address: editForm.address.trim() || undefined,
+          avatar_url: avatarUrl
         })
       })
 
@@ -120,7 +192,8 @@ export default function ProfilePage() {
         ...prev,
         name: editForm.name,
         phone: editForm.phone,
-        address: editForm.address
+        address: editForm.address,
+        avatar_url: avatarUrl
       } : null)
 
       setIsEditModalOpen(false)
@@ -189,6 +262,29 @@ export default function ProfilePage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">My Profile</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Profile Picture */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="relative inline-block">
+                  {profile.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile.name}
+                      className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center border-4 border-gray-200">
+                      <User className="w-16 h-16 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mt-4">{profile.name}</h2>
+                <p className="text-gray-600">{profile.email}</p>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Profile Information */}
           <div className="lg:col-span-2 space-y-6">
             <Card>
@@ -346,6 +442,58 @@ export default function ProfilePage() {
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
+            {/* Profile Picture Upload */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="avatar" className="text-right">
+                Photo
+              </Label>
+              <div className="col-span-3">
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                      />
+                    ) : profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="Current"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-200">
+                        <User className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      type="file"
+                      id="avatar"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('avatar')?.click()}
+                    >
+                      {selectedFile ? 'Change Photo' : 'Upload Photo'}
+                    </Button>
+                    {selectedFile && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {selectedFile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Name
@@ -409,12 +557,12 @@ export default function ProfilePage() {
             </Button>
             <Button 
               onClick={handleSaveProfile}
-              disabled={isSaving}
+              disabled={isSaving || isUploadingImage}
             >
-              {isSaving ? (
+              {isSaving || isUploadingImage ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                  Saving...
+                  {isUploadingImage ? 'Uploading...' : 'Saving...'}
                 </>
               ) : (
                 <>

@@ -28,378 +28,353 @@ import {
   Banknote,
   ShoppingCart,
   Calendar,
-  Star
+  Star,
+  RefreshCw,
+  UserPlus
 } from "lucide-react"
-
-// Mock data - replace with real data from your database
-const mockCustomers = [
-  {
-    id: "CUST-001",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 123-4567",
-    avatar: "SJ",
-    address: {
-      street: "123 Main St",
-      city: "Springfield",
-      state: "IL",
-      zip: "62701"
-    },
-    totalOrders: 5,
-    totalSpent: 425.95,
-    lastOrderDate: "2024-01-15",
-    joinDate: "2023-06-15",
-    status: "active",
-    isVip: true,
-    tags: ["Pottery Lover", "Repeat Customer"]
-  },
-  {
-    id: "CUST-002",
-    name: "Mike Chen",
-    email: "mike.chen@email.com",
-    phone: "+1 (555) 234-5678",
-    avatar: "MC",
-    address: {
-      street: "456 Oak Ave",
-      city: "Chicago",
-      state: "IL",
-      zip: "60601"
-    },
-    totalOrders: 3,
-    totalSpent: 298.47,
-    lastOrderDate: "2024-01-14",
-    joinDate: "2023-08-22",
-    status: "active",
-    isVip: false,
-    tags: ["Jewelry", "Gift Buyer"]
-  },
-  {
-    id: "CUST-003",
-    name: "Emily Davis",
-    email: "emily.davis@email.com",
-    phone: "+1 (555) 345-6789",
-    avatar: "ED",
-    address: {
-      street: "789 Pine St",
-      city: "Denver",
-      state: "CO",
-      zip: "80202"
-    },
-    totalOrders: 7,
-    totalSpent: 892.33,
-    lastOrderDate: "2024-01-13",
-    joinDate: "2023-03-10",
-    status: "active",
-    isVip: true,
-    tags: ["Textiles", "High Value", "Corporate"]
-  },
-  {
-    id: "CUST-004",
-    name: "Alex Smith",
-    email: "alex.smith@email.com",
-    phone: "+1 (555) 456-7890",
-    avatar: "AS",
-    address: {
-      street: "321 Elm St",
-      city: "Austin",
-      state: "TX",
-      zip: "73301"
-    },
-    totalOrders: 1,
-    totalSpent: 92.99,
-    lastOrderDate: "2024-01-12",
-    joinDate: "2024-01-10",
-    status: "new",
-    isVip: false,
-    tags: ["New Customer", "Woodwork"]
-  },
-]
-
-const statusOptions = ["All", "active", "new", "inactive"]
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "active": return "bg-emerald-100 text-emerald-700 border-emerald-200"
-    case "new": return "bg-blue-100 text-blue-700 border-blue-200"
-    case "inactive": return "bg-gray-100 text-gray-700 border-gray-200"
-    default: return "bg-gray-100 text-gray-700 border-gray-200"
-  }
-}
+import { useCustomers, useCustomerStats, type Customer } from "@/hooks/admin/use-customers"
 
 export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedStatus, setSelectedStatus] = useState("All")
-  const [customers] = useState(mockCustomers)
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
-  const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         customer.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = selectedStatus === "All" || customer.status === selectedStatus
-    return matchesSearch && matchesStatus
+  const { customers, loading, error, total, fetchCustomers, refresh } = useCustomers({
+    search: searchTerm || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    limit: 50
   })
 
-  const handleViewCustomer = (customer: any) => {
+  const { stats, loading: statsLoading } = useCustomerStats()
+
+  const handleViewCustomer = (customer: Customer) => {
     setSelectedCustomer(customer)
     setIsViewModalOpen(true)
   }
 
-  const handleEditCustomer = (customer: any) => {
+  const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer)
     setIsEditModalOpen(true)
   }
 
-  const totalCustomers = customers.length
-  const activeCustomers = customers.filter(c => c.status === "active").length
-  const vipCustomers = customers.filter(c => c.isVip).length
-  const avgOrderValue = customers.reduce((sum, c) => sum + c.totalSpent, 0) / customers.reduce((sum, c) => sum + c.totalOrders, 0)
+  const handleSearch = (value: string) => {
+    setSearchTerm(value)
+    fetchCustomers({
+      search: value || undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      limit: 50
+    })
+  }
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status)
+    fetchCustomers({
+      search: searchTerm || undefined,
+      status: status !== 'all' ? status : undefined,
+      limit: 50
+    })
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800'
+      case 'inactive': return 'bg-gray-100 text-gray-800'
+      case 'blocked': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Failed to load customers</p>
+          <Button onClick={refresh} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-full">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="space-y-6">
-          {/* Page Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">JulieCraft Customers</h1>
-              <p className="text-gray-600 mt-1 text-base">Manage your customer relationships and order history</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Customers</h1>
+          <p className="text-gray-600 text-sm sm:text-base">Manage customer accounts and view analytics</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={refresh}
+            disabled={loading}
+            className="w-full sm:w-auto"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden xs:inline">Refresh</span>
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={() => setIsAddModalOpen(true)}
+            className="w-full sm:w-auto"
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            <span className="hidden xs:inline">Add Customer</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Customers</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {statsLoading ? '...' : stats?.totalCustomers || 0}
+                </p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button variant="outline" size="sm" className="bg-white hover:bg-gray-50 border-gray-300">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-              <Button variant="outline" size="sm" className="bg-white hover:bg-blue-50 hover:text-blue-700 border-gray-300">
-                <Mail className="w-4 h-4 mr-2" />
-                Send Newsletter
-              </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">VIP Customers</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {statsLoading ? '...' : stats?.vipCustomers || 0}
+                </p>
+              </div>
+              <Star className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">New This Month</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {statsLoading ? '...' : stats?.newCustomersThisMonth || 0}
+                </p>
+              </div>
+              <Calendar className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}
+                </p>
+              </div>
+              <Banknote className="h-8 w-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search customers by name or email..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={statusFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleStatusFilter('all')}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={statusFilter === 'active' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleStatusFilter('active')}
+                >
+                  Active
+                </Button>
+                <Button
+                  variant={statusFilter === 'vip' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleStatusFilter('vip')}
+                >
+                  VIP
+                </Button>
+              </div>
             </div>
           </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="relative overflow-hidden bg-white border-0 shadow-md hover:shadow-lg transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10"></div>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-1.5 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                    <Users className="h-4 w-4 text-blue-600" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-gray-600">Total Customers</p>
-                  <p className="text-xl font-bold text-gray-900">{totalCustomers}</p>
-                  <p className="text-xs text-gray-500">Registered customers</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden bg-white border-0 shadow-md hover:shadow-lg transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-emerald-600/10"></div>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-1.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
-                    <ShoppingCart className="h-4 w-4 text-emerald-600" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-gray-600">Active Customers</p>
-                  <p className="text-xl font-bold text-gray-900">{activeCustomers}</p>
-                  <p className="text-xs text-gray-500">Recently active</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden bg-white border-0 shadow-md hover:shadow-lg transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10"></div>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-1.5 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                    <Star className="h-4 w-4 text-blue-600" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-gray-600">VIP Customers</p>
-                  <p className="text-xl font-bold text-gray-900">{vipCustomers}</p>
-                  <p className="text-xs text-gray-500">High-value customers</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden bg-white border-0 shadow-md hover:shadow-lg transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-emerald-600/10"></div>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-1.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
-                    <Banknote className="h-4 w-4 text-emerald-600" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-gray-600">Avg Order Value</p>
-                  <p className="text-xl font-bold text-gray-900">{avgOrderValue.toLocaleString()} UGX</p>
-                  <p className="text-xs text-gray-500">Per order average</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        </CardContent>
+      </Card>
 
       {/* Customers Table */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Customer Directory</CardTitle>
-            <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search customers..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
-              
-              {/* Status Filter */}
-              <div className="flex space-x-2">
-                {statusOptions.map((status) => (
-                  <Button
-                    key={status}
-                    variant={selectedStatus === status ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedStatus(status)}
-                    className={selectedStatus === status ? "bg-amber-500 hover:bg-amber-600" : ""}
-                  >
-                    {status === "All" ? status : status.charAt(0).toUpperCase() + status.slice(1)}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <CardTitle className="flex items-center justify-between">
+            <span>Customer List ({total})</span>
+            <Button variant="outline" size="sm">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          </CardTitle>
         </CardHeader>
-        
         <CardContent>
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Orders</TableHead>
-                  <TableHead>Total Spent</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead className="w-16">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-medium shadow-sm">
-                          {customer.avatar}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <div className="font-medium text-gray-900">{customer.name}</div>
-                            {customer.isVip && (
-                              <Star className="w-4 h-4 text-blue-500 fill-current" />
+          {loading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                    <TableHead className="hidden md:table-cell">Orders</TableHead>
+                    <TableHead className="hidden lg:table-cell">Total Spent</TableHead>
+                    <TableHead className="hidden md:table-cell">Status</TableHead>
+                    <TableHead className="hidden lg:table-cell">Join Date</TableHead>
+                    <TableHead className="w-20">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                        No customers found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    customers.map((customer) => (
+                      <TableRow key={customer.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                              <span className="text-sm font-medium text-blue-600">
+                                {customer.avatar}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-medium">{customer.name}</div>
+                              <div className="text-sm text-gray-500 sm:hidden">{customer.email}</div>
+                              {customer.isVip && (
+                                <Badge variant="secondary" className="mt-1 text-xs">
+                                  <Star className="w-3 h-3 mr-1" />
+                                  VIP
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="space-y-1">
+                            <div className="flex items-center text-sm">
+                              <Mail className="w-3 h-3 mr-2 text-gray-400" />
+                              {customer.email}
+                            </div>
+                            {customer.phone && (
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Phone className="w-3 h-3 mr-2" />
+                                {customer.phone}
+                              </div>
                             )}
                           </div>
-                          <div className="text-sm text-gray-500">{customer.id}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Mail className="w-3 h-3 text-gray-400" />
-                          <span>{customer.email}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <Phone className="w-3 h-3 text-gray-400" />
-                          <span>{customer.phone}</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2 text-sm">
-                        <MapPin className="w-3 h-3 text-gray-400" />
-                        <span>{customer.address.city}, {customer.address.state}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-center">
-                        <div className="font-medium text-gray-900">{customer.totalOrders}</div>
-                        <div className="text-xs text-gray-500">orders</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-gray-900">{customer.totalSpent.toLocaleString()} UGX</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(customer.status)}>
-                        {customer.status.charAt(0).toUpperCase() + customer.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {customer.tags.slice(0, 2).map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="flex items-center">
+                            <ShoppingCart className="w-4 h-4 mr-2 text-gray-400" />
+                            {customer.totalOrders}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="font-medium">
+                            {formatCurrency(customer.totalSpent)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <Badge className={getStatusColor(customer.status)}>
+                            {customer.status}
                           </Badge>
-                        ))}
-                        {customer.tags.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{customer.tags.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
-                          onClick={() => handleViewCustomer(customer)}
-                          title="View Customer Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
-                          onClick={() => handleEditCustomer(customer)}
-                          title="Edit Customer"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {filteredCustomers.length === 0 && (
-            <div className="text-center py-8">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No customers found</h3>
-              <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Calendar className="w-3 h-3 mr-2" />
+                            {formatDate(customer.joinDate)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+                              onClick={() => handleViewCustomer(customer)}
+                              title="View Customer Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+                              onClick={() => handleEditCustomer(customer)}
+                              title="Edit Customer"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
       </Card>
-        </div>
-      </div>
 
       {/* View Customer Modal */}
       {selectedCustomer && (
@@ -407,34 +382,37 @@ export default function CustomersPage() {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Customer Details</DialogTitle>
-              <DialogDescription>
-                View detailed information about {selectedCustomer.name}
-              </DialogDescription>
+              <DialogDescription>View detailed information about {selectedCustomer.name}</DialogDescription>
             </DialogHeader>
-            
             <div className="grid gap-4 py-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
+                  <span className="text-xl font-medium text-blue-600">
+                    {selectedCustomer.avatar}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{selectedCustomer.name}</h3>
+                  <p className="text-gray-600">{selectedCustomer.email}</p>
+                  {selectedCustomer.isVip && (
+                    <Badge variant="secondary" className="mt-1">
+                      <Star className="w-3 h-3 mr-1" />
+                      VIP Customer
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Customer ID</Label>
-                  <p className="text-sm font-semibold">{selectedCustomer.id}</p>
+                  <Label className="text-sm font-medium text-gray-500">Phone</Label>
+                  <p className="text-sm">{selectedCustomer.phone || 'Not provided'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Status</Label>
-                  <Badge className={getStatusBadgeClass(selectedCustomer.status)}>
+                  <Badge className={getStatusColor(selectedCustomer.status)}>
                     {selectedCustomer.status}
                   </Badge>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-500">Name</Label>
-                  <p className="text-sm font-semibold">{selectedCustomer.name}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-500">Email</Label>
-                  <p className="text-sm">{selectedCustomer.email}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-500">Phone</Label>
-                  <p className="text-sm">{selectedCustomer.phone}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Total Orders</Label>
@@ -442,29 +420,42 @@ export default function CustomersPage() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Total Spent</Label>
-                  <p className="text-sm font-semibold">${selectedCustomer.totalSpent.toFixed(2)}</p>
+                  <p className="text-sm font-semibold">{formatCurrency(selectedCustomer.totalSpent)}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Member Since</Label>
-                  <p className="text-sm">{new Date(selectedCustomer.joinDate).toLocaleDateString()}</p>
+                  <Label className="text-sm font-medium text-gray-500">Join Date</Label>
+                  <p className="text-sm">{formatDate(selectedCustomer.joinDate)}</p>
                 </div>
-              </div>
-              
-              {selectedCustomer.address && (
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Address</Label>
+                  <Label className="text-sm font-medium text-gray-500">Last Order</Label>
                   <p className="text-sm">
-                    {selectedCustomer.address.street}<br />
-                    {selectedCustomer.address.city}, {selectedCustomer.address.state} {selectedCustomer.address.zip}
+                    {selectedCustomer.lastOrderDate ? formatDate(selectedCustomer.lastOrderDate) : 'No orders'}
                   </p>
                 </div>
-              )}
-              
-              {selectedCustomer.tags && selectedCustomer.tags.length > 0 && (
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Address</Label>
+                <div className="flex items-start mt-1">
+                  <MapPin className="w-4 h-4 mr-2 text-gray-400 mt-0.5" />
+                  <div className="text-sm">
+                    {selectedCustomer.address.street && (
+                      <p>{selectedCustomer.address.street}</p>
+                    )}
+                    <p>
+                      {selectedCustomer.address.city && `${selectedCustomer.address.city}, `}
+                      {selectedCustomer.address.state && `${selectedCustomer.address.state} `}
+                      {selectedCustomer.address.zip}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedCustomer.tags.length > 0 && (
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Tags</Label>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedCustomer.tags.map((tag: string, index: number) => (
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedCustomer.tags.map((tag, index) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {tag}
                       </Badge>
@@ -473,15 +464,9 @@ export default function CustomersPage() {
                 </div>
               )}
             </div>
-
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
-                Close
-              </Button>
-              <Button onClick={() => {
-                setIsViewModalOpen(false)
-                handleEditCustomer(selectedCustomer)
-              }}>
+              <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>Close</Button>
+              <Button onClick={() => { setIsViewModalOpen(false); handleEditCustomer(selectedCustomer); }}>
                 Edit Customer
               </Button>
             </DialogFooter>
@@ -495,74 +480,81 @@ export default function CustomersPage() {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Edit Customer</DialogTitle>
-              <DialogDescription>
-                Update customer information for {selectedCustomer.name}
-              </DialogDescription>
+              <DialogDescription>Update customer information for {selectedCustomer.name}</DialogDescription>
             </DialogHeader>
-            
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="edit-name"
-                  defaultValue={selectedCustomer.name}
-                  className="col-span-3"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Name</Label>
+                  <Input id="name" defaultValue={selectedCustomer.name} />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" defaultValue={selectedCustomer.email} />
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-email" className="text-right">
-                  Email
-                </Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  defaultValue={selectedCustomer.email}
-                  className="col-span-3"
-                />
+              <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input id="phone" defaultValue={selectedCustomer.phone || ''} />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-phone" className="text-right">
-                  Phone
-                </Label>
-                <Input
-                  id="edit-phone"
-                  defaultValue={selectedCustomer.phone}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-status" className="text-right">
-                  Status
-                </Label>
-                <select
-                  id="edit-status"
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <select 
+                  id="status" 
+                  className="w-full p-2 border border-gray-300 rounded-md"
                   defaultValue={selectedCustomer.status}
-                  className="col-span-3 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
+                  <option value="blocked">Blocked</option>
                 </select>
               </div>
             </div>
-
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => {
-                // TODO: Implement actual customer update logic
-                console.log('Update customer:', selectedCustomer)
-                setIsEditModalOpen(false)
-              }}>
+              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+              <Button onClick={() => { console.log('Update customer:', selectedCustomer); setIsEditModalOpen(false); }}>
                 Save Changes
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Add Customer Modal */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add New Customer</DialogTitle>
+            <DialogDescription>Create a new customer account</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="firstName">First Name</Label>
+                <Input id="firstName" placeholder="Enter first name" />
+              </div>
+              <div>
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input id="lastName" placeholder="Enter last name" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="newEmail">Email</Label>
+              <Input id="newEmail" type="email" placeholder="Enter email address" />
+            </div>
+            <div>
+              <Label htmlFor="newPhone">Phone</Label>
+              <Input id="newPhone" placeholder="Enter phone number" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+            <Button onClick={() => { console.log('Add new customer'); setIsAddModalOpen(false); }}>
+              Create Customer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,18 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/admin/supabase/server'
-import { customerService } from '@/lib/admin/services/customers'
+import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient()
-    
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return NextResponse.json({
+        customer_id: params.id,
+        customer_name: 'Mock Customer',
+        orders: [],
+        total_orders: 0,
+        total_spent: 0,
+        message: 'Database not configured'
+      })
+    }
+
+    // Verify admin authentication
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.substring(7)
+    try {
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+      if (error || !user) {
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      }
+    } catch (error) {
+      return NextResponse.json({ error: 'Token verification failed' }, { status: 401 })
     }
 
     const { id } = await params
@@ -25,20 +44,42 @@ export async function GET(
     }
 
     // Check if customer exists
-    const customer = await customerService.getCustomerById(id)
-    if (!customer) {
+    const { data: customer, error: customerError } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', id)
+      .eq('is_admin', false)
+      .single()
+
+    if (customerError || !customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
     // Get customer orders
-    const orders = await customerService.getCustomerOrders(id, limit)
+    const { data: orders, error: ordersError } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        order_items:order_items(*)
+      `)
+      .eq('customer_id', id)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (ordersError) {
+      console.error('Database error:', ordersError)
+      return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
+    }
+
+    const totalOrders = orders?.length || 0
+    const totalSpent = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
 
     return NextResponse.json({
       customer_id: id,
-      customer_name: customer.full_name,
-      orders: orders,
-      total_orders: customer.total_orders,
-      total_spent: customer.total_spent
+      customer_name: customer.full_name || 'Unknown Customer',
+      orders: orders || [],
+      total_orders: totalOrders,
+      total_spent: totalSpent
     })
 
   } catch (error) {

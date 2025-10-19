@@ -233,10 +233,10 @@ export async function POST(request: NextRequest) {
             const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
             const productId = item.product_id || item.id.toString()
             
-            // Get current stock first, then deduct
+            // Get current stock first, then deduct atomically
             const { data: currentProduct, error: getError } = await supabaseAdmin
               .from('products')
-              .select('stock_quantity')
+              .select('stock_quantity, name, reorder_point')
               .eq('id', productId)
               .single()
             
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
             
             const newStockQuantity = Math.max(0, currentProduct.stock_quantity - quantity)
             
-            // Deduct stock quantity
+            // Deduct stock quantity atomically
             const { error: stockError } = await supabaseAdmin
               .from('products')
               .update({ 
@@ -255,12 +255,52 @@ export async function POST(request: NextRequest) {
                 updated_at: new Date().toISOString()
               })
               .eq('id', productId)
+              .eq('stock_quantity', currentProduct.stock_quantity) // Ensure no race conditions
             
             if (stockError) {
               console.error(`Failed to deduct inventory for product ${productId}:`, stockError)
-              // Don't fail the order, just log the error
+              // This is a critical error - the order should be rolled back
+              throw new Error(`Inventory deduction failed for product ${productId}: ${stockError.message}`)
             } else {
-              console.log(`Successfully deducted ${quantity} units from product ${productId}`)
+              console.log(`Successfully deducted ${quantity} units from product ${productId} (${currentProduct.name})`)
+              
+              // Create stock movement record
+              try {
+                await supabaseAdmin
+                  .from('stock_movements')
+                  .insert({
+                    product_id: productId,
+                    movement_type: 'sale',
+                    quantity: -quantity, // Negative for deduction
+                    previous_quantity: currentProduct.stock_quantity,
+                    new_quantity: newStockQuantity,
+                    reference_type: 'order',
+                    reference_id: orderData.id,
+                    notes: `Guest Order ${orderNumber} - ${quantity} units sold`,
+                    created_at: new Date().toISOString()
+                  })
+              } catch (stockMovementError) {
+                console.log('Stock movements table not available, skipping movement record:', stockMovementError)
+              }
+              
+              // Check if product is now at or below reorder point
+              const reorderPoint = currentProduct.reorder_point || 10
+              if (newStockQuantity <= reorderPoint) {
+                try {
+                  await supabaseAdmin
+                    .from('reorder_alerts')
+                    .insert({
+                      product_id: productId,
+                      alert_type: newStockQuantity === 0 ? 'out_of_stock' : 'low_stock',
+                      current_stock: newStockQuantity,
+                      reorder_point: reorderPoint,
+                      created_at: new Date().toISOString()
+                    })
+                  console.log(`Low stock alert created for product ${productId}`)
+                } catch (alertError) {
+                  console.log('Reorder alerts table not available, skipping alert:', alertError)
+                }
+              }
             }
           }
           
@@ -277,7 +317,45 @@ export async function POST(request: NextRequest) {
           console.log('Guest order inventory deduction completed successfully')
         } catch (inventoryError) {
           console.error('Error during guest order inventory deduction:', inventoryError)
-          // Don't fail the order, just log the error
+          // Rollback the order if inventory deduction fails
+          try {
+            await supabaseAdmin.from('orders').delete().eq('id', orderData.id)
+            console.log('Guest order rolled back due to inventory deduction failure')
+          } catch (rollbackError) {
+            console.error('Failed to rollback guest order:', rollbackError)
+          }
+          throw new Error(`Guest order failed due to inventory issues: ${inventoryError.message}`)
+        }
+
+        // Create admin notification for new guest order
+        try {
+          await supabaseAdmin
+            .from('order_notes')
+            .insert({
+              order_id: orderData.id,
+              note_type: 'internal',
+              content: `New guest order received: ${orderNumber} from ${order_data.customer_name} (${order_data.customer_email}) - Total: ${order_data.total_amount} UGX`,
+              is_internal: true,
+              created_by: 'system',
+              created_at: new Date().toISOString()
+            })
+          
+          // Create order task for admin
+          await supabaseAdmin
+            .from('order_tasks')
+            .insert({
+              order_id: orderData.id,
+              task_type: 'payment_verification',
+              title: 'Verify Guest Payment',
+              description: `Verify payment for guest order ${orderNumber} from ${order_data.customer_name}`,
+              status: 'pending',
+              priority: 'normal',
+              created_at: new Date().toISOString()
+            })
+          
+          console.log('Admin notifications created for new guest order')
+        } catch (notificationError) {
+          console.log('Admin notification tables not available, skipping notifications:', notificationError)
         }
 
         // Add success message and metadata
