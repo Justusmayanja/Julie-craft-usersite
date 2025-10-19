@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,8 +21,12 @@ import {
   Copy,
   Edit,
   Grid3x3,
-  List
+  List,
+  RefreshCw,
+  AlertCircle
 } from "lucide-react"
+import { useMedia } from "@/hooks/admin/use-media"
+import { useToast } from "@/components/ui/use-toast"
 
 // Mock data for media files
 const mockMediaFiles = [
@@ -83,46 +87,96 @@ const mockMediaFiles = [
   },
 ]
 
-const mediaTypes = ["All", "image", "video", "document"]
+const mediaTypes = ["All", "images", "videos", "documents", "other"]
 
-const getTypeIcon = (type: string) => {
-  switch (type) {
-    case "image": return ImageIcon
-    case "video": return Video
-    case "document": return File
+const getTypeIcon = (category: string) => {
+  switch (category) {
+    case "images": return ImageIcon
+    case "videos": return Video
+    case "documents": return File
     default: return File
   }
 }
 
-const getTypeColor = (type: string) => {
-  switch (type) {
-    case "image": return "bg-green-100 text-green-700 border-green-200"
-    case "video": return "bg-purple-100 text-purple-700 border-purple-200"
-    case "document": return "bg-blue-100 text-blue-700 border-blue-200"
+const getTypeColor = (category: string) => {
+  switch (category) {
+    case "images": return "bg-green-100 text-green-700 border-green-200"
+    case "videos": return "bg-purple-100 text-purple-700 border-purple-200"
+    case "documents": return "bg-blue-100 text-blue-700 border-blue-200"
     default: return "bg-gray-100 text-gray-700 border-gray-200"
   }
 }
 
 export default function MediaLibraryPage() {
+  const { files, loading, error, fetchFiles, deleteFile, uploadFile } = useMedia()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedType, setSelectedType] = useState("All")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [mediaFiles] = useState(mockMediaFiles)
+  const [isUploading, setIsUploading] = useState(false)
 
-  const filteredFiles = mediaFiles.filter(file => {
-    const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = selectedType === "All" || file.type === selectedType
+  // Fetch media files on component mount
+  useEffect(() => {
+    fetchFiles({ limit: 50 })
+  }, [fetchFiles])
+
+  const filteredFiles = files.filter(file => {
+    const matchesSearch = file.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         file.original_name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = selectedType === "All" || file.category === selectedType
     return matchesSearch && matchesType
   })
 
-  const totalFiles = mediaFiles.length
-  const totalSize = mediaFiles.reduce((sum, file) => {
-    const size = parseFloat(file.size.replace(/[^\d.]/g, ''))
-    const unit = file.size.includes('MB') ? 1 : 0.001
-    return sum + (size * unit)
+  const totalFiles = files.length
+  const totalSize = files.reduce((sum, file) => {
+    return sum + (file.file_size / (1024 * 1024)) // Convert bytes to MB
   }, 0)
-  const imageCount = mediaFiles.filter(f => f.type === "image").length
-  const videoCount = mediaFiles.filter(f => f.type === "video").length
+  const imageCount = files.filter(f => f.category === "images").length
+  const videoCount = files.filter(f => f.category === "videos").length
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setIsUploading(true)
+    try {
+      await uploadFile(file, {
+        category: file.type.startsWith('image/') ? 'images' : 
+                 file.type.startsWith('video/') ? 'videos' : 
+                 file.type.includes('pdf') || file.type.includes('document') ? 'documents' : 'other'
+      })
+      toast({
+        title: "File Uploaded",
+        description: "Your file has been uploaded successfully.",
+      })
+      fetchFiles({ limit: 50 })
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload file. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleDeleteFile = async (id: string) => {
+    try {
+      await deleteFile(id)
+      toast({
+        title: "File Deleted",
+        description: "The file has been deleted successfully.",
+      })
+      fetchFiles({ limit: 50 })
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete file. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
 
   return (
     <div className="h-full">
@@ -134,10 +188,41 @@ export default function MediaLibraryPage() {
               <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Media Library</h1>
               <p className="text-gray-600 mt-1 text-base">Manage images, videos, and documents for your website</p>
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Media
-            </Button>
+            <div className="flex gap-2">
+              <input
+                type="file"
+                id="file-upload"
+                onChange={handleFileUpload}
+                className="hidden"
+                accept="image/*,video/*,.pdf,.doc,.docx"
+              />
+              <Button 
+                onClick={() => document.getElementById('file-upload')?.click()}
+                disabled={isUploading}
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+              >
+                {isUploading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Media
+                  </>
+                )}
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => fetchFiles({ limit: 50 })}
+                disabled={loading}
+                className="bg-white hover:bg-gray-50 border-gray-300"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -268,18 +353,41 @@ export default function MediaLibraryPage() {
             </CardHeader>
         
             <CardContent className="p-6">
-              {viewMode === "grid" ? (
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <RefreshCw className="w-8 h-8 text-gray-400 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600">Loading media files...</p>
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
+                    <p className="text-red-600 mb-4">Failed to load media files</p>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => fetchFiles({ limit: 50 })}
+                      className="bg-white hover:bg-gray-50 border-gray-300"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Try Again
+                    </Button>
+                  </div>
+                </div>
+              ) : viewMode === "grid" ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                   {filteredFiles.map((file) => {
-                    const TypeIcon = getTypeIcon(file.type)
+                    const TypeIcon = getTypeIcon(file.category)
+                    const fileSizeMB = (file.file_size / (1024 * 1024)).toFixed(1)
                     return (
                       <Card key={file.id} className="group hover:shadow-lg transition-all duration-200 cursor-pointer">
                         <CardContent className="p-3">
                           <div className="aspect-square bg-gray-100 rounded-lg mb-3 overflow-hidden relative">
-                            {file.thumbnail ? (
+                            {file.category === "images" && file.file_path ? (
                               <Image 
-                                src={file.thumbnail} 
-                                alt={file.name}
+                                src={file.file_path} 
+                                alt={file.original_name}
                                 fill
                                 sizes="200px"
                                 className="object-cover"
@@ -290,17 +398,15 @@ export default function MediaLibraryPage() {
                               </div>
                             )}
                             <div className="absolute top-2 right-2">
-                              <Badge className={getTypeColor(file.type)}>
-                                {file.type}
+                              <Badge className={getTypeColor(file.category)}>
+                                {file.category}
                               </Badge>
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-sm font-semibold text-gray-900 truncate">{file.name}</p>
-                            <p className="text-xs text-gray-500">{file.size}</p>
-                            {file.dimensions && (
-                              <p className="text-xs text-gray-500">{file.dimensions}</p>
-                            )}
+                            <p className="text-sm font-semibold text-gray-900 truncate">{file.original_name}</p>
+                            <p className="text-xs text-gray-500">{fileSizeMB} MB</p>
+                            <p className="text-xs text-gray-500">{file.mime_type}</p>
                           </div>
                           <div className="flex justify-between items-center mt-3 transition-opacity">
                             <div className="flex space-x-1">
@@ -311,7 +417,12 @@ export default function MediaLibraryPage() {
                                 <Copy className="w-3 h-3" />
                               </Button>
                             </div>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteFile(file.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
                               <Trash2 className="w-3 h-3" />
                             </Button>
                           </div>

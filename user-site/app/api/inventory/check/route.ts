@@ -3,21 +3,30 @@ import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if Supabase is configured
-    if (!isSupabaseConfigured || !supabaseAdmin) {
-      console.log('Supabase not configured, simulating stock check')
-      return NextResponse.json({
-        success: true,
-        message: 'Stock check simulated (database not configured)',
-        availability: []
-      })
-    }
-
     const body = await request.json()
     const { items } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Items array required' }, { status: 400 })
+    }
+
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      console.log('Supabase not configured, simulating stock check')
+      // Return availability for all requested items as available
+      const availability = items.map((item: any) => ({
+        product_id: item.product_id || item.id,
+        available: true,
+        reason: 'Available (simulated)',
+        available_quantity: 999, // High number to simulate availability
+        requested_quantity: typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
+      }))
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Stock check simulated (database not configured)',
+        availability
+      })
     }
 
     const availability = []

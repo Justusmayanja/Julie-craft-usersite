@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { 
   Save, 
   Eye, 
@@ -20,8 +22,12 @@ import {
   Trash2,
   MessageCircle,
   Mail,
-  TrendingUp
+  TrendingUp,
+  RefreshCw,
+  AlertCircle
 } from "lucide-react"
+import { useContent } from "@/hooks/admin/use-content"
+import { useToast } from "@/components/ui/use-toast"
 
 // Mock data for homepage sections
 const mockHomepageSections = [
@@ -88,31 +94,87 @@ const sectionTypes = [
 ]
 
 export default function HomepageEditorPage() {
-  const [sections, setSections] = useState(mockHomepageSections)
-  const [editingSection, setEditingSection] = useState<string | null>(null)
+  const { pages, loading, error, fetchPages, updatePage, createPage } = useContent()
+  const { toast } = useToast()
+  const [editingPage, setEditingPage] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    excerpt: '',
+    meta_title: '',
+    meta_description: '',
+    featured_image: ''
+  })
 
-  const activeSections = sections.filter(s => s.isActive).length
-  const totalSections = sections.length
+  // Fetch homepage content
+  useEffect(() => {
+    fetchPages({ type: 'homepage', limit: 10 })
+  }, [fetchPages])
+
+  const homepagePage = pages.find(p => p.type === 'homepage')
+  const activeSections = mockHomepageSections.filter(s => s.isActive).length
+  const totalSections = mockHomepageSections.length
+
+  // Initialize form data when homepage page is loaded
+  useEffect(() => {
+    if (homepagePage) {
+      setFormData({
+        title: homepagePage.title || '',
+        content: homepagePage.content || '',
+        excerpt: homepagePage.excerpt || '',
+        meta_title: homepagePage.meta_title || '',
+        meta_description: homepagePage.meta_description || '',
+        featured_image: homepagePage.featured_image || ''
+      })
+    }
+  }, [homepagePage])
+
+  const handleSaveHomepage = async () => {
+    setIsSaving(true)
+    try {
+      if (homepagePage) {
+        await updatePage(homepagePage.id, {
+          ...formData,
+          status: 'published'
+        })
+        toast({
+          title: "Homepage Updated",
+          description: "Your homepage content has been saved successfully.",
+        })
+      } else {
+        await createPage({
+          ...formData,
+          slug: 'homepage',
+          type: 'homepage',
+          status: 'published',
+          author_name: 'Admin'
+        })
+        toast({
+          title: "Homepage Created",
+          description: "Your homepage content has been created successfully.",
+        })
+      }
+      fetchPages({ type: 'homepage', limit: 10 })
+    } catch (error) {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save homepage content. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const moveSection = (id: string, direction: 'up' | 'down') => {
-    setSections(prev => {
-      const newSections = [...prev]
-      const index = newSections.findIndex(s => s.id === id)
-      if (direction === 'up' && index > 0) {
-        [newSections[index], newSections[index - 1]] = [newSections[index - 1], newSections[index]]
-      } else if (direction === 'down' && index < newSections.length - 1) {
-        [newSections[index], newSections[index + 1]] = [newSections[index + 1], newSections[index]]
-      }
-      return newSections
-    })
+    // This would be implemented for section reordering
+    console.log('Move section:', id, direction)
   }
 
   const toggleSection = (id: string) => {
-    setSections(prev => 
-      prev.map(section => 
-        section.id === id ? { ...section, isActive: !section.isActive } : section
-      )
-    )
+    // This would be implemented for section visibility
+    console.log('Toggle section:', id)
   }
 
   return (
@@ -130,9 +192,22 @@ export default function HomepageEditorPage() {
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
+              <Button 
+                onClick={handleSaveHomepage}
+                disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -203,6 +278,92 @@ export default function HomepageEditorPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Homepage Content Editor */}
+          <Card className="bg-white border-0 shadow-lg">
+            <CardHeader className="border-b border-gray-100 pb-4">
+              <CardTitle className="text-lg font-semibold text-gray-900">Homepage Content</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="title" className="text-sm font-medium text-gray-700 mb-2 block">
+                      Page Title
+                    </Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Enter page title"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="meta_title" className="text-sm font-medium text-gray-700 mb-2 block">
+                      Meta Title
+                    </Label>
+                    <Input
+                      id="meta_title"
+                      value={formData.meta_title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, meta_title: e.target.value }))}
+                      placeholder="Enter meta title for SEO"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="excerpt" className="text-sm font-medium text-gray-700 mb-2 block">
+                    Page Excerpt
+                  </Label>
+                  <Textarea
+                    id="excerpt"
+                    value={formData.excerpt}
+                    onChange={(e) => setFormData(prev => ({ ...prev, excerpt: e.target.value }))}
+                    placeholder="Enter a brief description of the page"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="meta_description" className="text-sm font-medium text-gray-700 mb-2 block">
+                    Meta Description
+                  </Label>
+                  <Textarea
+                    id="meta_description"
+                    value={formData.meta_description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, meta_description: e.target.value }))}
+                    placeholder="Enter meta description for SEO"
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="content" className="text-sm font-medium text-gray-700 mb-2 block">
+                    Page Content
+                  </Label>
+                  <Textarea
+                    id="content"
+                    value={formData.content}
+                    onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                    placeholder="Enter the main content for your homepage"
+                    rows={8}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="featured_image" className="text-sm font-medium text-gray-700 mb-2 block">
+                    Featured Image URL
+                  </Label>
+                  <Input
+                    id="featured_image"
+                    value={formData.featured_image}
+                    onChange={(e) => setFormData(prev => ({ ...prev, featured_image: e.target.value }))}
+                    placeholder="Enter featured image URL"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Homepage Sections */}
           <Card className="bg-white border-0 shadow-lg">

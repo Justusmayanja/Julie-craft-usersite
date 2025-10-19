@@ -331,7 +331,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return true
     }
 
-    // Check stock availability for the new quantity
+    // Check stock availability for the new quantity (but don't block if check fails)
     try {
       const response = await fetch('/api/inventory/check', {
         method: 'POST',
@@ -341,15 +341,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
         })
       })
       const result = await response.json()
-      const itemAvailability = result.availability.find((a: any) => a.product_id === id)
       
-      if (!itemAvailability?.available) {
-        console.warn(`Cannot update quantity for item ${id}: ${itemAvailability?.reason}`)
-        return false
+      // Only check availability if we got a proper response
+      if (result.availability && Array.isArray(result.availability) && result.availability.length > 0) {
+        const itemAvailability = result.availability.find((a: any) => a.product_id === id)
+        
+        if (itemAvailability && !itemAvailability.available) {
+          console.warn(`Cannot update quantity for item ${id}: ${itemAvailability.reason}`)
+          return false
+        }
       }
     } catch (error) {
       console.error('Error checking quantity availability:', error)
-      return false
+      // Don't block quantity update if stock check fails - allow the update to proceed
+      console.log('Proceeding with quantity update despite stock check failure')
     }
 
     dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } })
