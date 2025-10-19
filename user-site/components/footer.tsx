@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Facebook, Instagram, Phone, Mail, MapPin } from "lucide-react"
 
 export function Footer() {
@@ -13,8 +14,18 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-6">
             <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shadow-lg">
-                <span className="text-primary-foreground font-bold text-lg">JC</span>
+              <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-white/20">
+                <Image 
+                  src="/julie-logo.jpeg" 
+                  alt="JulieCraft Logo" 
+                  fill
+                  sizes="48px"
+                  className="object-contain p-1.5"
+                  onError={(e) => {
+                    // Fallback to a simple icon if image fails to load
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
               </div>
               <span className="font-bold text-2xl">Julie Crafts</span>
             </div>

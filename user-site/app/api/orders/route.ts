@@ -12,6 +12,12 @@ export async function GET(request: NextRequest) {
         total: 0,
         limit: 50,
         offset: 0,
+        stats: {
+          totalOrders: 0,
+          totalRevenue: 0,
+          pendingOrders: 0,
+          completedOrders: 0
+        },
         message: 'Database not configured'
       })
     }
@@ -72,11 +78,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
     }
 
+    // Calculate stats
+    const orders = data || []
+    const stats = {
+      totalOrders: count || 0,
+      totalRevenue: orders.reduce((sum, order) => sum + (order.total_amount || 0), 0),
+      pendingOrders: orders.filter(order => order.status === 'pending').length,
+      completedOrders: orders.filter(order => order.status === 'delivered').length
+    }
+
     return NextResponse.json({
-      orders: data || [],
+      orders,
       total: count || 0,
       limit: filters.limit,
-      offset: filters.offset
+      offset: filters.offset,
+      stats
     })
 
   } catch (error) {

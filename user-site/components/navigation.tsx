@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { Badge } from "@/components/ui/badge"
 import { Menu, ShoppingCart, Search, MessageCircle, User, LogOut, ShoppingBag } from "lucide-react"
@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import Image from "next/image"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -66,9 +67,19 @@ export function Navigation() {
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">JC</span>
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-white/10">
+                <Image 
+                  src="/julie-logo.jpeg" 
+                  alt="JulieCraft Logo" 
+                  fill
+                  sizes="40px"
+                  className="object-contain p-1"
+                  onError={(e) => {
+                    // Fallback to a simple icon if image fails to load
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
               </div>
               <span className="font-bold text-xl text-foreground">Julie Crafts</span>
             </Link>
@@ -206,15 +217,23 @@ export function Navigation() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[320px] sm:w-[380px] p-0 bg-white border-l border-slate-200">
-                  <VisuallyHidden>
-                    <h2>Navigation Menu</h2>
-                  </VisuallyHidden>
+                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                   <div className="flex flex-col h-full">
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-slate-50">
-                      <div className="flex items-center space-x-2">
-                        <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                          <span className="text-primary-foreground font-bold text-sm">JC</span>
+                      <div className="flex items-center space-x-3">
+                        <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-white/10">
+                          <Image 
+                            src="/julie-logo.jpeg" 
+                            alt="JulieCraft Logo" 
+                            fill
+                            sizes="40px"
+                            className="object-contain p-1"
+                            onError={(e) => {
+                              // Fallback to a simple icon if image fails to load
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
                         </div>
                         <span className="font-bold text-lg text-slate-900">Julie Crafts</span>
                       </div>

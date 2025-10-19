@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
+import { useRole } from '@/contexts/role-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,7 +19,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<{email?: string; password?: string}>({})
 
-  const { login, error, clearError } = useAuth()
+  const { login, error, clearError, user } = useAuth()
+  const { isAdmin, isLoading: roleLoading } = useRole()
   const router = useRouter()
 
   const validateForm = () => {
@@ -51,7 +53,82 @@ export default function LoginPage() {
 
     try {
       await login(email, password)
-      router.push('/')
+      
+      // Check for redirect parameter or redirect based on user role
+      const urlParams = new URLSearchParams(window.location.search)
+      const redirectTo = urlParams.get('redirect')
+      
+      if (redirectTo) {
+        router.push(redirectTo)
+      } else {
+        // Wait for role to be loaded before redirecting
+        let checkAttempts = 0
+        const MAX_ATTEMPTS = 50 // Max 5 seconds (50 * 100ms)
+        
+        const checkRoleAndRedirect = async () => {
+          checkAttempts++
+          console.log(`=== LOGIN REDIRECT CHECK (Attempt ${checkAttempts}) ===`)
+          console.log('Login - roleLoading:', roleLoading)
+          console.log('Login - isAdmin:', isAdmin)
+          console.log('Login - user from auth:', user)
+          
+          // Debug: Check user role information
+          let debugIsAdmin = false
+          try {
+            const token = localStorage.getItem('julie-crafts-token')
+            if (token) {
+              const debugResponse = await fetch('/api/debug/user-role', {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              })
+              if (debugResponse.ok) {
+                const debugData = await debugResponse.json()
+                console.log('Login - Debug role info:', debugData)
+                debugIsAdmin = debugData.profile_direct?.is_admin === true
+                console.log('Login - is_admin from debug:', debugIsAdmin)
+              }
+            }
+          } catch (error) {
+            console.error('Login - Debug role error:', error)
+          }
+          
+          // Wait for role context to finish loading OR if we've tried too many times
+          if (roleLoading && checkAttempts < MAX_ATTEMPTS) {
+            console.log('Login - Role still loading, checking again in 100ms...')
+            setTimeout(checkRoleAndRedirect, 100)
+            return
+          }
+          
+          // If role context says not loading but isAdmin is still false, 
+          // but debug shows is_admin is true, wait a bit more for state to update
+          if (!roleLoading && !isAdmin && debugIsAdmin && checkAttempts < 10) {
+            console.log('Login - Waiting for role context to update isAdmin...')
+            setTimeout(checkRoleAndRedirect, 100)
+            return
+          }
+          
+          console.log('Login - Role loaded, making redirect decision')
+          console.log('Login - isAdmin from role context:', isAdmin)
+          console.log('Login - user.is_admin from auth:', user?.is_admin)
+          
+          // Check all possible sources
+          const userIsAdmin = isAdmin || user?.is_admin === true || debugIsAdmin
+          console.log('Login - Final admin decision:', userIsAdmin)
+          
+          if (userIsAdmin) {
+            console.log('✅ Login - Redirecting to ADMIN dashboard (/admin)')
+            router.push('/admin')
+          } else {
+            console.log('❌ Login - Redirecting to HOME page (/)')
+            router.push('/')
+          }
+        }
+        
+        // Start checking for role after a delay to ensure state updates
+        setTimeout(checkRoleAndRedirect, 500)
+      }
     } catch (error) {
       // Error is handled by the auth context
     } finally {

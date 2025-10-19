@@ -141,6 +141,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = await response.json()
             console.log('Token verification successful:', data.user)
             
+            // Store token in cookie for middleware access
+            document.cookie = `julie-crafts-token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`
+            
             // Update session manager to convert guest to registered user
             sessionManager.convertToRegisteredUser(data.user)
             
@@ -195,6 +198,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Store session data in localStorage
         if (data.session?.access_token) {
           localStorage.setItem('julie-crafts-token', data.session.access_token)
+          // Also store in cookie for middleware access
+          document.cookie = `julie-crafts-token=${data.session.access_token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`
         }
         console.log('Token stored, user authenticated:', data.user)
         
@@ -283,6 +288,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('julie-crafts-token')
+    // Clear the cookie as well
+    document.cookie = 'julie-crafts-token=; path=/; max-age=0'
     sessionManager.clearSession()
     dispatch({ type: "AUTH_LOGOUT" })
 

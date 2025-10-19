@@ -7,6 +7,9 @@ export interface User {
   updated_at: string
   last_login?: string
   is_guest: boolean
+  role: 'customer' | 'admin' | 'super_admin'
+  is_admin?: boolean
+  is_verified?: boolean
 }
 
 export interface UserSession {
