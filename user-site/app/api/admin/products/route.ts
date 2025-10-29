@@ -256,6 +256,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name and price are required' }, { status: 400 })
     }
 
+    // Prepare inventory fields with defaults to satisfy database constraints
+    const stockQuantity = body.stock_quantity || 0
+    const reorderQuantity = body.reorder_quantity || 10 // Must be positive (>0) per database constraint
+    const physicalStock = body.physical_stock !== undefined ? body.physical_stock : stockQuantity
+    const reservedStock = body.reserved_stock || 0
+    const reorderPoint = body.reorder_point !== undefined ? body.reorder_point : 10
+    const maxStockLevel = body.max_stock_level || 1000
+    const minStockLevel = body.min_stock_level || 5
+
     // Create product
     const { data: product, error } = await supabaseAdmin
       .from('products')
@@ -265,7 +274,7 @@ export async function POST(request: NextRequest) {
         price: body.price,
         image_url: body.image || null,
         category_id: body.category_id || null,
-        stock_quantity: body.stock_quantity || 0,
+        stock_quantity: stockQuantity,
         featured: body.featured || false,
         status: body.status || 'active',
         sku: body.sku || null,
@@ -274,14 +283,27 @@ export async function POST(request: NextRequest) {
         tags: body.tags || null,
         meta_title: body.meta_title || null,
         meta_description: body.meta_description || null,
-        seo_keywords: body.seo_keywords || null
+        seo_keywords: body.seo_keywords || null,
+        images: body.images && Array.isArray(body.images) ? body.images : null,
+        featured_image: body.images && Array.isArray(body.images) && body.images.length > 0 ? body.images[0] : null,
+        // Inventory fields - required to satisfy database constraints
+        physical_stock: physicalStock,
+        reserved_stock: reservedStock,
+        reorder_point: reorderPoint,
+        reorder_quantity: reorderQuantity, // Must be > 0
+        max_stock_level: maxStockLevel,
+        min_stock_level: minStockLevel
       })
       .select()
       .single()
 
     if (error) {
       console.error('Product creation error:', error)
-      return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
+      return NextResponse.json({ 
+        error: 'Failed to create product',
+        details: error.message,
+        code: error.code 
+      }, { status: 500 })
     }
 
     return NextResponse.json(product, { status: 201 })

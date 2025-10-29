@@ -190,7 +190,9 @@ export default function AdminProductsPage() {
         await loadCategories()
         handleCloseModal()
       } else {
-        console.error('Failed to save product')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Failed to save product:', errorData)
+        throw new Error(errorData.details || errorData.error || 'Failed to save product')
       }
     } catch (error) {
       console.error('Error saving product:', error)
