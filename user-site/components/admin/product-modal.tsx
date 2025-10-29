@@ -40,6 +40,7 @@ import {
   Banknote
 } from "lucide-react"
 import { Product, Category } from "@/lib/types/product"
+import { useToast } from "@/components/admin/ui/toast"
 
 interface ProductModalProps {
   product: Product | null
@@ -63,6 +64,7 @@ export function ProductModal({
   const [formData, setFormData] = useState<Partial<Product>>({})
   const [loading, setLoading] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const { addToast } = useToast()
 
   useEffect(() => {
     if (product && mode !== 'add') {
