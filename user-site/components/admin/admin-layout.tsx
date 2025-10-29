@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useRole } from "@/contexts/role-context"
 import { Loader2 } from "lucide-react"
 import { Toaster } from "@/components/ui/toaster"
+import { ToastProvider } from "@/components/admin/ui/toast"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -69,7 +70,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <>
+    <ToastProvider>
       <LoadingOverlay />
       <div className="h-screen w-screen flex min-w-0 overflow-hidden">
         {/* Mobile overlay */}
@@ -102,6 +103,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       </div>
       <Toaster />
-    </>
+    </ToastProvider>
   )
 }

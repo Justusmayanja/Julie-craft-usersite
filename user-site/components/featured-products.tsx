@@ -280,7 +280,7 @@ export function FeaturedProducts() {
           >
             <CarouselContent className="-ml-2 md:-ml-4">
               {products.map((product) => (
-                <CarouselItem key={product.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
+                <CarouselItem key={product.id} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/2 md:basis-1/2 lg:basis-1/3">
                   <Card className="group hover:shadow-lg transition-all duration-300 h-full">
                     <div className="relative overflow-hidden rounded-t-lg">
                       <img
