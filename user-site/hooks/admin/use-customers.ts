@@ -60,8 +60,6 @@ export function useCustomers() {
   const { user } = useAuth()
 
   const fetchCustomers = useCallback(async (filters: CustomerFilters = {}) => {
-    if (!user) return
-
     try {
       setLoading(true)
       setError(null)
@@ -74,11 +72,16 @@ export function useCustomers() {
       if (filters.limit) params.append('limit', filters.limit.toString())
       if (filters.offset) params.append('offset', filters.offset.toString())
 
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+
+      if (user?.token) {
+        headers['Authorization'] = `Bearer ${user.token}`
+      }
+
       const response = await fetch(`/api/customers?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
       })
 
       if (!response.ok) {
@@ -122,17 +125,20 @@ export function useCustomerStats() {
   const { user } = useAuth()
 
   const fetchStats = useCallback(async () => {
-    if (!user) return
-
     try {
       setLoading(true)
       setError(null)
 
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+
+      if (user?.token) {
+        headers['Authorization'] = `Bearer ${user.token}`
+      }
+
       const response = await fetch('/api/customers/stats', {
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
       })
 
       if (!response.ok) {
@@ -174,17 +180,22 @@ export function useCustomer(id: string) {
   const { user } = useAuth()
 
   const fetchCustomer = useCallback(async () => {
-    if (!user || !id) return
+    if (!id) return
 
     try {
       setLoading(true)
       setError(null)
 
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+
+      if (user?.token) {
+        headers['Authorization'] = `Bearer ${user.token}`
+      }
+
       const response = await fetch(`/api/customers/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
       })
 
       if (!response.ok) {
@@ -203,18 +214,23 @@ export function useCustomer(id: string) {
   }, [user, id])
 
   const updateCustomer = useCallback(async (updates: Partial<Customer>) => {
-    if (!user || !id) return
+    if (!id) return
 
     try {
       setLoading(true)
       setError(null)
 
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+
+      if (user?.token) {
+        headers['Authorization'] = `Bearer ${user.token}`
+      }
+
       const response = await fetch(`/api/customers/${id}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(updates),
       })
 

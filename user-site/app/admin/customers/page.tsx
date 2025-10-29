@@ -42,11 +42,7 @@ export default function CustomersPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
-  const { customers, loading, error, total, fetchCustomers, refresh } = useCustomers({
-    search: searchTerm || undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-    limit: 50
-  })
+  const { customers, loading, error, total, fetchCustomers, refresh } = useCustomers()
 
   const { stats, loading: statsLoading } = useCustomerStats()
 
@@ -104,20 +100,26 @@ export default function CustomersPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Failed to load customers</p>
-          <Button onClick={refresh} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Try Again
-          </Button>
+      <div className="h-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-red-600 mb-4">Failed to load customers</p>
+              <Button onClick={refresh} variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -555,6 +557,8 @@ export default function CustomersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </div>
+      </div>
     </div>
   )
 }
