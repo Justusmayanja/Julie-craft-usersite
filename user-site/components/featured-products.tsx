@@ -7,13 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ShoppingCart, Star, Eye } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
 
 interface Product {
   id: string
@@ -35,7 +28,7 @@ export function FeaturedProducts() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch('/api/products?featured=true&limit=6')
+        const response = await fetch('/api/products?featured=true')
         if (!response.ok) {
           throw new Error('Failed to fetch products')
         }
@@ -205,28 +198,16 @@ export function FeaturedProducts() {
       <div className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Featured Products</h2>
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-2 md:-ml-4">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <CarouselItem key={i} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
-                  <div className="bg-white rounded-lg shadow-md p-6 animate-pulse h-full">
-                    <div className="w-full h-48 bg-gray-200 rounded-lg mb-4"></div>
-                    <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                    <div className="h-10 bg-gray-200 rounded"></div>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="hidden md:flex" />
-            <CarouselNext className="hidden md:flex" />
-          </Carousel>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow-md p-6 animate-pulse h-full">
+                <div className="w-full h-48 bg-gray-200 rounded-lg mb-4"></div>
+                <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -271,16 +252,9 @@ export function FeaturedProducts() {
             </Link>
           </div>
         ) : (
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-2 md:-ml-4">
-              {products.map((product) => (
-                <CarouselItem key={product.id} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/2 md:basis-1/2 lg:basis-1/3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <div key={product.id}>
                   <Card className="group hover:shadow-lg transition-all duration-300 h-full">
                     <div className="relative overflow-hidden rounded-t-lg">
                       <img
@@ -314,15 +288,15 @@ export function FeaturedProducts() {
                         <span className="text-2xl font-bold text-primary">
                           UGX {product.price.toLocaleString()}
                         </span>
-                        <Badge variant={product.inStock ? "default" : "destructive"}>
-                          {product.inStock ? "In Stock" : "Out of Stock"}
+                        <Badge variant={(product.stock_quantity > 0 || product.inStock) ? "default" : "destructive"}>
+                          {(product.stock_quantity > 0 || product.inStock) ? "In Stock" : "Out of Stock"}
                         </Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button 
                           className="flex-1" 
                           onClick={() => handleAddToCart(product)}
-                          disabled={!product.inStock}
+                          disabled={product.stock_quantity === 0 && !product.inStock}
                         >
                           <ShoppingCart className="w-4 h-4 mr-2" />
                           Add to Cart
@@ -335,12 +309,9 @@ export function FeaturedProducts() {
                       </div>
                     </CardContent>
                   </Card>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="hidden md:flex" />
-            <CarouselNext className="hidden md:flex" />
-          </Carousel>
+              </div>
+            ))}
+          </div>
         )}
         
         <div className="text-center mt-12">
