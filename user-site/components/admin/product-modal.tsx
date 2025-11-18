@@ -72,6 +72,8 @@ export function ProductModal({
   const prevIsOpenRef = useRef<boolean>(false)
   const initialSkuRef = useRef<string | null>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const isUserTypingRef = useRef<boolean>(false)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     // Only initialize form data when modal opens or when product/mode actually changes
@@ -80,6 +82,12 @@ export function ProductModal({
       prevProductIdRef.current = undefined
       prevModeRef.current = undefined
       initialSkuRef.current = null
+      isUserTypingRef.current = false
+      // Clear typing timeout when modal closes
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+        typingTimeoutRef.current = null
+      }
       return
     }
 
@@ -89,8 +97,14 @@ export function ProductModal({
     const wasClosed = !prevIsOpenRef.current
 
     // Only reset form if modal just opened, product changed, or mode changed
+    // AND user is not currently typing
     if (!wasClosed && !hasProductChanged && !hasModeChanged) {
       return // Don't reset if nothing meaningful changed
+    }
+
+    // Don't reset if user is actively typing
+    if (isUserTypingRef.current && wasClosed === false) {
+      return
     }
 
     if (product && mode !== 'add') {
@@ -114,6 +128,7 @@ export function ProductModal({
       prevProductIdRef.current = productId
       prevModeRef.current = mode
       prevIsOpenRef.current = true
+      isUserTypingRef.current = false
     } else if (mode === 'add') {
       // Generate SKU only once when adding (preserve it if already generated)
       if (!initialSkuRef.current) {
@@ -127,7 +142,7 @@ export function ProductModal({
         price: 0,
         cost_price: 0,
         sku: initialSkuRef.current,
-        stock_quantity: 0,
+        stock_quantity: 1, // Default to 1 instead of 0 so product is available
         status: 'active',
         featured: false,
         images: [],
@@ -139,6 +154,7 @@ export function ProductModal({
       prevProductIdRef.current = undefined
       prevModeRef.current = mode
       prevIsOpenRef.current = true
+      isUserTypingRef.current = false
     }
   }, [isOpen, product?.id, mode]) // Only depend on stable values
 
@@ -207,38 +223,44 @@ export function ProductModal({
   // Specific handler for name field to ensure it's fully editable
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
+    // Mark that user is typing to prevent form resets
+    isUserTypingRef.current = true
+    
+    // Clear any existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+    
     // Always update, even if it seems the same (browser autocomplete might interfere)
     setFormData(prev => ({
       ...prev,
       name: newValue
     }))
+    
+    // Reset typing flag after user stops typing (debounced)
+    typingTimeoutRef.current = setTimeout(() => {
+      isUserTypingRef.current = false
+      typingTimeoutRef.current = null
+    }, 1000) // Increased to 1 second to be safer
   }
   
-  // Ensure input is editable when modal opens and clear browser autocomplete
+  // Focus input when modal opens (only once, not on every name change)
   useEffect(() => {
-    if (isOpen && mode !== 'view' && nameInputRef.current) {
-      // Small delay to ensure DOM is ready and browser autocomplete has run
+    if (isOpen && mode !== 'view' && nameInputRef.current && !isUserTypingRef.current) {
+      // Small delay to ensure DOM is ready
       const timeoutId = setTimeout(() => {
-        if (nameInputRef.current) {
-          // Force set the value to what we want (clears browser autocomplete)
-          const desiredValue = formData.name || ''
-          if (nameInputRef.current.value !== desiredValue) {
-            nameInputRef.current.value = desiredValue
-            // Trigger change event to sync with React state
-            const event = new Event('input', { bubbles: true })
-            nameInputRef.current.dispatchEvent(event)
-          }
-          // Focus and select if in add mode
-          nameInputRef.current.focus()
-          if (mode === 'add') {
-            nameInputRef.current.select()
+        if (nameInputRef.current && !isUserTypingRef.current) {
+          // Only focus and select if in add mode and field is empty (don't interfere with typing)
+          if (mode === 'add' && !formData.name) {
+            nameInputRef.current.focus()
+            // Don't select - let user type naturally
           }
         }
       }, 150)
       
       return () => clearTimeout(timeoutId)
     }
-  }, [isOpen, mode, formData.name])
+  }, [isOpen, mode]) // Removed formData.name from dependencies to prevent re-running on every keystroke
 
       const handleImageUpload = async (file: File) => {
         if (!file) return
@@ -254,17 +276,19 @@ export function ProductModal({
               title: 'Invalid File Type',
               description: 'Only JPEG, PNG, and WebP images are allowed'
             })
+            setUploadingImage(false)
             return
           }
 
-          // Validate file size (max 2MB for faster uploads)
-          const maxSize = 2 * 1024 * 1024 // 2MB
+          // Validate file size (max 5MB before compression)
+          const maxSize = 5 * 1024 * 1024 // 5MB
           if (file.size > maxSize) {
             addToast({
               type: 'error',
               title: 'File Too Large',
-              description: 'Maximum file size is 2MB for faster uploads'
+              description: 'Maximum file size is 5MB'
             })
+            setUploadingImage(false)
             return
           }
 
@@ -275,16 +299,27 @@ export function ProductModal({
           uploadFormData.append('file', compressedFile)
           uploadFormData.append('productId', product?.id || 'new')
 
+          // Get auth token for the request
+          const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
+          
           const response = await fetch('/api/products/upload', {
             method: 'POST',
+            headers: token ? {
+              'Authorization': `Bearer ${token}`
+            } : {},
             body: uploadFormData,
           })
 
           if (!response.ok) {
-            throw new Error('Failed to upload image')
+            const errorData = await response.json().catch(() => ({ error: 'Failed to upload image' }))
+            throw new Error(errorData.error || 'Failed to upload image')
           }
 
           const data = await response.json()
+          
+          if (!data.imageUrl) {
+            throw new Error('No image URL returned from server')
+          }
           
           // Add the new image to the existing images array
           setFormData(prev => ({
@@ -292,11 +327,18 @@ export function ProductModal({
             images: [...(prev.images || []), data.imageUrl]
           }))
 
-          console.log('Image uploaded successfully')
-          alert('Image uploaded successfully')
+          addToast({
+            type: 'success',
+            title: 'Image Uploaded',
+            description: 'Product image uploaded successfully'
+          })
         } catch (error) {
           console.error('Error uploading image:', error)
-          alert('Failed to upload image')
+          addToast({
+            type: 'error',
+            title: 'Upload Failed',
+            description: error instanceof Error ? error.message : 'Failed to upload image. Please try again.'
+          })
         } finally {
           setUploadingImage(false)
         }
@@ -391,26 +433,11 @@ export function ProductModal({
                   value={formData.name || ''}
                   onChange={handleNameChange}
                   onKeyDown={(e) => {
-                    // Allow all key presses including delete and backspace
-                    // Don't prevent default - let the input handle it normally
+                    // Only prevent Enter from submitting the form
                     if (e.key === 'Enter') {
                       e.preventDefault()
                     }
-                    // Explicitly allow delete and backspace
-                    if (e.key === 'Delete' || e.key === 'Backspace') {
-                      // Let it proceed normally
-                      return
-                    }
-                  }}
-                  onPaste={(e) => {
-                    // Allow pasting
-                    e.stopPropagation()
-                  }}
-                  onFocus={(e) => {
-                    // Select all text on focus to make it easy to replace
-                    if (mode === 'add') {
-                      e.target.select()
-                    }
+                    // All other keys (including Delete, Backspace, etc.) work normally
                   }}
                   placeholder="Enter product name"
                   disabled={isReadOnly}
@@ -622,25 +649,36 @@ export function ProductModal({
                 <input
                   type="file"
                   id="image-upload"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
-                    if (file) handleImageUpload(file)
+                    if (file) {
+                      handleImageUpload(file)
+                      // Reset the input so the same file can be selected again if needed
+                      e.target.value = ''
+                    }
                   }}
                   className="hidden"
                   disabled={uploadingImage}
                 />
                 <label
                   htmlFor="image-upload"
-                  className={`cursor-pointer ${uploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`cursor-pointer flex flex-col items-center ${uploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">
-                    {uploadingImage ? 'Uploading...' : 'Click to upload product images'}
-                  </p>
+                  {uploadingImage ? (
+                    <>
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Uploading image...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Click to upload product images</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        PNG, JPG, WebP up to 2MB (auto-compressed)
+                        PNG, JPG, WebP up to 5MB (auto-compressed)
                       </p>
+                    </>
+                  )}
                 </label>
               </div>
 

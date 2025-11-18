@@ -471,25 +471,77 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Helper function to normalize image URLs (same as admin API)
+    const normalizeImageUrl = (url: string | null | undefined): string | null => {
+      if (!url) return null
+      
+      // If already a full URL, return as is
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url
+      }
+      
+      // If it's a relative path starting with /uploads/, it's a local file
+      // Return as-is so Next.js can serve it from the public folder
+      if (url.startsWith('/uploads/')) {
+        return url
+      }
+      
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      if (!supabaseUrl) {
+        // If no Supabase URL configured, return relative path as is
+        return url
+      }
+      
+      // If it already contains the storage path structure, prepend base URL
+      if (url.startsWith('/storage/')) {
+        return `${supabaseUrl}${url}`
+      }
+      
+      // If it looks like a storage path without leading slash
+      if (url.includes('products/') && !url.startsWith('http') && !url.startsWith('/')) {
+        if (url.startsWith('products/')) {
+          return `${supabaseUrl}/storage/v1/object/public/${url}`
+        }
+      }
+      
+      // Return as is if we can't normalize (might be a valid relative path)
+      return url
+    }
+
+    // Helper function to normalize an array of image URLs
+    const normalizeImageArray = (images: string[] | null | undefined): string[] => {
+      if (!images || !Array.isArray(images)) return []
+      return images.map(img => normalizeImageUrl(img)).filter((img): img is string => img !== null)
+    }
+
     // Transform products to frontend format
-    const transformedProducts: FrontendProduct[] = (data || []).map((product: Product) => ({
-      id: product.id, // Keep UUID as string
-      name: product.name,
-      price: product.price,
-      originalPrice: product.cost_price && product.cost_price > product.price ? product.cost_price : undefined,
-      image: product.featured_image || (product.images && product.images[0]) || '/placeholder.svg',
-      category: product.category?.name?.toLowerCase().replace(/\s+/g, '-') || 'uncategorized',
-      description: product.description || '',
-      materials: product.tags?.join(', ') || 'Handmade materials',
-      dimensions: product.dimensions ? 
-        `${product.dimensions.width || 0}cm × ${product.dimensions.height || 0}cm` : 
-        'Various sizes available',
-      care: 'Handle with care, see product description for details',
-      cultural: product.seo_description || 'Handcrafted with traditional techniques',
-      isNew: new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // New if created within last 30 days
-      onSale: product.cost_price && product.cost_price > product.price,
-      inStock: product.stock_quantity > 0,
-    }))
+    const transformedProducts: FrontendProduct[] = (data || []).map((product: Product) => {
+      // Normalize image URLs
+      const normalizedFeaturedImage = normalizeImageUrl(product.featured_image)
+      const normalizedImages = normalizeImageArray(product.images)
+      
+      // Select image: prioritize featured_image, then first image from images array, then placeholder
+      let imageUrl = normalizedFeaturedImage || (normalizedImages.length > 0 ? normalizedImages[0] : null) || '/placeholder.svg'
+      
+      return {
+        id: product.id, // Keep UUID as string
+        name: product.name,
+        price: product.price,
+        originalPrice: product.cost_price && product.cost_price > product.price ? product.cost_price : undefined,
+        image: imageUrl,
+        category: product.category?.name?.toLowerCase().replace(/\s+/g, '-') || 'uncategorized',
+        description: product.description || '',
+        materials: product.tags?.join(', ') || 'Handmade materials',
+        dimensions: product.dimensions ? 
+          `${product.dimensions.width || 0}cm × ${product.dimensions.height || 0}cm` : 
+          'Various sizes available',
+        care: 'Handle with care, see product description for details',
+        cultural: product.seo_description || 'Handcrafted with traditional techniques',
+        isNew: new Date(product.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // New if created within last 30 days
+        onSale: product.cost_price && product.cost_price > product.price,
+        inStock: product.stock_quantity > 0,
+      }
+    })
 
     return NextResponse.json({
       products: transformedProducts,

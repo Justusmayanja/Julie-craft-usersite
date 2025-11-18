@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Helper function to normalize image URLs
-    // Converts relative paths to full Supabase storage URLs if needed
+    // Handles both local files (/uploads/) and Supabase storage URLs
     const normalizeImageUrl = (url: string | null | undefined): string | null => {
       if (!url) return null
       
@@ -199,24 +199,16 @@ export async function GET(request: NextRequest) {
         return url
       }
       
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      if (!supabaseUrl) {
-        // If no Supabase URL configured, return as is
+      // If it's a relative path starting with /uploads/, it's a local file
+      // Return as-is so Next.js can serve it from the public folder
+      if (url.startsWith('/uploads/')) {
         return url
       }
       
-      // If relative path starting with /uploads/products/, convert to full Supabase storage URL
-      // Path structure: /uploads/products/filename -> products/products/filename in storage
-      if (url.startsWith('/uploads/products/')) {
-        const filename = url.replace('/uploads/products/', '')
-        return `${supabaseUrl}/storage/v1/object/public/products/products/${filename}`
-      }
-      
-      // If relative path starting with /uploads/, convert to full URL
-      if (url.startsWith('/uploads/')) {
-        const pathAfterUploads = url.replace('/uploads/', '')
-        // Default to products bucket
-        return `${supabaseUrl}/storage/v1/object/public/products/${pathAfterUploads}`
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      if (!supabaseUrl) {
+        // If no Supabase URL configured, return relative path as is
+        return url
       }
       
       // If it already contains the storage path structure, prepend base URL
@@ -225,14 +217,13 @@ export async function GET(request: NextRequest) {
       }
       
       // If it looks like a storage path without leading slash
-      if (url.includes('products/') && !url.startsWith('http')) {
-        // Check if it's already a full path or needs the base URL
+      if (url.includes('products/') && !url.startsWith('http') && !url.startsWith('/')) {
         if (url.startsWith('products/')) {
           return `${supabaseUrl}/storage/v1/object/public/${url}`
         }
       }
       
-      // Return as is if we can't normalize
+      // Return as is if we can't normalize (might be a valid relative path)
       return url
     }
 
@@ -326,7 +317,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare inventory fields with defaults to satisfy database constraints
-    const stockQuantity = body.stock_quantity || 0
+    // Ensure stock_quantity is a valid number
+    // Parse stock_quantity properly - handle string, number, or undefined
+    let stockQuantity = 0
+    if (body.stock_quantity !== undefined && body.stock_quantity !== null) {
+      if (typeof body.stock_quantity === 'number') {
+        stockQuantity = body.stock_quantity
+      } else if (typeof body.stock_quantity === 'string') {
+        stockQuantity = parseInt(body.stock_quantity) || 0
+      } else {
+        stockQuantity = 0
+      }
+    }
+    // If stock_quantity is 0 or not provided, default to 1 to make product available
+    // Admin can manually set to 0 if they want it out of stock
+    if (stockQuantity === 0 && body.stock_quantity === undefined) {
+      stockQuantity = 1
+    }
     const reorderQuantity = body.reorder_quantity || 10 // Must be positive (>0) per database constraint
     const physicalStock = body.physical_stock !== undefined ? body.physical_stock : stockQuantity
     const reservedStock = body.reserved_stock || 0
