@@ -167,7 +167,7 @@ export function useStockAdjustment(): UseStockAdjustmentReturn {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/inventory/adjust', {
+      const response = await fetch('/api/inventory/adjustments/apply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,29 +196,47 @@ export function useStockAdjustment(): UseStockAdjustmentReturn {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/inventory/adjust', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          adjustments,
-          reason,
-          notes,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to bulk adjust stock')
+      // Process bulk adjustments sequentially using atomic function
+      const results: any[] = []
+      const errors: any[] = []
+      
+      for (const adjustment of adjustments) {
+        try {
+          const response = await fetch('/api/inventory/adjustments/apply', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...adjustment,
+              reason: reason || adjustment.reason || 'Bulk adjustment',
+              notes: notes || adjustment.notes
+            }),
+          })
+          
+          const result = await response.json()
+          
+          if (!response.ok) {
+            errors.push({
+              product_id: adjustment.product_id,
+              error: result.error || 'Failed to adjust stock'
+            })
+          } else {
+            results.push(result)
+          }
+        } catch (err) {
+          errors.push({
+            product_id: adjustment.product_id,
+            error: err instanceof Error ? err.message : 'Unknown error'
+          })
+        }
       }
-
-      return { 
-        success: result.success, 
-        message: result.message, 
-        results: result.results, 
-        errors: result.errors 
+      
+      return {
+        success: errors.length === 0,
+        message: `Processed ${results.length} adjustments${errors.length > 0 ? `, ${errors.length} failed` : ''}`,
+        results,
+        errors
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to bulk adjust stock'

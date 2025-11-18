@@ -141,48 +141,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create order
-    const { data: orderData, error: orderError } = await supabaseAdmin
-      .from('orders')
-      .insert({
-        order_number: orderNumber,
-        customer_email: body.customer_email,
-        customer_name: body.customer_name,
-        customer_phone: body.customer_phone,
-        status: 'pending',
-        payment_status: 'pending',
-        payment_method: body.payment_method || 'cash',
-        subtotal: body.subtotal,
-        tax_amount: body.tax_amount || 0,
-        shipping_amount: body.shipping_amount || 0,
-        discount_amount: body.discount_amount || 0,
-        total_amount: body.total_amount,
-        currency: body.currency || 'UGX',
-        shipping_address: body.shipping_address,
-        billing_address: body.billing_address || body.shipping_address,
-        notes: body.notes,
-        order_date: new Date().toISOString(),
-        customer_id: userId, // Associate order with user if authenticated
-        is_guest_order: !userId // Mark as guest order if no user
-      })
-      .select()
-      .single()
+    // Convert address objects to JSON strings as database expects text type
+    const shippingAddressText = typeof body.shipping_address === 'string' 
+      ? body.shipping_address 
+      : JSON.stringify(body.shipping_address)
+    const billingAddressText = typeof body.billing_address === 'string'
+      ? (body.billing_address || shippingAddressText)
+      : JSON.stringify(body.billing_address || body.shipping_address)
 
-    if (orderError) {
-      console.error('Order creation error:', orderError)
-      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
-    }
-
-    // Note: Stock validation is handled by the cart context before order placement
-    // The cart context ensures all items are available and reserved before calling this API
-    console.log('Order items validated by cart context, proceeding with order creation...')
-
-    // Create order items with validation
-    console.log('Creating order items from:', JSON.stringify(body.items, null, 2))
-    
+    // Prepare order items for RPC function
     const orderItems = body.items.map(item => {
       // Validate and ensure all required fields are present
-      // Check both 'price' and 'unit_price' fields for compatibility
       const unitPrice = typeof item.price === 'number' ? item.price : 
                        typeof (item as any).unit_price === 'number' ? (item as any).unit_price : 
                        parseFloat(item.price || (item as any).unit_price) || 0
@@ -198,203 +167,136 @@ export async function POST(request: NextRequest) {
       }
       
       return {
-        order_id: orderData.id,
         product_id: item.product_id,
         product_name: item.product_name || 'Unknown Product',
         product_sku: item.product_sku || `SKU-${item.product_id}`,
         quantity: quantity,
-        price: unitPrice, // Database column is 'price', not 'unit_price'
+        price: unitPrice,
         total_price: totalPrice,
         product_image: item.product_image || null
       }
     })
-    
-    console.log('Processed order items:', JSON.stringify(orderItems, null, 2))
 
-    const { error: itemsError } = await supabaseAdmin
-      .from('order_items')
-      .insert(orderItems)
+    // Get reservation IDs from request if available (from cart context)
+    const reservationIds = (body as any).reservation_ids || null
 
-    if (itemsError) {
-      console.error('Order items creation error:', itemsError)
-      // Try to clean up the order
-      try {
-        await supabaseAdmin.from('orders').delete().eq('id', orderData.id)
-        console.log('Order cleanup completed after items creation failure')
-      } catch (cleanupError) {
-        console.error('Failed to cleanup order after items creation failure:', cleanupError)
-      }
-      
-      // Provide more specific error message
-      let errorMessage = 'Failed to create order items'
-      if (itemsError.message.includes('check constraint')) {
-        errorMessage = 'Order failed due to insufficient stock. Please check product availability.'
-      } else if (itemsError.message.includes('foreign key')) {
-        errorMessage = 'Order failed due to invalid product references.'
-      }
-      
-      return NextResponse.json({ error: errorMessage }, { status: 500 })
+    // Call the atomic order creation function
+    // This function handles: stock validation, inventory deduction, order creation, and order items
+    // all in a single database transaction
+    // Note: Parameter order matters - required params first, then optional ones
+    console.log('Calling atomic order creation function...')
+    const { data: result, error: rpcError } = await supabaseAdmin.rpc('create_order_atomic', {
+      // Required parameters (must be in this order)
+      p_order_number: orderNumber,
+      p_customer_email: body.customer_email,
+      p_customer_name: body.customer_name,
+      p_subtotal: body.subtotal,
+      p_total_amount: body.total_amount,
+      p_shipping_address: shippingAddressText,
+      p_billing_address: billingAddressText,
+      p_order_items: orderItems,
+      // Optional parameters (can be in any order when using named parameters)
+      p_customer_phone: body.customer_phone || null,
+      p_user_id: userId,
+      p_customer_id: userId,
+      p_is_guest_order: !userId,
+      p_payment_method: body.payment_method || 'cash',
+      p_tax_amount: body.tax_amount || 0,
+      p_shipping_amount: body.shipping_amount || 0,
+      p_discount_amount: body.discount_amount || 0,
+      p_currency: body.currency || 'UGX',
+      p_notes: body.notes || null,
+      p_reservation_ids: reservationIds
+    })
+
+    if (rpcError) {
+      console.error('RPC function error:', rpcError)
+      return NextResponse.json({ 
+        error: 'Failed to create order',
+        details: rpcError.message 
+      }, { status: 500 })
     }
 
-    // Return the complete order with items
+    // Check if the function returned an error
+    if (!result || !result.success) {
+      const errorCode = result?.error_code || 'UNKNOWN_ERROR'
+      const errorMessage = result?.error || 'Order creation failed'
+      const failedProducts = result?.failed_products || []
+      
+      console.error('Order creation failed:', errorMessage, errorCode)
+      
+      // Return appropriate error based on error code
+      if (errorCode === 'INSUFFICIENT_STOCK') {
+        return NextResponse.json({ 
+          error: 'Some items are no longer available',
+          error_code: errorCode,
+          failed_products: failedProducts,
+          message: 'Please review your cart and remove unavailable items.'
+        }, { status: 400 })
+      }
+      
+      if (errorCode === 'PRODUCT_NOT_FOUND') {
+        return NextResponse.json({ 
+          error: 'One or more products not found',
+          error_code: errorCode,
+          product_id: result?.product_id
+        }, { status: 404 })
+      }
+      
+      return NextResponse.json({ 
+        error: errorMessage,
+        error_code: errorCode
+      }, { status: 500 })
+    }
+
+    // Order created successfully, fetch the complete order with items
+    const orderId = result.order_id
     const { data: completeOrder, error: fetchError } = await supabaseAdmin
       .from('orders')
       .select(`
         *,
         order_items:order_items(*)
       `)
-      .eq('id', orderData.id)
+      .eq('id', orderId)
       .single()
 
-        if (fetchError) {
-          console.error('Error fetching complete order:', fetchError)
-          return NextResponse.json({ error: 'Order created but failed to fetch details' }, { status: 500 })
-        }
+    if (fetchError) {
+      console.error('Error fetching complete order:', fetchError)
+      // Order was created but we can't fetch it - still return success with order number
+      return NextResponse.json({
+        order_id: orderId,
+        order_number: orderNumber,
+        message: 'Order created successfully! Your beautiful handcrafted items are being prepared with care.',
+        success: true,
+        estimated_delivery: '3-5 business days',
+        tracking_info: 'You will receive tracking information via email once your order ships.'
+      }, { status: 201 })
+    }
 
-        // Deduct inventory for each order item (atomic operation)
-        console.log('Deducting inventory for order items...')
-        try {
-          for (const item of body.items) {
-            const quantity = typeof item.quantity === 'number' ? item.quantity : parseInt(item.quantity) || 1
-            
-            // Get current stock first, then deduct atomically
-            const { data: currentProduct, error: getError } = await supabaseAdmin
-              .from('products')
-              .select('stock_quantity, name, reorder_point')
-              .eq('id', item.product_id)
-              .single()
-            
-            if (getError || !currentProduct) {
-              console.error(`Failed to get current stock for product ${item.product_id}:`, getError)
-              continue
-            }
-            
-            const newStockQuantity = Math.max(0, currentProduct.stock_quantity - quantity)
-            
-            // Deduct stock quantity atomically
-            const { error: stockError } = await supabaseAdmin
-              .from('products')
-              .update({ 
-                stock_quantity: newStockQuantity,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', item.product_id)
-              .eq('stock_quantity', currentProduct.stock_quantity) // Ensure no race conditions
-            
-            if (stockError) {
-              console.error(`Failed to deduct inventory for product ${item.product_id}:`, stockError)
-              // This is a critical error - the order should be rolled back
-              throw new Error(`Inventory deduction failed for product ${item.product_id}: ${stockError.message}`)
-            } else {
-              console.log(`Successfully deducted ${quantity} units from product ${item.product_id} (${currentProduct.name})`)
-              
-              // Create stock movement record
-              try {
-                await supabaseAdmin
-                  .from('stock_movements')
-                  .insert({
-                    product_id: item.product_id,
-                    movement_type: 'sale',
-                    quantity: -quantity, // Negative for deduction
-                    previous_quantity: currentProduct.stock_quantity,
-                    new_quantity: newStockQuantity,
-                    reference_type: 'order',
-                    reference_id: orderData.id,
-                    notes: `Order ${orderNumber} - ${quantity} units sold`,
-                    created_at: new Date().toISOString()
-                  })
-              } catch (stockMovementError) {
-                console.log('Stock movements table not available, skipping movement record:', stockMovementError)
-              }
-              
-              // Check if product is now at or below reorder point
-              const reorderPoint = currentProduct.reorder_point || 10
-              if (newStockQuantity <= reorderPoint) {
-                try {
-                  await supabaseAdmin
-                    .from('reorder_alerts')
-                    .insert({
-                      product_id: item.product_id,
-                      alert_type: newStockQuantity === 0 ? 'out_of_stock' : 'low_stock',
-                      current_stock: newStockQuantity,
-                      reorder_point: reorderPoint,
-                      created_at: new Date().toISOString()
-                    })
-                  console.log(`Low stock alert created for product ${item.product_id}`)
-                } catch (alertError) {
-                  console.log('Reorder alerts table not available, skipping alert:', alertError)
-                }
-              }
-            }
-          }
-          
-          // Mark order as having reserved inventory
-          await supabaseAdmin
-            .from('orders')
-            .update({ 
-              inventory_reserved: true,
-              reserved_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', orderData.id)
-            
-          console.log('Inventory deduction completed successfully')
-        } catch (inventoryError) {
-          console.error('Error during inventory deduction:', inventoryError)
-          // Rollback the order if inventory deduction fails
-          try {
-            await supabaseAdmin.from('orders').delete().eq('id', orderData.id)
-            console.log('Order rolled back due to inventory deduction failure')
-          } catch (rollbackError) {
-            console.error('Failed to rollback order:', rollbackError)
-          }
-          throw new Error(`Order failed due to inventory issues: ${inventoryError.message}`)
-        }
+    // Return complete order with success message
+    const response = {
+      ...completeOrder,
+      message: 'Order created successfully! Your beautiful handcrafted items are being prepared with care.',
+      success: true,
+      estimated_delivery: '3-5 business days',
+      tracking_info: 'You will receive tracking information via email once your order ships.'
+    }
 
-        // Create admin notification for new order
-        try {
-          await supabaseAdmin
-            .from('order_notes')
-            .insert({
-              order_id: orderData.id,
-              note_type: 'internal',
-              content: `New order received: ${orderNumber} from ${body.customer_name} (${body.customer_email}) - Total: ${body.total_amount} UGX`,
-              is_internal: true,
-              created_by: 'system',
-              created_at: new Date().toISOString()
-            })
-          
-          // Create order task for admin
-          await supabaseAdmin
-            .from('order_tasks')
-            .insert({
-              order_id: orderData.id,
-              task_type: 'payment_verification',
-              title: 'Verify Payment',
-              description: `Verify payment for order ${orderNumber} from ${body.customer_name}`,
-              status: 'pending',
-              priority: 'normal',
-              created_at: new Date().toISOString()
-            })
-          
-          console.log('Admin notifications created for new order')
-        } catch (notificationError) {
-          console.log('Admin notification tables not available, skipping notifications:', notificationError)
-        }
+    return NextResponse.json(response, { status: 201 })
 
-        // Add success message and metadata
-        const response = {
-          ...completeOrder,
-          message: 'Order created successfully! Your beautiful handcrafted items are being prepared with care.',
-          success: true,
-          estimated_delivery: '3-5 business days',
-          tracking_info: 'You will receive tracking information via email once your order ships.'
-        }
-
-        return NextResponse.json(response, { status: 201 })
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    
+    // Handle validation errors
+    if (error.message && error.message.includes('Invalid')) {
+      return NextResponse.json({ 
+        error: error.message 
+      }, { status: 400 })
+    }
+    
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }, { status: 500 })
   }
 }

@@ -193,6 +193,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Get current stock to validate previous_physical_stock if not provided
+    let currentStock = previous_physical_stock
+    if (currentStock === undefined) {
+      const { data: product, error: productError } = await supabaseAdmin
+        .from('products')
+        .select('physical_stock, stock_quantity')
+        .eq('id', product_id)
+        .single()
+      
+      if (productError || !product) {
+        return NextResponse.json({ 
+          error: 'Product not found',
+          error_code: 'PRODUCT_NOT_FOUND'
+        }, { status: 404 })
+      }
+      
+      currentStock = product.physical_stock || product.stock_quantity || 0
+    }
+
+    // Calculate new_physical_stock if not provided
+    let calculatedNewStock = new_physical_stock
+    if (calculatedNewStock === undefined) {
+      if (adjustment_type === 'increase') {
+        calculatedNewStock = currentStock + quantity_adjusted
+      } else if (adjustment_type === 'decrease') {
+        calculatedNewStock = Math.max(0, currentStock - quantity_adjusted)
+      } else if (adjustment_type === 'set') {
+        calculatedNewStock = quantity_adjusted
+      } else {
+        return NextResponse.json({ 
+          error: 'Invalid adjustment_type. Must be: increase, decrease, or set' 
+        }, { status: 400 })
+      }
+    }
+
     // Create the adjustment
     const { data: adjustment, error: adjustmentError } = await supabaseAdmin
       .from('inventory_adjustments')
@@ -201,8 +236,8 @@ export async function POST(request: NextRequest) {
         adjustment_type,
         reason_code,
         quantity_adjusted,
-        previous_physical_stock,
-        new_physical_stock,
+        previous_physical_stock: currentStock,
+        new_physical_stock: calculatedNewStock,
         approval_status: 'pending',
         description,
         supporting_documents: supporting_documents || [],
@@ -317,19 +352,46 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update adjustment' }, { status: 500 })
     }
 
-    // If approved, update the product stock
+    // If approved, apply the adjustment using atomic function
     if (approval_status === 'approved' && adjustment) {
-      const { error: stockUpdateError } = await supabaseAdmin
-        .from('products')
-        .update({
-          stock_quantity: adjustment.new_physical_stock,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', adjustment.product_id)
+      // Determine adjustment type and quantity
+      const quantityChange = adjustment.quantity_adjusted || (adjustment.new_physical_stock - adjustment.previous_physical_stock)
+      const adjustmentType = quantityChange > 0 ? 'increase' : quantityChange < 0 ? 'decrease' : 'set'
+      const quantity = adjustmentType === 'set' 
+        ? adjustment.new_physical_stock 
+        : Math.abs(quantityChange)
+      
+      // Map reason_code to reason text
+      const reasonText = adjustment.reason_code || adjustment.description || 'Inventory adjustment'
+      
+      // Use atomic function to apply the adjustment
+      const { data: result, error: rpcError } = await supabaseAdmin.rpc('adjust_inventory_atomic', {
+        p_product_id: adjustment.product_id,
+        p_adjustment_type: adjustmentType,
+        p_quantity: quantity,
+        p_reason: reasonText,
+        p_reference_type: 'adjustment',
+        p_reference_id: adjustment.id,
+        p_notes: adjustment.notes || `Approved adjustment: ${adjustment.description || ''}`,
+        p_user_id: approved_by || null
+      })
 
-      if (stockUpdateError) {
-        console.error('Error updating product stock:', stockUpdateError)
-        // Don't fail the request, just log the error
+      if (rpcError || !result || !result.success) {
+        console.error('Error applying inventory adjustment:', rpcError || result?.error)
+        // Rollback the approval if stock update fails
+        await supabaseAdmin
+          .from('inventory_adjustments')
+          .update({
+            approval_status: 'pending',
+            approved_at: null,
+            approved_by: null
+          })
+          .eq('id', adjustment_id)
+        
+        return NextResponse.json({ 
+          error: 'Failed to apply adjustment to inventory',
+          details: result?.error || rpcError?.message 
+        }, { status: 500 })
       }
     }
 

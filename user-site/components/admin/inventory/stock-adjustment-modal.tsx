@@ -133,17 +133,17 @@ export function StockAdjustmentModal({ isOpen, onClose, onSuccess, product }: St
         'theft_loss': 'lost'
       }
 
-      // Use the basic inventory adjustment API
+      // Use the atomic inventory adjustment API
       const adjustmentData = {
         product_id: product.id,
-        adjustment_type: adjustmentType,
+        adjustment_type: adjustmentType, // 'increase', 'decrease', or 'set'
         quantity: quantityNum,
         reason: reasonMapping[reason] || 'other',
         notes: notes || `Stock ${adjustmentType}: ${reason}`,
         reference: reference || undefined
       }
 
-      const response = await fetch('/api/inventory/adjust', {
+      const response = await fetch('/api/inventory/adjustments/apply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
