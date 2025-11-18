@@ -79,20 +79,48 @@ export function RoleProvider({ children }: { children: ReactNode }) {
           }
         })
 
+        // Check content type before parsing
+        const contentType = response.headers.get('content-type') || ''
+        
         if (response.ok) {
-          const profileData = await response.json()
-          console.log('Role Context - Profile data:', profileData)
-          
-          // Check if user is admin based on is_admin field
-          const isAdminUser = profileData.profile?.is_admin === true || profileData.is_admin === true
-          console.log('Role Context - is_admin flag:', profileData.profile?.is_admin || profileData.is_admin)
-          console.log('Role Context - Determined as admin:', isAdminUser)
-          
-          // Set role based on is_admin field
-          const role = isAdminUser ? 'admin' : 'customer'
-          console.log('Role Context - Set role to:', role)
-          setUserRole(role)
+          // Only parse as JSON if content type indicates JSON
+          if (contentType.includes('application/json')) {
+            try {
+              const profileData = await response.json()
+              console.log('Role Context - Profile data:', profileData)
+              
+              // Check if user is admin based on is_admin field
+              const isAdminUser = profileData.profile?.is_admin === true || profileData.is_admin === true
+              console.log('Role Context - is_admin flag:', profileData.profile?.is_admin || profileData.is_admin)
+              console.log('Role Context - Determined as admin:', isAdminUser)
+              
+              // Set role based on is_admin field
+              const role = isAdminUser ? 'admin' : 'customer'
+              console.log('Role Context - Set role to:', role)
+              setUserRole(role)
+            } catch (parseError) {
+              console.error('Role Context - Failed to parse JSON response:', parseError)
+              // Fallback to user object role if parsing fails
+              setUserRole(user.role || 'customer')
+            }
+          } else {
+            console.warn('Role Context - API returned non-JSON response:', contentType)
+            // Fallback to user object role if response is not JSON
+            setUserRole(user.role || 'customer')
+          }
         } else {
+          // Check if error response is JSON
+          if (contentType.includes('application/json')) {
+            try {
+              const errorData = await response.json()
+              console.log('Role Context - API error:', errorData)
+            } catch (e) {
+              console.error('Role Context - Failed to parse error response')
+            }
+          } else {
+            const text = await response.text()
+            console.warn('Role Context - API returned HTML instead of JSON:', text.substring(0, 200))
+          }
           console.log('Role Context - API failed, using fallback role:', user.role)
           // Fallback to user object role if API fails
           setUserRole(user.role || 'customer')

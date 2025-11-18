@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -65,10 +65,37 @@ export function ProductModal({
   const [loading, setLoading] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const { addToast } = useToast()
+  
+  // Use refs to track previous values and prevent unnecessary resets
+  const prevProductIdRef = useRef<string | undefined>(undefined)
+  const prevModeRef = useRef<'view' | 'edit' | 'add' | undefined>(undefined)
+  const prevIsOpenRef = useRef<boolean>(false)
+  const initialSkuRef = useRef<string | null>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    // Only initialize form data when modal opens or when product/mode actually changes
+    if (!isOpen) {
+      prevIsOpenRef.current = false
+      prevProductIdRef.current = undefined
+      prevModeRef.current = undefined
+      initialSkuRef.current = null
+      return
+    }
+
+    const productId = product?.id
+    const hasProductChanged = productId !== prevProductIdRef.current
+    const hasModeChanged = mode !== prevModeRef.current
+    const wasClosed = !prevIsOpenRef.current
+
+    // Only reset form if modal just opened, product changed, or mode changed
+    if (!wasClosed && !hasProductChanged && !hasModeChanged) {
+      return // Don't reset if nothing meaningful changed
+    }
+
     if (product && mode !== 'add') {
       setFormData({
+        id: product.id,
         name: product.name,
         description: product.description,
         category_id: product.category_id,
@@ -84,14 +111,22 @@ export function ProductModal({
         seo_title: product.seo_title || '',
         seo_description: product.seo_description || '',
       })
+      prevProductIdRef.current = productId
+      prevModeRef.current = mode
+      prevIsOpenRef.current = true
     } else if (mode === 'add') {
+      // Generate SKU only once when adding (preserve it if already generated)
+      if (!initialSkuRef.current) {
+        initialSkuRef.current = `SKU-${Date.now()}`
+      }
+      
       setFormData({
         name: '',
         description: '',
         category_id: undefined,
         price: 0,
         cost_price: 0,
-        sku: `SKU-${Date.now()}`,
+        sku: initialSkuRef.current,
         stock_quantity: 0,
         status: 'active',
         featured: false,
@@ -101,8 +136,11 @@ export function ProductModal({
         seo_title: '',
         seo_description: '',
       })
+      prevProductIdRef.current = undefined
+      prevModeRef.current = mode
+      prevIsOpenRef.current = true
     }
-  }, [product, mode])
+  }, [isOpen, product?.id, mode]) // Only depend on stable values
 
   const handleSave = async () => {
     if (!onSave) return
@@ -154,11 +192,53 @@ export function ProductModal({
   }
 
   const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => {
+      // Prevent unnecessary updates if value hasn't changed
+      if (prev[field as keyof typeof prev] === value) {
+        return prev
+      }
+      return {
+        ...prev,
+        [field]: value
+      }
+    })
+  }
+  
+  // Specific handler for name field to ensure it's fully editable
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value
+    // Always update, even if it seems the same (browser autocomplete might interfere)
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      name: newValue
     }))
   }
+  
+  // Ensure input is editable when modal opens and clear browser autocomplete
+  useEffect(() => {
+    if (isOpen && mode !== 'view' && nameInputRef.current) {
+      // Small delay to ensure DOM is ready and browser autocomplete has run
+      const timeoutId = setTimeout(() => {
+        if (nameInputRef.current) {
+          // Force set the value to what we want (clears browser autocomplete)
+          const desiredValue = formData.name || ''
+          if (nameInputRef.current.value !== desiredValue) {
+            nameInputRef.current.value = desiredValue
+            // Trigger change event to sync with React state
+            const event = new Event('input', { bubbles: true })
+            nameInputRef.current.dispatchEvent(event)
+          }
+          // Focus and select if in add mode
+          nameInputRef.current.focus()
+          if (mode === 'add') {
+            nameInputRef.current.select()
+          }
+        }
+      }, 150)
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isOpen, mode, formData.name])
 
       const handleImageUpload = async (file: File) => {
         if (!file) return
@@ -302,13 +382,45 @@ export function ProductModal({
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-gray-700 font-medium">Product Name *</Label>
+                <Label htmlFor={`product-name-${mode}-${product?.id || 'new'}`} className="text-gray-700 font-medium">Product Name *</Label>
                 <Input
-                  id="name"
+                  ref={nameInputRef}
+                  id={`product-name-${mode}-${product?.id || 'new'}`}
+                  name="product-name-field"
+                  type="text"
                   value={formData.name || ''}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  onChange={handleNameChange}
+                  onKeyDown={(e) => {
+                    // Allow all key presses including delete and backspace
+                    // Don't prevent default - let the input handle it normally
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                    }
+                    // Explicitly allow delete and backspace
+                    if (e.key === 'Delete' || e.key === 'Backspace') {
+                      // Let it proceed normally
+                      return
+                    }
+                  }}
+                  onPaste={(e) => {
+                    // Allow pasting
+                    e.stopPropagation()
+                  }}
+                  onFocus={(e) => {
+                    // Select all text on focus to make it easy to replace
+                    if (mode === 'add') {
+                      e.target.select()
+                    }
+                  }}
                   placeholder="Enter product name"
                   disabled={isReadOnly}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  data-lpignore="true"
+                  data-form-type="other"
+                  data-1p-ignore="true"
                   className="bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>

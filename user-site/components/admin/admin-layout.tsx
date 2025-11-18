@@ -36,14 +36,26 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   // Redirect to login if not authenticated or not admin
   useEffect(() => {
-    if (!isLoading && !roleLoading) {
+    // Only redirect after both loading states are complete
+    // Make sure we have a pathname before checking
+    if (!isLoading && !roleLoading && pathname) {
       if (!isAuthenticated) {
         router.push('/login?redirect=/admin')
-      } else if (!isAdmin && pathname.startsWith('/admin')) {
-        router.push('/?error=insufficient_privileges')
+      } else if (isAuthenticated && !isAdmin && pathname.startsWith('/admin')) {
+        // Only redirect if we're absolutely sure the user is not an admin
+        // Check if user object has admin flag as a fallback
+        const userIsAdmin = user?.is_admin === true || user?.role === 'admin' || user?.role === 'super_admin'
+        
+        if (!userIsAdmin && !isAdmin) {
+          console.log('Non-admin user attempting to access admin page, redirecting to home')
+          router.push('/?error=insufficient_privileges')
+        } else if (userIsAdmin && !isAdmin) {
+          // User object says admin but role context doesn't - wait a bit for role to load
+          console.log('User appears to be admin but role context not loaded yet, waiting...')
+        }
       }
     }
-  }, [isLoading, roleLoading, isAuthenticated, isAdmin, pathname, router])
+  }, [isLoading, roleLoading, isAuthenticated, isAdmin, pathname, router, user])
 
   const closeSidebar = () => setSidebarOpen(false)
 

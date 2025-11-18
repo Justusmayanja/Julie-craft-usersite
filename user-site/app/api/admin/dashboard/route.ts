@@ -58,13 +58,13 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('is_admin', false)
 
-    // Total revenue
+    // Total revenue (from delivered orders)
     const { data: orders } = await supabaseAdmin
       .from('orders')
-      .select('total')
-      .eq('status', 'completed')
+      .select('total_amount')
+      .eq('status', 'delivered')
 
-    const totalRevenue = orders?.reduce((sum, order) => sum + (order.total || 0), 0) || 0
+    const totalRevenue = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
 
     // Pending orders
     const { count: pendingOrders } = await supabaseAdmin
@@ -72,11 +72,11 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending')
 
-    // Low stock products (stock < 10)
+    // Low stock products (stock_quantity < 10)
     const { count: lowStockProducts } = await supabaseAdmin
       .from('products')
       .select('*', { count: 'exact', head: true })
-      .lt('stock', 10)
+      .lt('stock_quantity', 10)
 
     return NextResponse.json({
       totalProducts: totalProducts || 0,

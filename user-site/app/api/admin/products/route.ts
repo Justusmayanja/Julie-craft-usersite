@@ -121,10 +121,29 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query - admin can see ALL products (active, inactive, draft)
+    // Optimize: Only select fields needed for admin view
     let query = supabaseAdmin
       .from('products')
       .select(`
-        *,
+        id,
+        name,
+        price,
+        description,
+        featured_image,
+        images,
+        category_id,
+        stock_quantity,
+        featured,
+        status,
+        created_at,
+        updated_at,
+        sku,
+        weight,
+        dimensions,
+        tags,
+        meta_title,
+        meta_description,
+        seo_keywords,
         category:categories(name)
       `, { count: 'exact' })
 
@@ -170,21 +189,71 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
     }
 
+    // Helper function to normalize image URLs
+    // Converts relative paths to full Supabase storage URLs if needed
+    const normalizeImageUrl = (url: string | null | undefined): string | null => {
+      if (!url) return null
+      
+      // If already a full URL, return as is
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url
+      }
+      
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      if (!supabaseUrl) {
+        // If no Supabase URL configured, return as is
+        return url
+      }
+      
+      // If relative path starting with /uploads/products/, convert to full Supabase storage URL
+      // Path structure: /uploads/products/filename -> products/products/filename in storage
+      if (url.startsWith('/uploads/products/')) {
+        const filename = url.replace('/uploads/products/', '')
+        return `${supabaseUrl}/storage/v1/object/public/products/products/${filename}`
+      }
+      
+      // If relative path starting with /uploads/, convert to full URL
+      if (url.startsWith('/uploads/')) {
+        const pathAfterUploads = url.replace('/uploads/', '')
+        // Default to products bucket
+        return `${supabaseUrl}/storage/v1/object/public/products/${pathAfterUploads}`
+      }
+      
+      // If it already contains the storage path structure, prepend base URL
+      if (url.startsWith('/storage/')) {
+        return `${supabaseUrl}${url}`
+      }
+      
+      // If it looks like a storage path without leading slash
+      if (url.includes('products/') && !url.startsWith('http')) {
+        // Check if it's already a full path or needs the base URL
+        if (url.startsWith('products/')) {
+          return `${supabaseUrl}/storage/v1/object/public/${url}`
+        }
+      }
+      
+      // Return as is if we can't normalize
+      return url
+    }
+
+    // Helper function to normalize an array of image URLs
+    const normalizeImageArray = (images: string[] | null | undefined): string[] => {
+      if (!images || !Array.isArray(images)) return []
+      return images.map(img => normalizeImageUrl(img)).filter((img): img is string => img !== null)
+    }
+
     // Transform data for admin view
     const adminProducts = (data || []).map(product => {
       // Handle image selection - prioritize featured_image, then first image from images array
       let imageUrl = null
-      if (product.featured_image) {
-        imageUrl = product.featured_image
-      } else if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-        imageUrl = product.images[0]
+      const normalizedFeaturedImage = normalizeImageUrl(product.featured_image)
+      const normalizedImages = normalizeImageArray(product.images)
+      
+      if (normalizedFeaturedImage) {
+        imageUrl = normalizedFeaturedImage
+      } else if (normalizedImages.length > 0) {
+        imageUrl = normalizedImages[0]
       }
-
-      console.log(`Product ${product.name}:`, {
-        featured_image: product.featured_image,
-        images: product.images,
-        selected_image: imageUrl
-      })
 
       return {
         id: product.id,
@@ -192,8 +261,8 @@ export async function GET(request: NextRequest) {
         price: product.price,
         description: product.description,
         image: imageUrl,
-        images: product.images || [],
-        featured_image: product.featured_image,
+        images: normalizedImages,
+        featured_image: normalizedFeaturedImage,
         category: product.category?.name || product.category_name || 'Uncategorized',
         stock_quantity: product.stock_quantity || 0,
         featured: product.featured || false,

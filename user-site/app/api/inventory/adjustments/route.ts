@@ -71,25 +71,26 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
 
     // Build the query
+    // Use left join (products) instead of inner join to avoid filtering out adjustments without products
     let query = supabaseAdmin
       .from('inventory_adjustments')
       .select(`
         id,
         product_id,
+        product_name,
         adjustment_type,
-        reason_code,
-        quantity_adjusted,
-        previous_physical_stock,
-        new_physical_stock,
+        reason,
+        quantity_change,
+        quantity_before,
+        quantity_after,
         approval_status,
-        description,
-        supporting_documents,
-        requested_by,
-        approved_by,
-        created_at,
-        approved_at,
         notes,
-        products!inner(
+        reference,
+        user_id,
+        user_name,
+        created_at,
+        updated_at,
+        products(
           id,
           name,
           sku
@@ -178,54 +179,61 @@ export async function POST(request: NextRequest) {
     const {
       product_id,
       adjustment_type,
-      reason_code,
-      quantity_adjusted,
-      previous_physical_stock,
-      new_physical_stock,
-      description,
-      supporting_documents,
-      requested_by,
-      notes
+      reason,
+      quantity_change,
+      quantity_before,
+      quantity_after,
+      notes,
+      reference,
+      user_id,
+      user_name
     } = body
 
     // Validate required fields
-    if (!product_id || !adjustment_type || !reason_code || quantity_adjusted === undefined) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (!product_id || !adjustment_type || !reason) {
+      return NextResponse.json({ error: 'Missing required fields: product_id, adjustment_type, and reason are required' }, { status: 400 })
     }
 
-    // Get current stock to validate previous_physical_stock if not provided
-    let currentStock = previous_physical_stock
-    if (currentStock === undefined) {
-      const { data: product, error: productError } = await supabaseAdmin
-        .from('products')
-        .select('physical_stock, stock_quantity')
-        .eq('id', product_id)
-        .single()
-      
-      if (productError || !product) {
-        return NextResponse.json({ 
-          error: 'Product not found',
-          error_code: 'PRODUCT_NOT_FOUND'
-        }, { status: 404 })
-      }
-      
-      currentStock = product.physical_stock || product.stock_quantity || 0
+    // Get product info
+    const { data: product, error: productError } = await supabaseAdmin
+      .from('products')
+      .select('id, name, physical_stock, stock_quantity')
+      .eq('id', product_id)
+      .single()
+    
+    if (productError || !product) {
+      return NextResponse.json({ 
+        error: 'Product not found',
+        error_code: 'PRODUCT_NOT_FOUND'
+      }, { status: 404 })
     }
-
-    // Calculate new_physical_stock if not provided
-    let calculatedNewStock = new_physical_stock
-    if (calculatedNewStock === undefined) {
+    
+    // Get current stock
+    const currentStock = product.physical_stock || product.stock_quantity || 0
+    
+    // Calculate quantities if not provided
+    let finalQuantityBefore = quantity_before !== undefined ? quantity_before : currentStock
+    let finalQuantityAfter = quantity_after
+    let finalQuantityChange = quantity_change
+    
+    if (finalQuantityAfter === undefined) {
       if (adjustment_type === 'increase') {
-        calculatedNewStock = currentStock + quantity_adjusted
+        finalQuantityChange = finalQuantityChange || 0
+        finalQuantityAfter = finalQuantityBefore + finalQuantityChange
       } else if (adjustment_type === 'decrease') {
-        calculatedNewStock = Math.max(0, currentStock - quantity_adjusted)
+        finalQuantityChange = finalQuantityChange || 0
+        finalQuantityAfter = Math.max(0, finalQuantityBefore - Math.abs(finalQuantityChange))
+        finalQuantityChange = -Math.abs(finalQuantityChange)
       } else if (adjustment_type === 'set') {
-        calculatedNewStock = quantity_adjusted
+        finalQuantityAfter = finalQuantityChange || finalQuantityBefore
+        finalQuantityChange = finalQuantityAfter - finalQuantityBefore
       } else {
         return NextResponse.json({ 
           error: 'Invalid adjustment_type. Must be: increase, decrease, or set' 
         }, { status: 400 })
       }
+    } else {
+      finalQuantityChange = finalQuantityAfter - finalQuantityBefore
     }
 
     // Create the adjustment
@@ -233,35 +241,36 @@ export async function POST(request: NextRequest) {
       .from('inventory_adjustments')
       .insert({
         product_id,
+        product_name: product.name,
         adjustment_type,
-        reason_code,
-        quantity_adjusted,
-        previous_physical_stock: currentStock,
-        new_physical_stock: calculatedNewStock,
+        reason,
+        quantity_before: finalQuantityBefore,
+        quantity_after: finalQuantityAfter,
+        quantity_change: finalQuantityChange,
         approval_status: 'pending',
-        description,
-        supporting_documents: supporting_documents || [],
-        requested_by,
         notes,
+        reference,
+        user_id,
+        user_name,
         created_at: new Date().toISOString()
       })
       .select(`
         id,
         product_id,
+        product_name,
         adjustment_type,
-        reason_code,
-        quantity_adjusted,
-        previous_physical_stock,
-        new_physical_stock,
+        reason,
+        quantity_change,
+        quantity_before,
+        quantity_after,
         approval_status,
-        description,
-        supporting_documents,
-        requested_by,
-        approved_by,
-        created_at,
-        approved_at,
         notes,
-        products!inner(
+        reference,
+        user_id,
+        user_name,
+        created_at,
+        updated_at,
+        products(
           id,
           name,
           sku
@@ -311,13 +320,12 @@ export async function PUT(request: NextRequest) {
     // Update the adjustment
     const updateData: any = {
       approval_status,
-      notes
+      notes: notes || null,
+      updated_at: new Date().toISOString()
     }
 
-    if (approval_status === 'approved') {
-      updateData.approved_at = new Date().toISOString()
-      updateData.approved_by = approved_by
-    }
+    // Note: The database schema doesn't have approved_at or approved_by fields
+    // Approval status is tracked via approval_status field only
 
     const { data: adjustment, error: adjustmentError } = await supabaseAdmin
       .from('inventory_adjustments')
@@ -326,20 +334,20 @@ export async function PUT(request: NextRequest) {
       .select(`
         id,
         product_id,
+        product_name,
         adjustment_type,
-        reason_code,
-        quantity_adjusted,
-        previous_physical_stock,
-        new_physical_stock,
+        reason,
+        quantity_change,
+        quantity_before,
+        quantity_after,
         approval_status,
-        description,
-        supporting_documents,
-        requested_by,
-        approved_by,
-        created_at,
-        approved_at,
         notes,
-        products!inner(
+        reference,
+        user_id,
+        user_name,
+        created_at,
+        updated_at,
+        products(
           id,
           name,
           sku
@@ -355,14 +363,14 @@ export async function PUT(request: NextRequest) {
     // If approved, apply the adjustment using atomic function
     if (approval_status === 'approved' && adjustment) {
       // Determine adjustment type and quantity
-      const quantityChange = adjustment.quantity_adjusted || (adjustment.new_physical_stock - adjustment.previous_physical_stock)
-      const adjustmentType = quantityChange > 0 ? 'increase' : quantityChange < 0 ? 'decrease' : 'set'
+      const quantityChange = adjustment.quantity_change || 0
+      const adjustmentType = adjustment.adjustment_type || (quantityChange > 0 ? 'increase' : quantityChange < 0 ? 'decrease' : 'set')
       const quantity = adjustmentType === 'set' 
-        ? adjustment.new_physical_stock 
+        ? adjustment.quantity_after 
         : Math.abs(quantityChange)
       
-      // Map reason_code to reason text
-      const reasonText = adjustment.reason_code || adjustment.description || 'Inventory adjustment'
+      // Map reason to reason text
+      const reasonText = adjustment.reason || 'Inventory adjustment'
       
       // Use atomic function to apply the adjustment
       const { data: result, error: rpcError } = await supabaseAdmin.rpc('adjust_inventory_atomic', {
@@ -383,8 +391,7 @@ export async function PUT(request: NextRequest) {
           .from('inventory_adjustments')
           .update({
             approval_status: 'pending',
-            approved_at: null,
-            approved_by: null
+            updated_at: new Date().toISOString()
           })
           .eq('id', adjustment_id)
         

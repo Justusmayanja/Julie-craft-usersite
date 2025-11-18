@@ -52,7 +52,7 @@ export default function LoginPage() {
     setFormErrors({})
 
     try {
-      await login(email, password)
+      const loggedInUser = await login(email, password)
       
       // Check for redirect parameter or redirect based on user role
       const urlParams = new URLSearchParams(window.location.search)
@@ -60,74 +60,26 @@ export default function LoginPage() {
       
       if (redirectTo) {
         router.push(redirectTo)
-      } else {
-        // Wait for role to be loaded before redirecting
-        let checkAttempts = 0
-        const MAX_ATTEMPTS = 50 // Max 5 seconds (50 * 100ms)
+      } else if (loggedInUser) {
+        // Check admin status immediately from login response
+        const userIsAdmin = loggedInUser.is_admin === true || loggedInUser.role === 'admin' || loggedInUser.role === 'super_admin'
         
-        const checkRoleAndRedirect = async () => {
-          checkAttempts++
-          console.log(`=== LOGIN REDIRECT CHECK (Attempt ${checkAttempts}) ===`)
-          console.log('Login - roleLoading:', roleLoading)
-          console.log('Login - isAdmin:', isAdmin)
-          console.log('Login - user from auth:', user)
-          
-          // Debug: Check user role information
-          let debugIsAdmin = false
-          try {
-            const token = localStorage.getItem('julie-crafts-token')
-            if (token) {
-              const debugResponse = await fetch('/api/debug/user-role', {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                }
-              })
-              if (debugResponse.ok) {
-                const debugData = await debugResponse.json()
-                console.log('Login - Debug role info:', debugData)
-                debugIsAdmin = debugData.profile_direct?.is_admin === true
-                console.log('Login - is_admin from debug:', debugIsAdmin)
-              }
-            }
-          } catch (error) {
-            console.error('Login - Debug role error:', error)
-          }
-          
-          // Wait for role context to finish loading OR if we've tried too many times
-          if (roleLoading && checkAttempts < MAX_ATTEMPTS) {
-            console.log('Login - Role still loading, checking again in 100ms...')
-            setTimeout(checkRoleAndRedirect, 100)
-            return
-          }
-          
-          // If role context says not loading but isAdmin is still false, 
-          // but debug shows is_admin is true, wait a bit more for state to update
-          if (!roleLoading && !isAdmin && debugIsAdmin && checkAttempts < 10) {
-            console.log('Login - Waiting for role context to update isAdmin...')
-            setTimeout(checkRoleAndRedirect, 100)
-            return
-          }
-          
-          console.log('Login - Role loaded, making redirect decision')
-          console.log('Login - isAdmin from role context:', isAdmin)
-          console.log('Login - user.is_admin from auth:', user?.is_admin)
-          
-          // Check all possible sources
-          const userIsAdmin = isAdmin || user?.is_admin === true || debugIsAdmin
-          console.log('Login - Final admin decision:', userIsAdmin)
-          
-          if (userIsAdmin) {
-            console.log('✅ Login - Redirecting to ADMIN dashboard (/admin)')
-            router.push('/admin')
-          } else {
-            console.log('❌ Login - Redirecting to HOME page (/)')
-            router.push('/')
-          }
+        console.log('Login - User data from login response:', loggedInUser)
+        console.log('Login - is_admin from user:', loggedInUser.is_admin)
+        console.log('Login - role from user:', loggedInUser.role)
+        console.log('Login - Final admin decision:', userIsAdmin)
+        
+        if (userIsAdmin) {
+          console.log('✅ Login - Redirecting to ADMIN dashboard (/admin)')
+          router.push('/admin')
+        } else {
+          console.log('❌ Login - Redirecting to HOME page (/)')
+          router.push('/')
         }
-        
-        // Start checking for role after a delay to ensure state updates
-        setTimeout(checkRoleAndRedirect, 500)
+      } else {
+        // Fallback: if user data is not available, redirect to home
+        console.log('Login - No user data, redirecting to home')
+        router.push('/')
       }
     } catch (error) {
       // Error is handled by the auth context

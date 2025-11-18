@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 
     // Build the query
     let query = supabaseAdmin
-      .from('inventory_audit_logs')
+      .from('inventory_audit_log')
       .select(`
         id,
         product_id,
@@ -105,19 +105,18 @@ export async function GET(request: NextRequest) {
         product_sku,
         physical_stock_before,
         physical_stock_after,
-        physical_stock_change,
         reserved_stock_before,
         reserved_stock_after,
-        reserved_stock_change,
         available_stock_before,
         available_stock_after,
-        available_stock_change,
         operation_type,
         operation_reason,
         quantity_affected,
         order_id,
         adjustment_id,
         related_user_id,
+        inventory_version_before,
+        inventory_version_after,
         created_at,
         notes
       `)
@@ -148,9 +147,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch audit logs' }, { status: 500 })
     }
 
+    // Calculate change values (not stored in database, computed from before/after)
+    const auditLogsWithChanges = (auditLogs || []).map(log => ({
+      ...log,
+      physical_stock_change: log.physical_stock_after - log.physical_stock_before,
+      reserved_stock_change: log.reserved_stock_after - log.reserved_stock_before,
+      available_stock_change: log.available_stock_after - log.available_stock_before
+    }))
+
     // Get total count for pagination
     let countQuery = supabaseAdmin
-      .from('inventory_audit_logs')
+      .from('inventory_audit_log')
       .select('id', { count: 'exact', head: true })
 
     if (productId) {
@@ -177,7 +184,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      audit_logs: auditLogs || [],
+      audit_logs: auditLogsWithChanges,
       total: count || 0,
       limit,
       offset,

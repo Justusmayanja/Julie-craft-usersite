@@ -73,7 +73,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<User | null>
   register: (email: string, password: string, name: string, phone?: string) => Promise<void>
   logout: () => void
   clearError: () => void
@@ -178,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth()
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User | null> => {
     dispatch({ type: "AUTH_START" })
 
     try {
@@ -220,13 +220,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             detail: { user: data.user, isLogin: true } 
           }))
         }
+
+        // Return user data for immediate use in login page
+        return data.user
       } else {
         console.log('Login failed:', data.error)
         dispatch({ type: "AUTH_FAILURE", payload: data.error || 'Login failed' })
+        return null
       }
     } catch (error) {
       console.error('Login network error:', error)
       dispatch({ type: "AUTH_FAILURE", payload: 'Network error. Please try again.' })
+      return null
     }
   }
 

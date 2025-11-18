@@ -7,6 +7,17 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { ProductModal } from "@/components/admin/product-modal"
+import { useToast } from "@/components/ui/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { 
   Package, 
   Plus, 
@@ -62,11 +73,16 @@ export default function AdminProductsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
+  const { toast } = useToast()
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'view' | 'edit' | 'add'>('add')
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
 
   useEffect(() => {
     loadProducts()
@@ -93,8 +109,6 @@ export default function AdminProductsPage() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Admin products API response:', data)
-        console.log('First product image:', data.products?.[0]?.image)
         setProducts(data.products || [])
       } else {
         console.error('Failed to fetch products:', response.status, response.statusText)
@@ -170,6 +184,65 @@ export default function AdminProductsPage() {
     setSelectedProduct(null)
   }
 
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return
+
+    try {
+      const token = localStorage.getItem('julie-crafts-token')
+      if (!token) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in again to continue.',
+          variant: 'destructive'
+        })
+        setDeleteDialogOpen(false)
+        setProductToDelete(null)
+        return
+      }
+
+      const response = await fetch(`/api/admin/products/${productToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to delete product' }))
+        throw new Error(errorData.error || 'Failed to delete product')
+      }
+
+      // Show success toast
+      toast({
+        title: 'Product Deleted',
+        description: `"${productToDelete.name}" has been deleted successfully.`,
+      })
+      
+      // Refresh the products list
+      await loadProducts(true)
+      
+      // Close dialog
+      setDeleteDialogOpen(false)
+      setProductToDelete(null)
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete product'
+      toast({
+        title: 'Delete Failed',
+        description: errorMessage,
+        variant: 'destructive'
+      })
+      setDeleteDialogOpen(false)
+      setProductToDelete(null)
+    }
+  }
+
   const handleSaveProduct = async (productData: Partial<Product>) => {
     try {
       const token = localStorage.getItem('julie-crafts-token')
@@ -185,6 +258,14 @@ export default function AdminProductsPage() {
       })
 
       if (response.ok) {
+        // Show success toast
+        toast({
+          title: modalMode === 'add' ? 'Product Created' : 'Product Updated',
+          description: modalMode === 'add' 
+            ? 'Product has been created successfully.'
+            : 'Product has been updated successfully.',
+        })
+        
         // Refresh the products list and categories
         await loadProducts(true)
         await loadCategories()
@@ -192,10 +273,21 @@ export default function AdminProductsPage() {
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Failed to save product:', errorData)
-        throw new Error(errorData.details || errorData.error || 'Failed to save product')
+        const errorMessage = errorData.details || errorData.error || 'Failed to save product'
+        toast({
+          title: 'Save Failed',
+          description: errorMessage,
+          variant: 'destructive'
+        })
       }
     } catch (error) {
       console.error('Error saving product:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save product'
+      toast({
+        title: 'Save Failed',
+        description: errorMessage,
+        variant: 'destructive'
+      })
     }
   }
 
@@ -456,10 +548,7 @@ export default function AdminProductsPage() {
                         variant="outline" 
                         size="sm" 
                         className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 text-xs h-8"
-                        onClick={() => {
-                          // TODO: Implement delete functionality
-                          console.log('Delete product:', product.id)
-                        }}
+                        onClick={() => handleDeleteClick(product)}
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
@@ -502,6 +591,32 @@ export default function AdminProductsPage() {
         onSave={handleSaveProduct}
         onRefresh={() => loadProducts(true)}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{productToDelete?.name}"? This action cannot be undone and will also delete all associated images.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteDialogOpen(false)
+              setProductToDelete(null)
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProduct}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

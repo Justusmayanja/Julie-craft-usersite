@@ -35,22 +35,66 @@ export default function AdminDashboard() {
     const fetchDashboardStats = async () => {
       try {
         const token = localStorage.getItem('julie-crafts-token')
-        if (!token) return
+        if (!token) {
+          console.error('No token found in localStorage')
+          setIsLoading(false)
+          return
+        }
+
+        console.log('Fetching dashboard stats with token:', token.substring(0, 20) + '...')
 
         // Fetch dashboard statistics
         const response = await fetch('/api/admin/dashboard', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          credentials: 'include' // Include cookies in the request
         })
 
-        if (response.ok) {
-          const data = await response.json()
-          setStats(data)
+        // Check content type before parsing
+        const contentType = response.headers.get('content-type') || ''
+        
+        if (!response.ok) {
+          // Check if response is JSON or HTML
+          if (contentType.includes('application/json')) {
+            try {
+              const errorData = await response.json()
+              console.error('Dashboard API error:', errorData)
+            } catch (e) {
+              console.error('Failed to parse error response as JSON')
+            }
+          } else {
+            // Response is HTML (likely an error page or redirect)
+            const text = await response.text()
+            console.error('Dashboard API returned HTML instead of JSON:', text.substring(0, 200))
+            console.error('Response status:', response.status, response.statusText)
+            console.error('Response URL:', response.url)
+          }
+          // Don't try to parse as JSON if it's not JSON
+          return
         }
+
+        // Only parse as JSON if content type indicates JSON
+        if (!contentType.includes('application/json')) {
+          const text = await response.text()
+          console.error('Expected JSON but got:', contentType, text.substring(0, 200))
+          throw new Error(`API returned non-JSON response (${contentType})`)
+        }
+
+        const data = await response.json()
+        setStats(data)
       } catch (error) {
         console.error('Error fetching dashboard stats:', error)
+        // Set default stats on error to prevent UI breaking
+        setStats({
+          totalProducts: 0,
+          totalOrders: 0,
+          totalCustomers: 0,
+          totalRevenue: 0,
+          pendingOrders: 0,
+          lowStockProducts: 0
+        })
       } finally {
         setIsLoading(false)
       }
