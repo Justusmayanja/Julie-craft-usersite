@@ -161,16 +161,29 @@ export async function middleware(request: NextRequest) {
       
       if (error || !user) {
         console.log('Token verification failed in middleware:', error?.message)
-        if (isAdminApiRoute) {
-          return NextResponse.json(
-            { error: 'Invalid token' },
-            { status: 401 }
-          )
+        
+        // Clear the invalid token cookie
+        const response = isAdminApiRoute 
+          ? NextResponse.json(
+              { 
+                error: 'Invalid or expired session',
+                message: 'Please log in again'
+              },
+              { status: 401 }
+            )
+          : NextResponse.redirect(new URL('/login', request.url))
+        
+        // Clear the cookie
+        response.cookies.delete('julie-crafts-token')
+        
+        if (!isAdminApiRoute) {
+          const loginUrl = new URL('/login', request.url)
+          loginUrl.searchParams.set('redirect', pathname)
+          loginUrl.searchParams.set('message', 'session_expired')
+          return NextResponse.redirect(loginUrl)
         }
         
-        const loginUrl = new URL('/login', request.url)
-        loginUrl.searchParams.set('redirect', pathname)
-        return NextResponse.redirect(loginUrl)
+        return response
       }
 
       // Get user profile with role information

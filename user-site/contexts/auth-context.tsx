@@ -292,6 +292,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    // Check if user is on an admin page before logging out
+    const isOnAdminPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
+    
     localStorage.removeItem('julie-crafts-token')
     // Clear the cookie as well
     document.cookie = 'julie-crafts-token=; path=/; max-age=0'
@@ -303,6 +306,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new CustomEvent('authStateChanged', { 
         detail: { user: null, isLogin: false } 
       }))
+      
+      // Redirect away from admin pages after logout
+      if (isOnAdminPage) {
+        window.location.href = '/login?message=logged_out'
+      }
     }
   }
 

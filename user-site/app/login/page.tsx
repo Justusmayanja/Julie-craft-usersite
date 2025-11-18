@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
 import { useRole } from '@/contexts/role-context'
@@ -10,18 +10,38 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Lock, Shield } from 'lucide-react'
+import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Lock, Shield, Info } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<{email?: string; password?: string}>({})
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   const { login, error, clearError, user } = useAuth()
   const { isAdmin, isLoading: roleLoading } = useRole()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Check for message parameter in URL
+  useEffect(() => {
+    const message = searchParams.get('message')
+    if (message === 'logged_out') {
+      setInfoMessage('You have been successfully logged out. Please sign in again to continue.')
+      // Clear the message from URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete('message')
+      window.history.replaceState({}, '', url.toString())
+    } else if (message === 'session_expired') {
+      setInfoMessage('Your session has expired. Please sign in again to continue.')
+      // Clear the message from URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete('message')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams])
 
   const validateForm = () => {
     const errors: {email?: string; password?: string} = {}
@@ -121,6 +141,12 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {infoMessage && (
+              <Alert className="border-blue-200 bg-blue-50">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">{infoMessage}</AlertDescription>
+              </Alert>
+            )}
             {error && (
               <Alert variant="destructive" className="border-red-200 bg-red-50">
                 <AlertDescription className="text-red-800">{error}</AlertDescription>
@@ -262,5 +288,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-600" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }

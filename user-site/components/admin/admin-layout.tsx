@@ -10,6 +10,7 @@ import { useRole } from "@/contexts/role-context"
 import { Loader2 } from "lucide-react"
 import { Toaster } from "@/components/ui/toaster"
 import { ToastProvider } from "@/components/admin/ui/toast"
+import { SessionGuard } from "@/components/admin/session-guard"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -39,9 +40,19 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     // Only redirect after both loading states are complete
     // Make sure we have a pathname before checking
     if (!isLoading && !roleLoading && pathname) {
-      if (!isAuthenticated) {
-        router.push('/login?redirect=/admin')
-      } else if (isAuthenticated && !isAdmin && pathname.startsWith('/admin')) {
+      // Check if user is logged out (no token in localStorage)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
+      
+      if (!isAuthenticated || !token) {
+        // User is not authenticated or token is missing
+        if (pathname.startsWith('/admin')) {
+          console.log('User not authenticated, redirecting to login')
+          router.push('/login?redirect=/admin&message=session_expired')
+        }
+        return
+      }
+      
+      if (isAuthenticated && !isAdmin && pathname.startsWith('/admin')) {
         // Only redirect if we're absolutely sure the user is not an admin
         // Check if user object has admin flag as a fallback
         const userIsAdmin = user?.is_admin === true || user?.role === 'admin' || user?.role === 'super_admin'
@@ -83,6 +94,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <ToastProvider>
+      <SessionGuard />
       <LoadingOverlay />
       <div className="h-screen w-screen flex min-w-0 overflow-hidden">
         {/* Mobile overlay */}
