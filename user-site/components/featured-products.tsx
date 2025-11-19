@@ -256,21 +256,26 @@ export function FeaturedProducts() {
             {products.map((product) => (
               <div key={product.id}>
                   <Card className="group hover:shadow-lg transition-all duration-300 h-full">
-                    <div className="relative overflow-hidden rounded-t-lg">
+                    <div className="relative overflow-hidden rounded-t-lg bg-gray-100">
                       <img
-                        src={product.image || '/placeholder-product.jpg'}
+                        src={product.image || '/placeholder.svg'}
                         alt={product.name}
                         className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = '/placeholder.svg'
+                          target.onerror = null
+                        }}
                       />
                       {product.featured && (
-                        <Badge className="absolute top-2 left-2 bg-yellow-500 text-white">
+                        <Badge className="absolute top-2 left-2 bg-yellow-500 text-white z-10">
                           <Star className="w-3 h-3 mr-1 fill-current" />
                           Featured
                         </Badge>
                       )}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none group-hover:pointer-events-auto">
                         <Link href={`/product/${product.id}`}>
-                          <Button variant="secondary" size="sm">
+                          <Button variant="secondary" size="sm" onClick={(e) => e.stopPropagation()}>
                             <Eye className="w-4 h-4 mr-2" />
                             Quick View
                           </Button>

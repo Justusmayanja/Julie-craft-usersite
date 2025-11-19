@@ -34,7 +34,13 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
+  const [quantityInput, setQuantityInput] = useState<string>('1')
   const { addItem } = useCart()
+
+  // Sync quantityInput when quantity changes externally
+  useEffect(() => {
+    setQuantityInput(quantity.toString())
+  }, [quantity])
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -123,9 +129,14 @@ export default function ProductDetailPage() {
         <div className="space-y-4">
           <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
             <img
-              src={product.image || '/placeholder-product.jpg'}
+              src={product.image || '/placeholder.svg'}
               alt={product.name}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.src = '/placeholder.svg'
+                target.onerror = null
+              }}
             />
           </div>
           
@@ -208,11 +219,40 @@ export default function ProductDetailPage() {
                 >
                   -
                 </Button>
-                <span className="px-4 py-2 min-w-[60px] text-center">{quantity}</span>
+                <input
+                  type="number"
+                  id="quantity"
+                  min="1"
+                  max={product.stock_quantity}
+                  value={quantityInput}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    // Allow typing freely
+                    setQuantityInput(value)
+                    // Parse and update quantity if valid
+                    const numValue = parseInt(value, 10)
+                    if (!isNaN(numValue) && numValue >= 1) {
+                      setQuantity(Math.min(numValue, product.stock_quantity))
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value.trim()
+                    if (value === '' || isNaN(parseInt(value, 10))) {
+                      setQuantity(1)
+                      setQuantityInput('1')
+                    } else {
+                      const numValue = parseInt(value, 10)
+                      const validQuantity = Math.max(1, Math.min(numValue, product.stock_quantity))
+                      setQuantity(validQuantity)
+                      setQuantityInput(validQuantity.toString())
+                    }
+                  }}
+                  className="w-16 h-10 text-center font-medium border-0 focus:outline-none focus:ring-0 px-2"
+                />
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setQuantity(quantity + 1)}
+                  onClick={() => setQuantity(Math.min(quantity + 1, product.stock_quantity))}
                   disabled={quantity >= product.stock_quantity}
                 >
                   +

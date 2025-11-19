@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -33,8 +33,14 @@ interface ProductModalProps {
 
 export function ProductModal({ product, onClose }: ProductModalProps) {
   const [quantity, setQuantity] = useState(1)
+  const [quantityInput, setQuantityInput] = useState<string>('1')
   const [isWishlisted, setIsWishlisted] = useState(false)
   const { addItem } = useCart()
+
+  // Sync quantityInput when quantity changes externally
+  useEffect(() => {
+    setQuantityInput(quantity.toString())
+  }, [quantity])
 
   const formatPrice = (price: number) => {
     return `UGX ${price.toLocaleString()}`
@@ -68,13 +74,18 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Product Image */}
           <div className="space-y-4">
-            <div className="relative aspect-square overflow-hidden rounded-lg">
+            <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
               <img
                 src={product.image || "/placeholder.svg"}
                 alt={product.name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.src = '/placeholder.svg'
+                  target.onerror = null
+                }}
               />
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
+              <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
                 {product.isNew && (
                   <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
                     New
@@ -134,16 +145,28 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                     <input
                       type="number"
                       min="1"
-                      value={quantity}
+                      value={quantityInput}
                       onChange={(e) => {
-                        const newQuantity = parseInt(e.target.value) || 1
-                        if (newQuantity >= 1) {
-                          setQuantity(newQuantity)
+                        const value = e.target.value
+                        // Allow typing freely
+                        setQuantityInput(value)
+                        // Parse and update quantity if valid
+                        const numValue = parseInt(value, 10)
+                        if (!isNaN(numValue) && numValue >= 1) {
+                          setQuantity(numValue)
                         }
                       }}
                       onBlur={(e) => {
-                        const newQuantity = parseInt(e.target.value) || 1
-                        setQuantity(Math.max(1, newQuantity))
+                        const value = e.target.value.trim()
+                        if (value === '' || isNaN(parseInt(value, 10))) {
+                          setQuantity(1)
+                          setQuantityInput('1')
+                        } else {
+                          const numValue = parseInt(value, 10)
+                          const validQuantity = Math.max(1, numValue)
+                          setQuantity(validQuantity)
+                          setQuantityInput(validQuantity.toString())
+                        }
                       }}
                       className="w-16 h-10 text-center font-medium border border-gray-300 rounded-md focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
                     />

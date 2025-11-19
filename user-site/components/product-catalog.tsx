@@ -403,7 +403,7 @@ export function ProductCatalog() {
             >
               <CardContent className={`p-0 ${viewMode === "list" ? "flex flex-row w-full" : "h-full flex flex-col"}`}>
                 <div
-                  className={`relative overflow-hidden ${
+                  className={`relative overflow-hidden bg-gray-100 ${
                     viewMode === "list" ? "w-48 h-48 flex-shrink-0" : "aspect-square w-full rounded-t-lg"
                   } ${viewMode === "grid" ? "rounded-t-lg" : "rounded-l-lg"}`}
                 >
@@ -411,8 +411,13 @@ export function ProductCatalog() {
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.src = '/placeholder.svg'
+                      target.onerror = null
+                    }}
                   />
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
+                  <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
                     {product.isNew && (
                       <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
                         New
