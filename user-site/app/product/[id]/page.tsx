@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/components/ui/toast"
 import { ShoppingCart, ArrowLeft, Star, Package } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 
@@ -36,6 +37,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [quantityInput, setQuantityInput] = useState<string>('1')
   const { addItem } = useCart()
+  const { toast } = useToast()
 
   // Sync quantityInput when quantity changes externally
   useEffect(() => {
@@ -67,17 +69,35 @@ export default function ProductDetailPage() {
   const handleAddToCart = async () => {
     if (!product) return
     
+    if (!product.inStock) {
+      toast.showError("Out of Stock", "This product is currently unavailable.")
+      return
+    }
+
     try {
-      await addItem({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        category: product.category,
-        inStock: product.inStock
-      })
+      let allSuccess = true
+      for (let i = 0; i < quantity; i++) {
+        const success = await addItem({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          category: product.category,
+          inStock: product.inStock
+        })
+        if (!success) {
+          allSuccess = false
+        }
+      }
+
+      if (allSuccess) {
+        toast.showSuccess("Added to Cart! 🛒", `${quantity} ${quantity === 1 ? 'item' : 'items'} of ${product.name} ${quantity === 1 ? 'has' : 'have'} been added to your cart.`)
+      } else {
+        toast.showError("Partially Added", "Some items may be out of stock. Please check your cart.")
+      }
     } catch (error) {
       console.error('Error adding to cart:', error)
+      toast.showError("Error", "Failed to add item to cart. Please try again.")
     }
   }
 

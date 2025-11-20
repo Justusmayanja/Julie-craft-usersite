@@ -121,7 +121,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
           <AdminHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/30 p-6">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/30">
             {children}
           </main>
         </div>

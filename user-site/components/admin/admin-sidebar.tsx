@@ -222,10 +222,10 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
   return (
     <div className="w-64 min-w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 border-r border-slate-700 h-screen md:h-full flex flex-col backdrop-blur-sm">
       {/* Brand Header - Enhanced */}
-      <div className="flex-shrink-0 p-4 bg-slate-800/95 backdrop-blur-sm border-b border-slate-600">
+      <div className="flex-shrink-0 p-3 sm:p-4 bg-slate-800/95 backdrop-blur-sm border-b border-slate-600">
         <div className="flex items-center justify-between min-w-0">
-          <div className="flex items-center space-x-3 min-w-0">
-            <div className="relative w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-400/30">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+            <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-400/30">
               <Image 
                 src="/julie-logo.jpeg" 
                 alt="JulieCraft Logo" 
@@ -240,27 +240,27 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-bold text-white tracking-tight truncate">JulieCraft</h1>
-              <p className="text-xs text-amber-400 font-semibold tracking-wide truncate">Admin Dashboard</p>
+              <h1 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">JulieCraft</h1>
+              <p className="text-[10px] sm:text-xs text-amber-400 font-semibold tracking-wide truncate">Admin Dashboard</p>
             </div>
           </div>
           
           {/* Mobile close button */}
           <button
             onClick={onClose}
-            className="md:hidden p-2 hover:bg-slate-700 rounded-lg transition-colors flex-shrink-0"
+            className="md:hidden p-1.5 sm:p-2 hover:bg-slate-700 rounded-lg transition-colors flex-shrink-0"
           >
-            <X className="w-5 h-5 text-slate-300" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
           </button>
         </div>
       </div>
       
       {/* Navigation Sections - Enhanced */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 space-y-7 min-h-0">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-4 sm:py-6 space-y-5 sm:space-y-7 min-h-0">
         {navigationSections.map((section) => (
           <div key={section.title} className="min-w-0">
-            <div className="flex items-center space-x-2 px-3 mb-3 min-w-0">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest truncate">
+            <div className="flex items-center space-x-2 px-2 sm:px-3 mb-2 sm:mb-3 min-w-0">
+              <h3 className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest truncate">
                 {section.title}
               </h3>
               <div className="flex-1 h-px bg-gradient-to-r from-slate-600/50 to-transparent"></div>
@@ -278,29 +278,29 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                       <button
                         onClick={() => toggleMenu(item.name)}
                         className={cn(
-                          "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 group relative overflow-hidden",
+                          "w-full flex items-center justify-between px-2 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 group relative overflow-hidden",
                           isActive || hasActiveSubmenu
                             ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 shadow-md ring-1 ring-amber-400/50 backdrop-blur-sm"
                             : "text-slate-300 hover:bg-slate-700/80 hover:text-amber-300 hover:shadow-md hover:ring-1 hover:ring-slate-600/30 hover:backdrop-blur-sm",
                         )}
                       >
-                        <div className="flex items-center space-x-3 min-w-0">
+                        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
                           <div className={cn(
-                            "p-1.5 rounded-lg transition-all duration-300 flex-shrink-0",
+                            "p-1 sm:p-1.5 rounded-lg transition-all duration-300 flex-shrink-0",
                             isActive || hasActiveSubmenu
                               ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-sm" 
                               : "bg-slate-700/80 text-slate-400 group-hover:bg-amber-500/20 group-hover:text-amber-400"
                           )}>
-                            <item.icon className="h-3.5 w-3.5" />
+                            <item.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                           </div>
-                          <span className="tracking-tight truncate">{item.name}</span>
+                          <span className="tracking-tight truncate text-xs sm:text-sm">{item.name}</span>
                         </div>
                         
                         <div className="flex items-center space-x-2">
                           {/* Enhanced Badge */}
                           {item.badge && (
                             <span className={cn(
-                              "px-2 py-1 text-xs font-bold rounded-full shadow-sm ring-1",
+                              "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1",
                               item.badgeColor === "bg-red-500" 
                                 ? "bg-red-500 text-white ring-red-200" 
                                 : isActive || hasActiveSubmenu
@@ -313,10 +313,10 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                           
                           {/* Chevron */}
                           <div className={cn(
-                            "transition-transform duration-200",
+                            "transition-transform duration-200 flex-shrink-0",
                             isExpanded ? "rotate-180" : "rotate-0"
                           )}>
-                            <ChevronDown className="h-4 w-4" />
+                            <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
         </div>
       </div>
       
@@ -330,28 +330,28 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                         href={item.href}
                         onClick={handleLinkClick}
                         className={cn(
-                          "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 group relative overflow-hidden",
+                          "flex items-center justify-between px-2 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 group relative overflow-hidden",
                           isActive
                             ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 shadow-md ring-1 ring-amber-400/50 backdrop-blur-sm"
                             : "text-slate-300 hover:bg-slate-700/80 hover:text-amber-300 hover:shadow-md hover:ring-1 hover:ring-slate-600/30 hover:backdrop-blur-sm",
                         )}
                       >
-                        <div className="flex items-center space-x-3 min-w-0">
+                        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
                           <div className={cn(
-                            "p-1.5 rounded-lg transition-all duration-300 flex-shrink-0",
+                            "p-1 sm:p-1.5 rounded-lg transition-all duration-300 flex-shrink-0",
                             isActive 
                               ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-sm" 
                               : "bg-slate-700/80 text-slate-400 group-hover:bg-amber-500/20 group-hover:text-amber-400"
                           )}>
-                            <item.icon className="h-3.5 w-3.5" />
+                            <item.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                           </div>
-                          <span className="tracking-tight truncate">{item.name}</span>
+                          <span className="tracking-tight truncate text-xs sm:text-sm">{item.name}</span>
                         </div>
                         
                         {/* Enhanced Badge */}
                         {item.badge && (
                           <span className={cn(
-                            "px-2 py-1 text-xs font-bold rounded-full shadow-sm ring-1",
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
                             item.badgeColor === "bg-red-500" 
                               ? "bg-red-500 text-white ring-red-200" 
                               : isActive 
@@ -419,8 +419,8 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
       </nav>
       
       {/* System Status Footer - Enhanced */}
-      <div className="flex-shrink-0 p-4 bg-slate-800/95 backdrop-blur-sm border-t border-slate-600">
-        <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/60 p-4 rounded-xl border border-slate-500/40 shadow-sm backdrop-blur-sm">
+      <div className="flex-shrink-0 p-3 sm:p-4 bg-slate-800/95 backdrop-blur-sm border-t border-slate-600">
+        <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/60 p-3 sm:p-4 rounded-xl border border-slate-500/40 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
               <div className="p-1 bg-emerald-100 rounded-lg">

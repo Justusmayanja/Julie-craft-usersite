@@ -70,112 +70,157 @@ export function Categories() {
 
   if (loading) {
     return (
-      <div className="py-20 bg-gradient-to-br from-gray-50 to-white">
-        <div className="container mx-auto px-4">
+      <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           {/* Section Header Skeleton */}
-          <div className="text-center mb-16">
-            <div className="h-10 bg-gray-200 rounded-lg w-80 mx-auto mb-4 animate-pulse"></div>
-            <div className="h-6 bg-gray-200 rounded w-96 mx-auto animate-pulse"></div>
+          <div className="text-center mb-10 sm:mb-12 md:mb-16">
+            <div className="h-7 sm:h-8 md:h-10 bg-gray-200 rounded-lg w-48 sm:w-64 md:w-80 mx-auto mb-3 sm:mb-4 animate-pulse"></div>
+            <div className="h-4 sm:h-5 md:h-6 bg-gray-200 rounded w-72 sm:w-80 md:w-96 mx-auto animate-pulse"></div>
           </div>
           
           {/* Categories Grid Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[...Array(6)].map((_, index) => (
-              <div key={index} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center animate-pulse">
-                <div className="w-24 h-24 bg-gray-200 rounded-2xl mx-auto mb-6"></div>
-                <div className="h-6 bg-gray-200 rounded w-3/4 mx-auto mb-3"></div>
-                <div className="h-4 bg-gray-200 rounded w-full mx-auto mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3 mx-auto"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            {[...Array(8)].map((_, index) => (
+              <div key={index} className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 text-center animate-pulse">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded-xl sm:rounded-2xl mx-auto mb-5 sm:mb-6"></div>
+                <div className="h-5 sm:h-6 bg-gray-200 rounded w-3/4 mx-auto mb-2 sm:mb-3"></div>
+                <div className="h-3 sm:h-4 bg-gray-200 rounded w-full mx-auto mb-2"></div>
+                <div className="h-3 sm:h-4 bg-gray-200 rounded w-2/3 mx-auto mb-4 sm:mb-5"></div>
+                <div className="h-3 sm:h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
     )
   }
 
   if (error && categories.length === 0) {
     return (
-      <div className="py-20 bg-gradient-to-br from-gray-50 to-white">
-        <div className="container mx-auto px-4">
+      <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="text-center">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Shop by Category</h2>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 max-w-md mx-auto">
-              <Package className="w-16 h-16 mx-auto mb-6 text-gray-300" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to load categories</h3>
-              <p className="text-gray-600">Please try again later or refresh the page.</p>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4 sm:mb-6">Shop by Category</h2>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 max-w-md mx-auto">
+              <Package className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 sm:mb-6 text-gray-300" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Unable to load categories</h3>
+              <p className="text-sm sm:text-base text-gray-600">Please try again later or refresh the page.</p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     )
   }
 
   return (
-    <div className="py-20 bg-gradient-to-br from-gray-50 to-white">
-      <div className="container mx-auto px-4">
+    <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Shop by Category</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+        <div className="text-center mb-10 sm:mb-12 md:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
+            Shop by Category
+          </h2>
+          <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-4">
             Discover our carefully curated collection of handmade crafts, each category representing the finest in traditional artistry
           </p>
         </div>
 
         {/* Categories Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {categories.map((category) => {
             const IconComponent = getCategoryIcon(category.name)
             const colorClasses = getCategoryColor(category.name)
             
             return (
-                <Link 
+              <Link 
                 key={category.id} 
                 href={`/categories/${category.id}`}
                 className="group block"
               >
-                <div className="relative bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full overflow-hidden">
+                <div className="relative bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 text-center hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2 cursor-pointer h-full overflow-hidden">
                   {/* Background Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl sm:rounded-2xl"></div>
                   
                   {/* Category Image or Icon */}
-                  <div className="relative w-24 h-24 mx-auto mb-6">
+                  <div className="relative w-full aspect-square max-w-[140px] sm:max-w-[160px] mx-auto mb-5 sm:mb-6">
                     {category.image_url ? (
-                      <div className="relative w-full h-full rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-100 group-hover:border-primary/20 transition-all duration-500 shadow-sm">
-                        <Image
-                          src={category.image_url}
-                          alt={category.name}
-                          fill
-                          sizes="96px"
-                          className="object-cover group-hover:scale-110 transition-transform duration-500"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
+                      <div className="relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 group-hover:from-gray-100 group-hover:to-gray-200 transition-all duration-300">
+                        {/* Shadow/Glow Effect */}
+                        <div className="absolute inset-0 rounded-xl sm:rounded-2xl shadow-lg shadow-gray-200/50 group-hover:shadow-xl group-hover:shadow-primary/20 transition-all duration-300"></div>
+                        
+                        {/* Border Ring */}
+                        <div className="absolute inset-0 rounded-xl sm:rounded-2xl ring-2 ring-gray-100 group-hover:ring-primary/30 transition-all duration-300 pointer-events-none"></div>
+                        
+                        {/* Image Container */}
+                        <div className="relative w-full h-full overflow-hidden rounded-xl sm:rounded-2xl">
+                          <Image
+                            src={category.image_url}
+                            alt={category.name}
+                            fill
+                            sizes="(max-width: 640px) 140px, 160px"
+                            className="object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                              // Show icon fallback
+                              const container = target.closest('.relative')
+                              if (container) {
+                                const iconContainer = container.querySelector('.icon-fallback')
+                                if (iconContainer) {
+                                  (iconContainer as HTMLElement).style.display = 'flex'
+                                }
+                              }
+                            }}
+                          />
+                          
+                          {/* Overlay Gradient */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          
+                          {/* Icon Fallback (hidden by default, shown on image error) */}
+                          <div className="icon-fallback absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl sm:rounded-2xl">
+                            <div className={`p-3 sm:p-4 ${colorClasses} rounded-full`}>
+                              <IconComponent className="w-8 h-8 sm:w-10 sm:h-10" />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ) : (
-                      <div className={`w-full h-full ${colorClasses} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 border-2 border-gray-100 shadow-sm group-hover:shadow-md`}>
-                        <IconComponent className="w-12 h-12" />
+                      <div className={`relative w-full h-full rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-lg shadow-gray-200/50 group-hover:shadow-xl group-hover:shadow-primary/20 ${colorClasses}`}>
+                        {/* Border Ring */}
+                        <div className="absolute inset-0 rounded-xl sm:rounded-2xl ring-2 ring-white/50 group-hover:ring-primary/30 transition-all duration-300 pointer-events-none"></div>
+                        
+                        {/* Icon */}
+                        <div className="relative z-10">
+                          <IconComponent className="w-10 h-10 sm:w-12 sm:h-12" />
+                        </div>
+                        
+                        {/* Decorative Background Pattern */}
+                        <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
+                          <div className="absolute inset-0" style={{
+                            backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)',
+                            backgroundSize: '16px 16px'
+                          }}></div>
+                        </div>
                       </div>
                     )}
                   </div>
                   
                   {/* Category Content */}
                   <div className="relative z-10">
-                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300 mb-3">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300 mb-2 sm:mb-3">
                       {category.name}
                     </h3>
                     {category.description && (
-                      <p className="text-gray-600 leading-relaxed line-clamp-2 text-sm">
+                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed line-clamp-2 mb-4 sm:mb-5 min-h-[2.5rem] sm:min-h-[3rem]">
                         {category.description}
                       </p>
                     )}
                     
                     {/* Explore Button */}
-                    <div className="mt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="inline-flex items-center text-sm font-medium text-primary group-hover:text-primary/80 transition-colors duration-300">
+                    <div className="mt-auto pt-4 sm:pt-6 border-t border-gray-100 group-hover:border-primary/20 transition-colors duration-300">
+                      <span className="inline-flex items-center text-xs sm:text-sm font-medium text-primary group-hover:text-primary/80 transition-colors duration-300">
                         Explore Collection
-                        <svg className="ml-2 w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="ml-2 w-3 h-3 sm:w-4 sm:h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </span>
@@ -187,6 +232,6 @@ export function Categories() {
           })}
         </div>
       </div>
-    </div>
+    </section>
   )
 }

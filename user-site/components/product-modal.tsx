@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/components/ui/toast"
 import { Minus, Plus, ShoppingCart, Heart } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 
@@ -36,6 +37,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
   const [quantityInput, setQuantityInput] = useState<string>('1')
   const [isWishlisted, setIsWishlisted] = useState(false)
   const { addItem } = useCart()
+  const { toast } = useToast()
 
   // Sync quantityInput when quantity changes externally
   useEffect(() => {
@@ -46,18 +48,38 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
     return `UGX ${price.toLocaleString()}`
   }
 
-  const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      addItem({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        category: product.category,
-        inStock: product.inStock,
-      })
+  const handleAddToCart = async () => {
+    if (!product.inStock) {
+      toast.showError("Out of Stock", "This product is currently unavailable.")
+      return
     }
-    onClose()
+
+    try {
+      let allSuccess = true
+      for (let i = 0; i < quantity; i++) {
+        const success = await addItem({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          category: product.category,
+          inStock: product.inStock,
+        })
+        if (!success) {
+          allSuccess = false
+        }
+      }
+
+      if (allSuccess) {
+        toast.showSuccess("Added to Cart! 🛒", `${quantity} ${quantity === 1 ? 'item' : 'items'} of ${product.name} ${quantity === 1 ? 'has' : 'have'} been added to your cart.`)
+        onClose()
+      } else {
+        toast.showError("Partially Added", "Some items may be out of stock. Please check your cart.")
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast.showError("Error", "Failed to add item to cart. Please try again.")
+    }
   }
 
   const handleQuantityChange = (change: number) => {

@@ -41,6 +41,12 @@ const exemptApiRoutes = [
   '/api/admin/create-test-user'
 ]
 
+// Define API routes that are accessible to authenticated customers (not just admins)
+const customerApiRoutes = [
+  '/api/orders/user',  // User can view their own orders
+  '/api/orders/[',     // User can view their own order details (handled dynamically)
+]
+
 // Define routes that should be accessible to all users (including admins)
 const publicRoutes = [
   '/login',
@@ -59,9 +65,60 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
   const isCustomerInventoryRoute = customerInventoryRoutes.some(route => pathname.startsWith(route))
   const isAdminInventoryRoute = adminInventoryRoutes.some(route => pathname.startsWith(route))
+  
+  // Check if it's a customer-accessible order route (allows authenticated customers)
+  const isCustomerOrderRoute = pathname === '/api/orders/user' || 
+                               pathname.startsWith('/api/orders/') && 
+                               pathname !== '/api/orders' && 
+                               !pathname.startsWith('/api/orders/admin')
 
   // Skip middleware for exempt API routes, public routes, and customer inventory routes
   if (isExemptApiRoute || isPublicRoute || isCustomerInventoryRoute) {
+    return NextResponse.next()
+  }
+
+  // Handle customer-accessible order routes (requires authentication but not admin)
+  if (isCustomerOrderRoute) {
+    const authHeader = request.headers.get('authorization')
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : cookieToken
+    
+    if (!token) {
+      return NextResponse.json(
+        { 
+          error: 'Unauthorized - Authentication required',
+          message: 'Please log in to view your orders'
+        },
+        { status: 401 }
+      )
+    }
+    
+    // Verify token is valid (but don't check for admin privileges)
+    if (isSupabaseConfigured && supabaseAdmin) {
+      try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+        if (error || !user) {
+          return NextResponse.json(
+            { 
+              error: 'Unauthorized - Invalid token',
+              message: 'Please log in again'
+            },
+            { status: 401 }
+          )
+        }
+      } catch (error) {
+        console.error('Token verification error:', error)
+        return NextResponse.json(
+          { 
+            error: 'Unauthorized - Authentication failed',
+            message: 'Please log in again'
+          },
+          { status: 401 }
+        )
+      }
+    }
+    
+    // Allow authenticated users to access their order routes
     return NextResponse.next()
   }
 

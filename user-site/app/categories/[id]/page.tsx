@@ -162,6 +162,8 @@ export default function CategoryPage() {
 function CategoryProducts({ categoryId, categoryName }: { categoryId: string; categoryName: string }) {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { addItem } = useCart()
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetchProducts = async () => {

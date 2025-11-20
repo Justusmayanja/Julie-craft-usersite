@@ -26,13 +26,13 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-50 h-16 bg-white/95 border-b border-gray-200/60 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 shadow-sm min-w-0">
+    <header className="sticky top-0 z-50 h-14 sm:h-16 bg-white/95 border-b border-gray-200/60 backdrop-blur-md flex items-center justify-between px-3 sm:px-4 md:px-6 shadow-sm min-w-0">
       {/* Left side - Mobile menu button and breadcrumb */}
-      <div className="flex items-center space-x-4 min-w-0">
+      <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
         <Button 
           variant="ghost" 
           size="icon" 
-          className="md:hidden hover:bg-gray-100 rounded-lg flex-shrink-0"
+          className="md:hidden hover:bg-gray-100 rounded-lg flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
           onClick={onMenuClick}
         >
           <Menu className="h-5 w-5 text-gray-600" />
@@ -52,7 +52,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
       </div>
 
       {/* Right side - Search, notifications, and user menu */}
-      <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
+      <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 min-w-0 flex-shrink-0">
         {/* Premium Search Bar */}
         <div className="hidden lg:flex relative">
           <div className="relative group">
@@ -70,18 +70,18 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="relative hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-all duration-200 group"
+            className="relative hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-all duration-200 group h-9 w-9 sm:h-10 sm:w-10"
             onClick={() => setShowNotifications(!showNotifications)}
           >
-            <Bell className="h-5 w-5 text-gray-600 group-hover:text-blue-600 transition-colors" />
-            <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold shadow-lg ring-2 ring-white">
-            3
-          </span>
-        </Button>
+            <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-blue-600 transition-colors" />
+            <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-semibold shadow-lg ring-2 ring-white">
+              3
+            </span>
+          </Button>
 
           {/* Premium Notifications Dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 mt-3 w-96 bg-white rounded-2xl shadow-xl border border-gray-200/50 py-3 z-50 backdrop-blur-sm">
+            <div className="absolute right-0 mt-2 sm:mt-3 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-sm bg-white rounded-2xl shadow-xl border border-gray-200/50 py-3 z-50 backdrop-blur-sm">
               <div className="px-5 py-3 border-b border-gray-100/80">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 text-base">Notifications</h3>
@@ -139,36 +139,36 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         <div className="relative flex-shrink-0">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center space-x-2 sm:space-x-3 pl-2 sm:pl-4 border-l border-gray-200/60 hover:bg-blue-50/50 rounded-r-xl py-2 pr-2 sm:pr-3 transition-all duration-200 group min-w-0"
+            className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 pl-1.5 sm:pl-2 md:pl-4 border-l border-gray-200/60 hover:bg-blue-50/50 rounded-r-xl py-1.5 sm:py-2 pr-1.5 sm:pr-2 md:pr-3 transition-all duration-200 group min-w-0"
           >
-            <div className="hidden xl:block text-right min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate">
+            <div className="hidden lg:block text-right min-w-0">
+              <p className="text-xs sm:text-sm font-bold text-gray-900 truncate">
                 {user?.name || 'Admin User'}
               </p>
-              <p className="text-xs text-gray-500 font-medium truncate">
+              <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">
                 {user?.email || 'admin@juliecraft.com'}
               </p>
             </div>
             <div className="relative flex-shrink-0">
-              <Avatar className="w-10 h-10 border-2 border-blue-200/50 shadow-md group-hover:shadow-lg transition-shadow">
+              <Avatar className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 border-2 border-blue-200/50 shadow-md group-hover:shadow-lg transition-shadow">
                 <AvatarImage 
                   src={user?.avatar_url} 
                   alt={user?.name || 'Admin User'}
                 />
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-xs sm:text-sm">
                   {user?.name ? user.name.charAt(0).toUpperCase() : 'AU'}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm">
+              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm">
                 <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
               </div>
             </div>
-            <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+            <ChevronDown className="hidden sm:block w-3 h-3 md:w-4 md:h-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
           </button>
 
           {/* Premium User Dropdown Menu */}
           {showUserMenu && (
-            <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-gray-200/50 py-3 z-50 backdrop-blur-sm">
+            <div className="absolute right-0 mt-2 sm:mt-3 w-[calc(100vw-2rem)] sm:w-64 max-w-sm bg-white rounded-2xl shadow-xl border border-gray-200/50 py-3 z-50 backdrop-blur-sm">
               <div className="px-5 py-4 border-b border-gray-100/80">
                 <div className="flex items-center space-x-3">
                   <Avatar className="w-12 h-12 shadow-md">

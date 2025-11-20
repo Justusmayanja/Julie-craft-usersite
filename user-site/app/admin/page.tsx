@@ -150,11 +150,11 @@ export default function AdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse">
-        <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="animate-pulse px-4 sm:px-6">
+        <div className="h-6 sm:h-8 bg-gray-200 rounded w-1/3 sm:w-1/4 mb-4 sm:mb-6"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-gray-200 rounded-lg h-32"></div>
+            <div key={i} className="bg-gray-200 rounded-lg h-24 sm:h-32"></div>
           ))}
         </div>
       </div>
@@ -162,24 +162,26 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome to the admin panel. Here's an overview of your store.</p>
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
+        {/* Header */}
+        <div className="space-y-1 sm:space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-600">Welcome to the admin panel. Here's an overview of your store.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {statCards.map((stat, index) => (
-            <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+            <Card key={index} className="hover:shadow-md transition-shadow duration-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate pr-2">
                   {stat.title}
                 </CardTitle>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color} flex-shrink-0`} />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                <p className="text-xs text-gray-500 mt-1">
+              <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{stat.value}</div>
+                <p className="text-xs text-gray-500 mt-1 truncate">
                   {stat.description}
                 </p>
               </CardContent>
@@ -188,32 +190,32 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Orders</CardTitle>
-              <CardDescription>Latest orders that need attention</CardDescription>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <Card className="hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl">Recent Orders</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Latest orders that need attention</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
               <div className="space-y-4">
-                <div className="text-center text-gray-500 py-8">
-                  <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No recent orders to display</p>
+                <div className="text-center text-gray-500 py-6 sm:py-8">
+                  <ShoppingCart className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-gray-300" />
+                  <p className="text-sm sm:text-base">No recent orders to display</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Low Stock Alert</CardTitle>
-              <CardDescription>Products that need restocking</CardDescription>
+          <Card className="hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl">Low Stock Alert</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Products that need restocking</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
               <div className="space-y-4">
-                <div className="text-center text-gray-500 py-8">
-                  <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>All products are well stocked</p>
+                <div className="text-center text-gray-500 py-6 sm:py-8">
+                  <Package className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-gray-300" />
+                  <p className="text-sm sm:text-base">All products are well stocked</p>
                 </div>
               </div>
             </CardContent>

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/components/ui/toast"
 import { ShoppingCart, Star, Eye } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 
@@ -24,6 +25,7 @@ export function FeaturedProducts() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { addItem } = useCart()
+  const toast = useToast()
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -179,8 +181,13 @@ export function FeaturedProducts() {
   }, [])
 
   const handleAddToCart = async (product: Product) => {
+    if (!product.inStock) {
+      toast.showError("Out of Stock", "This product is currently unavailable.")
+      return
+    }
+
     try {
-      await addItem({
+      const success = await addItem({
         id: product.id,
         name: product.name,
         price: product.price,
@@ -188,8 +195,15 @@ export function FeaturedProducts() {
         category: product.category,
         inStock: product.stock_quantity > 0
       })
+
+      if (success) {
+        toast.showSuccess("Added to Cart! 🛒", `${product.name} has been added to your cart.`)
+      } else {
+        toast.showError("Unable to Add", "This item is currently out of stock or unavailable.")
+      }
     } catch (error) {
       console.error('Error adding to cart:', error)
+      toast.showError("Error", "Failed to add item to cart. Please try again.")
     }
   }
 

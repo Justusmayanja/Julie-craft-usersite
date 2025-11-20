@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/components/ui/toast"
 import { Search, Grid, List, Loader2 } from "lucide-react"
 import { ProductModal } from "@/components/product-modal"
 import { useCart } from "@/contexts/cart-context"
@@ -172,7 +173,6 @@ export function ProductCatalog() {
   const [sortBy, setSortBy] = useState("name")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [selectedProduct, setSelectedProduct] = useState<FrontendProduct | null>(null)
-  const { dispatch } = useCart()
 
   // Check if we should use API or fallback data
   const [useApiData, setUseApiData] = useState(true)
@@ -252,20 +252,35 @@ export function ProductCatalog() {
     return `UGX ${price.toLocaleString()}`
   }
 
-  const handleAddToCart = (product: FrontendProduct, e: React.MouseEvent) => {
+  const { addItem } = useCart()
+  const { toast } = useToast()
+
+  const handleAddToCart = async (product: FrontendProduct, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (product.inStock) {
-      dispatch({
-        type: "ADD_ITEM",
-        payload: {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          image: product.image,
-          category: product.category,
-          inStock: product.inStock,
-        },
+    
+    if (!product.inStock) {
+      toast.showError("Out of Stock", "This product is currently unavailable.")
+      return
+    }
+
+    try {
+      const success = await addItem({
+        id: product.id.toString(),
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        inStock: product.inStock,
       })
+
+      if (success) {
+        toast.showSuccess("Added to Cart! 🛒", `${product.name} has been added to your cart.`)
+      } else {
+        toast.showError("Unable to Add", "This item is currently out of stock or unavailable.")
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast.showError("Error", "Failed to add item to cart. Please try again.")
     }
   }
 
