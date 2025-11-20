@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Package, Loader2 } from "lucide-react"
+import { useCart } from "@/contexts/cart-context"
+import { useToast } from "@/contexts/toast-context"
 
 interface Category {
   id: string

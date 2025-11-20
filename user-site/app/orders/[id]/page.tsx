@@ -22,6 +22,7 @@ import {
   Printer,
   Download
 } from "lucide-react"
+import jsPDF from "jspdf"
 
 interface OrderItem {
   id: string
@@ -124,6 +125,200 @@ export default function OrderDetailPage() {
     })
   }
 
+  const parseAddress = (address: any): string => {
+    if (typeof address === 'string') {
+      try {
+        address = JSON.parse(address)
+      } catch {
+        return address
+      }
+    }
+    if (typeof address === 'object' && address !== null) {
+      const parts = [
+        address.name,
+        address.address_line1,
+        address.address_line2,
+        address.city,
+        address.state,
+        address.zip_code || address.postal_code,
+        address.country,
+      ].filter(Boolean)
+      return parts.join('\n')
+    }
+    return 'N/A'
+  }
+
+  const downloadPDF = () => {
+    if (!order) return
+
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 20
+    const maxWidth = pageWidth - (margin * 2)
+    let yPosition = margin
+
+    // Helper function to add text with word wrap
+    const addText = (text: string, fontSize: number, isBold: boolean = false, color: number[] = [0, 0, 0]) => {
+      doc.setFontSize(fontSize)
+      doc.setTextColor(color[0], color[1], color[2])
+      if (isBold) {
+        doc.setFont(undefined, 'bold')
+      } else {
+        doc.setFont(undefined, 'normal')
+      }
+      
+      const lines = doc.splitTextToSize(text, maxWidth)
+      doc.text(lines, margin, yPosition)
+      yPosition += lines.length * (fontSize * 0.4) + 5
+    }
+
+    // Header
+    doc.setFillColor(59, 130, 246) // Blue color
+    doc.rect(0, 0, pageWidth, 40, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(24)
+    doc.setFont(undefined, 'bold')
+    doc.text('JULIE CRAFTS', margin, 25)
+    doc.setFontSize(12)
+    doc.setFont(undefined, 'normal')
+    doc.text('Order Invoice', pageWidth - margin, 25, { align: 'right' })
+    
+    yPosition = 50
+
+    // Order Information
+    addText(`Order #${order.order_number}`, 18, true)
+    addText(`Date: ${formatDate(order.order_date)}`, 10)
+    yPosition += 5
+
+    // Status Information
+    doc.setFillColor(240, 240, 240)
+    doc.rect(margin, yPosition, maxWidth, 20, 'F')
+    yPosition += 8
+    addText(`Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}`, 11, true)
+    addText(`Payment: ${order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}`, 11)
+    yPosition += 5
+
+    // Customer Information
+    addText('CUSTOMER INFORMATION', 14, true, [59, 130, 246])
+    yPosition += 2
+    addText(`Name: ${order.customer_name}`, 10)
+    addText(`Email: ${order.customer_email}`, 10)
+    if (order.customer_phone) {
+      addText(`Phone: ${order.customer_phone}`, 10)
+    }
+    yPosition += 5
+
+    // Shipping Address
+    if (order.shipping_address) {
+      addText('SHIPPING ADDRESS', 14, true, [59, 130, 246])
+      yPosition += 2
+      const addressLines = parseAddress(order.shipping_address).split('\n')
+      addressLines.forEach(line => {
+        if (line.trim()) {
+          addText(line, 10)
+        }
+      })
+      yPosition += 5
+    }
+
+    // Order Items Header
+    addText('ORDER ITEMS', 14, true, [59, 130, 246])
+    yPosition += 5
+
+    // Table Header
+    doc.setFillColor(240, 240, 240)
+    doc.rect(margin, yPosition - 5, maxWidth, 10, 'F')
+    doc.setFontSize(10)
+    doc.setFont(undefined, 'bold')
+    doc.text('Item', margin + 5, yPosition)
+    doc.text('Qty', margin + 100, yPosition)
+    doc.text('Price', margin + 130, yPosition)
+    doc.text('Total', pageWidth - margin - 30, yPosition, { align: 'right' })
+    yPosition += 8
+
+    // Order Items
+    doc.setFont(undefined, 'normal')
+    doc.setFontSize(10)
+    order.order_items.forEach((item) => {
+      // Check if we need a new page
+      if (yPosition > 250) {
+        doc.addPage()
+        yPosition = margin
+      }
+
+      const itemName = item.product_name.length > 35 
+        ? item.product_name.substring(0, 32) + '...' 
+        : item.product_name
+      
+      const startY = yPosition
+      const itemLines = doc.splitTextToSize(itemName, 80)
+      doc.text(itemLines, margin + 5, yPosition)
+      const itemHeight = itemLines.length * 5
+      
+      // Quantity, Price, Total aligned
+      doc.text(`${item.quantity}`, margin + 100, startY + (itemHeight > 5 ? itemHeight / 2 : 0))
+      doc.text(formatPrice(item.price), margin + 130, startY + (itemHeight > 5 ? itemHeight / 2 : 0))
+      doc.text(formatPrice(item.price * item.quantity), pageWidth - margin - 30, startY + (itemHeight > 5 ? itemHeight / 2 : 0), { align: 'right' })
+      
+      yPosition += Math.max(itemHeight, 8) + 3
+    })
+
+    yPosition += 5
+
+    // Order Summary
+    doc.setDrawColor(200, 200, 200)
+    doc.line(margin, yPosition, pageWidth - margin, yPosition)
+    yPosition += 8
+
+    addText('ORDER SUMMARY', 12, true)
+    yPosition += 2
+
+    const subtotal = order.subtotal || order.total_amount
+    addText(`Subtotal: ${formatPrice(subtotal)}`, 10)
+    
+    if (order.shipping_cost) {
+      addText(`Shipping: ${formatPrice(order.shipping_cost)}`, 10)
+    }
+    
+    if (order.tax) {
+      addText(`Tax: ${formatPrice(order.tax)}`, 10)
+    }
+
+    yPosition += 3
+    doc.setDrawColor(200, 200, 200)
+    doc.line(margin, yPosition, pageWidth - margin, yPosition)
+    yPosition += 5
+
+    // Total
+    doc.setFontSize(14)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(59, 130, 246)
+    doc.text(`TOTAL: ${formatPrice(order.total_amount)}`, pageWidth - margin, yPosition, { align: 'right' })
+
+    // Footer
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(128, 128, 128)
+      doc.text(
+        `Page ${i} of ${totalPages}`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: 'center' }
+      )
+      doc.text(
+        'Thank you for your order!',
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 5,
+        { align: 'center' }
+      )
+    }
+
+    // Save the PDF
+    doc.save(`order-${order.order_number}.pdf`)
+  }
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -219,9 +414,9 @@ export default function OrderDetailPage() {
                 <Printer className="w-4 h-4 mr-2" />
                 Print
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={downloadPDF}>
                 <Download className="w-4 h-4 mr-2" />
-                Download
+                Download PDF
               </Button>
             </div>
           </div>
@@ -384,17 +579,14 @@ export default function OrderDetailPage() {
             {order.shipping_address && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Shipping Address</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5" />
+                    Shipping Address
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div className="text-sm text-gray-600">
-                      {typeof order.shipping_address === 'string' 
-                        ? order.shipping_address 
-                        : `${order.shipping_address.street || ''}\n${order.shipping_address.city || ''}, ${order.shipping_address.state || ''}\n${order.shipping_address.postal_code || ''}`
-                      }
-                    </div>
+                  <div className="text-sm text-gray-700 whitespace-pre-line">
+                    {parseAddress(order.shipping_address)}
                   </div>
                 </CardContent>
               </Card>

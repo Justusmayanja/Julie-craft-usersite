@@ -125,8 +125,8 @@ export function Categories() {
           </p>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+        {/* Categories Grid - Mobile-first responsive design */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
           {categories.map((category) => {
             const IconComponent = getCategoryIcon(category.name)
             const colorClasses = getCategoryColor(category.name)
@@ -135,92 +135,91 @@ export function Categories() {
               <Link 
                 key={category.id} 
                 href={`/categories/${category.id}`}
-                className="group block"
+                className="group block w-full"
               >
-                <div className="relative bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 text-center hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2 cursor-pointer h-full overflow-hidden">
+                <div className="relative bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8 text-center hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full flex flex-col overflow-hidden">
                   {/* Background Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl sm:rounded-2xl"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></div>
                   
                   {/* Category Image or Icon */}
-                  <div className="relative w-full aspect-square max-w-[140px] sm:max-w-[160px] mx-auto mb-5 sm:mb-6">
-                    {category.image_url ? (
-                      <div className="relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 group-hover:from-gray-100 group-hover:to-gray-200 transition-all duration-300">
-                        {/* Shadow/Glow Effect */}
-                        <div className="absolute inset-0 rounded-xl sm:rounded-2xl shadow-lg shadow-gray-200/50 group-hover:shadow-xl group-hover:shadow-primary/20 transition-all duration-300"></div>
-                        
-                        {/* Border Ring */}
-                        <div className="absolute inset-0 rounded-xl sm:rounded-2xl ring-2 ring-gray-100 group-hover:ring-primary/30 transition-all duration-300 pointer-events-none"></div>
-                        
-                        {/* Image Container */}
-                        <div className="relative w-full h-full overflow-hidden rounded-xl sm:rounded-2xl">
-                          <Image
-                            src={category.image_url}
-                            alt={category.name}
-                            fill
-                            sizes="(max-width: 640px) 140px, 160px"
-                            className="object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = 'none'
-                              // Show icon fallback
-                              const container = target.closest('.relative')
-                              if (container) {
-                                const iconContainer = container.querySelector('.icon-fallback')
-                                if (iconContainer) {
-                                  (iconContainer as HTMLElement).style.display = 'flex'
+                  <div className="relative w-full mb-4 sm:mb-5 md:mb-6 flex-shrink-0">
+                    <div className="relative w-full aspect-square max-w-full mx-auto" style={{ maxWidth: '200px' }}>
+                      {category.image_url ? (
+                        <div className="relative w-full h-full rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 group-hover:from-gray-100 group-hover:to-gray-200 transition-all duration-300">
+                          {/* Shadow/Glow Effect */}
+                          <div className="absolute inset-0 rounded-2xl shadow-md shadow-gray-200/50 group-hover:shadow-xl group-hover:shadow-primary/20 transition-all duration-300"></div>
+                          
+                          {/* Image Container with rounded top corners */}
+                          <div className="relative w-full h-full overflow-hidden rounded-2xl">
+                            <Image
+                              src={category.image_url}
+                              alt={category.name}
+                              fill
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                              className="object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                // Show icon fallback
+                                const container = target.closest('.relative')
+                                if (container) {
+                                  const iconContainer = container.querySelector('.icon-fallback')
+                                  if (iconContainer) {
+                                    (iconContainer as HTMLElement).style.display = 'flex'
+                                  }
                                 }
-                              }
-                            }}
-                          />
-                          
-                          {/* Overlay Gradient */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          
-                          {/* Icon Fallback (hidden by default, shown on image error) */}
-                          <div className="icon-fallback absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl sm:rounded-2xl">
-                            <div className={`p-3 sm:p-4 ${colorClasses} rounded-full`}>
-                              <IconComponent className="w-8 h-8 sm:w-10 sm:h-10" />
+                              }}
+                            />
+                            
+                            {/* Overlay Gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            
+                            {/* Icon Fallback (hidden by default, shown on image error) */}
+                            <div className="icon-fallback absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl">
+                              <div className={`p-4 sm:p-5 ${colorClasses} rounded-full`}>
+                                <IconComponent className="w-10 h-10 sm:w-12 sm:h-12" />
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className={`relative w-full h-full rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-lg shadow-gray-200/50 group-hover:shadow-xl group-hover:shadow-primary/20 ${colorClasses}`}>
-                        {/* Border Ring */}
-                        <div className="absolute inset-0 rounded-xl sm:rounded-2xl ring-2 ring-white/50 group-hover:ring-primary/30 transition-all duration-300 pointer-events-none"></div>
-                        
-                        {/* Icon */}
-                        <div className="relative z-10">
-                          <IconComponent className="w-10 h-10 sm:w-12 sm:h-12" />
+                      ) : (
+                        <div className={`relative w-full h-full rounded-2xl flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-md shadow-gray-200/50 group-hover:shadow-xl group-hover:shadow-primary/20 ${colorClasses}`}>
+                          {/* Border Ring */}
+                          <div className="absolute inset-0 rounded-2xl ring-2 ring-white/50 group-hover:ring-primary/30 transition-all duration-300 pointer-events-none"></div>
+                          
+                          {/* Icon */}
+                          <div className="relative z-10">
+                            <IconComponent className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16" />
+                          </div>
+                          
+                          {/* Decorative Background Pattern */}
+                          <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
+                            <div className="absolute inset-0" style={{
+                              backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)',
+                              backgroundSize: '16px 16px'
+                            }}></div>
+                          </div>
                         </div>
-                        
-                        {/* Decorative Background Pattern */}
-                        <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
-                          <div className="absolute inset-0" style={{
-                            backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)',
-                            backgroundSize: '16px 16px'
-                          }}></div>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                   
                   {/* Category Content */}
-                  <div className="relative z-10">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300 mb-2 sm:mb-3">
+                  <div className="relative z-10 flex-1 flex flex-col">
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 group-hover:text-primary transition-colors duration-300 mb-2 sm:mb-3">
                       {category.name}
                     </h3>
                     {category.description && (
-                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed line-clamp-2 mb-4 sm:mb-5 min-h-[2.5rem] sm:min-h-[3rem]">
+                      <p className="text-sm sm:text-base text-gray-600 leading-relaxed mb-4 sm:mb-5 flex-1">
                         {category.description}
                       </p>
                     )}
                     
-                    {/* Explore Button */}
-                    <div className="mt-auto pt-4 sm:pt-6 border-t border-gray-100 group-hover:border-primary/20 transition-colors duration-300">
-                      <span className="inline-flex items-center text-xs sm:text-sm font-medium text-primary group-hover:text-primary/80 transition-colors duration-300">
+                    {/* Explore Button - Orange/primary color with arrow */}
+                    <div className="mt-auto pt-3 sm:pt-4 md:pt-6 border-t border-gray-100 group-hover:border-primary/20 transition-colors duration-300">
+                      <span className="inline-flex items-center text-sm sm:text-base font-medium text-orange-600 group-hover:text-orange-700 transition-colors duration-300">
                         Explore Collection
-                        <svg className="ml-2 w-3 h-3 sm:w-4 sm:h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="ml-2 w-4 h-4 sm:w-5 sm:h-5 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </span>

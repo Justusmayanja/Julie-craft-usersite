@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation"
 import { Hero } from "@/components/hero"
 import { FeaturedProducts } from "@/components/featured-products"
 import { Categories } from "@/components/categories"
-import { About } from "@/components/about"
 import { Testimonials } from "@/components/testimonials"
 import { AlertCircle, X } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -59,7 +58,6 @@ export default function HomePage() {
       <Hero />
       <FeaturedProducts />
       <Categories />
-      <About />
       <Testimonials />
     </>
   )
