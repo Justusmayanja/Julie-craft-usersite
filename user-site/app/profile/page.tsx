@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { User, Mail, Phone, Calendar, MapPin, ShoppingBag, Package, CreditCard, Edit, Save, X } from "lucide-react"
+import { useToast } from "@/contexts/toast-context"
 
 interface UserProfile {
   id: string
@@ -27,6 +28,7 @@ interface UserProfile {
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
+  const toast = useToast()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -36,7 +38,6 @@ export default function ProfilePage() {
     phone: '',
     address: ''
   })
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -92,13 +93,13 @@ export default function ProfilePage() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        setSaveMessage({ type: 'error', text: 'Please select a valid image file' })
+        toast.showError('Invalid File', 'Please select a valid image file.')
         return
       }
       
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setSaveMessage({ type: 'error', text: 'Image size must be less than 5MB' })
+        toast.showError('File Too Large', 'Image size must be less than 5MB.')
         return
       }
       
@@ -135,12 +136,11 @@ export default function ProfilePage() {
     if (!user?.id) return
 
     setIsSaving(true)
-    setSaveMessage(null)
 
     try {
       const token = localStorage.getItem('julie-crafts-token')
       if (!token) {
-        setSaveMessage({ type: 'error', text: 'Authentication token missing. Please log in again.' })
+        toast.showError('Authentication Required', 'Please log in again to update your profile.')
         return
       }
 
@@ -156,12 +156,10 @@ export default function ProfilePage() {
         setIsUploadingImage(true)
         try {
           avatarUrl = await uploadImage(selectedFile)
+          toast.showSuccess('Image Uploaded', 'Profile picture uploaded successfully.')
         } catch (error) {
           console.error('Error uploading image:', error)
-          setSaveMessage({ 
-            type: 'error', 
-            text: 'Failed to upload profile picture. Please try again.' 
-          })
+          toast.showError('Upload Failed', 'Failed to upload profile picture. Please try again.')
           return
         } finally {
           setIsUploadingImage(false)
@@ -188,27 +186,21 @@ export default function ProfilePage() {
         throw new Error(errorData.error || 'Failed to update profile')
       }
 
-      // Update local profile state
-      setProfile(prev => prev ? {
-        ...prev,
-        name: editForm.name,
-        phone: editForm.phone,
-        address: editForm.address,
-        avatar_url: avatarUrl
-      } : null)
+      // Reload profile to get updated data from server
+      await loadProfile()
 
       setIsEditModalOpen(false)
-      setSaveMessage({ type: 'success', text: 'Profile updated successfully!' })
+      toast.showSuccess('Profile Updated', 'Your profile has been updated successfully!')
       
-      // Clear message after 3 seconds
-      setTimeout(() => setSaveMessage(null), 3000)
+      // Reset form
+      setSelectedFile(null)
+      setPreviewUrl(null)
     } catch (error) {
       console.error('Error updating profile:', error)
-      setSaveMessage({ 
-        type: 'error', 
-        text: error instanceof Error ? error.message : 'Failed to update profile' 
-      })
-      setTimeout(() => setSaveMessage(null), 5000)
+      toast.showError(
+        'Update Failed', 
+        error instanceof Error ? error.message : 'Failed to update profile. Please try again.'
+      )
     } finally {
       setIsSaving(false)
     }
@@ -533,17 +525,6 @@ export default function ProfilePage() {
               />
             </div>
           </div>
-
-          {/* Save Message */}
-          {saveMessage && (
-            <div className={`p-3 rounded-md text-sm ${
-              saveMessage.type === 'success' 
-                ? 'bg-green-50 text-green-700 border border-green-200' 
-                : 'bg-red-50 text-red-700 border border-red-200'
-            }`}>
-              {saveMessage.text}
-            </div>
-          )}
 
           <DialogFooter>
             <Button 

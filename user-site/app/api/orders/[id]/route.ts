@@ -132,8 +132,39 @@ export async function PUT(
       }, { status: 503 })
     }
 
+    // Verify admin authentication
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.substring(7)
+    try {
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+      if (error || !user) {
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      }
+    } catch (error) {
+      return NextResponse.json({ error: 'Token verification failed' }, { status: 401 })
+    }
+
+    // Get current order to check existing status and dates
+    const { data: currentOrder, error: fetchError } = await supabaseAdmin
+      .from('orders')
+      .select('status, shipped_date, delivered_date')
+      .eq('id', orderId)
+      .single()
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      }
+      console.error('Database error fetching order:', fetchError)
+      return NextResponse.json({ error: 'Failed to fetch order' }, { status: 500 })
+    }
+
     // Only allow updating certain fields
-    const allowedUpdates = ['status', 'payment_status', 'tracking_number', 'notes']
+    const allowedUpdates = ['status', 'payment_status', 'tracking_number', 'notes', 'shipped_date', 'delivered_date']
     const updates: any = {}
 
     for (const field of allowedUpdates) {
@@ -141,6 +172,24 @@ export async function PUT(
         updates[field] = body[field]
       }
     }
+
+    // Auto-update dates based on status changes
+    if (body.status && body.status !== currentOrder.status) {
+      const now = new Date().toISOString()
+      
+      // If status is changing to 'shipped' and shipped_date is not set, set it now
+      if (body.status === 'shipped' && !currentOrder.shipped_date && !body.shipped_date) {
+        updates.shipped_date = now
+      }
+      
+      // If status is changing to 'delivered' and delivered_date is not set, set it now
+      if (body.status === 'delivered' && !currentOrder.delivered_date && !body.delivered_date) {
+        updates.delivered_date = now
+      }
+    }
+
+    // Always update updated_at timestamp
+    updates.updated_at = new Date().toISOString()
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 })

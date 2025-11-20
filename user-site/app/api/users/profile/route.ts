@@ -103,22 +103,26 @@ export async function PUT(request: NextRequest) {
       avatar_url
     })
 
+    // Build update object with only defined fields
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+
+    // Only include fields that are provided (not undefined)
+    if (finalFirstName !== undefined) updateData.first_name = finalFirstName
+    if (finalLastName !== undefined) updateData.last_name = finalLastName
+    if (phone !== undefined) updateData.phone = phone
+    if (address !== undefined) updateData.address = address
+    if (bio !== undefined) updateData.bio = bio
+    if (location !== undefined) updateData.location = location
+    if (website !== undefined) updateData.website = website
+    if (preferences !== undefined) updateData.preferences = preferences
+    if (avatar_url !== undefined) updateData.avatar_url = avatar_url
+
     // Update profile
     const { data: updatedProfile, error: updateError } = await supabaseAdmin
       .from('profiles')
-      .update({
-        first_name: finalFirstName,
-        last_name: finalLastName,
-        name: finalFirstName && finalLastName ? `${finalFirstName} ${finalLastName}` : undefined,
-        phone,
-        address,
-        bio,
-        location,
-        website,
-        preferences,
-        avatar_url,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', decoded.userId)
       .select()
       .single()

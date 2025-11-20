@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { 
   Table,
   TableBody,
@@ -13,6 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { 
   Search, 
   Eye,
@@ -24,9 +32,14 @@ import {
   Truck,
   Banknote,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  CheckSquare,
+  Square,
+  MoreVertical
 } from "lucide-react"
 import { useOrders } from "@/hooks/admin/use-orders"
+import { OrderDetailModal } from "@/components/admin/order-detail-modal"
+import { useToast } from "@/contexts/toast-context"
 
 const statusOptions = ["All", "pending", "processing", "shipped", "delivered", "cancelled"]
 
@@ -55,13 +68,152 @@ const getStatusIcon = (status: string) => {
 export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("All")
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [showOrderDetail, setShowOrderDetail] = useState(false)
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set())
+  const [bulkUpdating, setBulkUpdating] = useState(false)
+  const [bulkAction, setBulkAction] = useState<'status' | 'payment_status' | null>(null)
+  const [bulkStatusValue, setBulkStatusValue] = useState<string>('')
+  const [bulkPaymentStatusValue, setBulkPaymentStatusValue] = useState<string>('')
+  const toast = useToast()
 
-  const { data: ordersData, loading, error, refresh } = useOrders({
+  const { data: ordersData, loading, error, refresh, updateOrder } = useOrders({
     search: searchTerm || undefined,
     status: selectedStatus === "All" ? undefined : selectedStatus,
     autoRefresh: true,
     refreshInterval: 300000 // 5 minutes
   })
+
+  const handleViewOrder = async (order: any) => {
+    try {
+      // Fetch full order details
+      const token = localStorage.getItem('julie-crafts-token')
+      const response = await fetch(`/api/orders/${order.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch order details')
+      }
+
+      const orderDetails = await response.json()
+      setSelectedOrder(orderDetails)
+      setShowOrderDetail(true)
+    } catch (error) {
+      console.error('Error fetching order details:', error)
+    }
+  }
+
+  const handleOrderUpdated = () => {
+    refresh()
+    setSelectedOrderIds(new Set())
+  }
+
+  const handleSelectOrder = (orderId: string) => {
+    setSelectedOrderIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId)
+      } else {
+        newSet.add(orderId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAll = () => {
+    if (!ordersData?.orders) return
+    
+    if (selectedOrderIds.size === ordersData.orders.length) {
+      setSelectedOrderIds(new Set())
+    } else {
+      setSelectedOrderIds(new Set(ordersData.orders.map(o => o.id)))
+    }
+  }
+
+  const handleBulkUpdate = async () => {
+    if (selectedOrderIds.size === 0) {
+      toast.showError('No Orders Selected', 'Please select at least one order to update.')
+      return
+    }
+
+    if (!bulkAction) {
+      toast.showError('No Action Selected', 'Please select an action to perform.')
+      return
+    }
+
+    if (bulkAction === 'status' && !bulkStatusValue) {
+      toast.showError('No Status Selected', 'Please select a status to apply.')
+      return
+    }
+
+    if (bulkAction === 'payment_status' && !bulkPaymentStatusValue) {
+      toast.showError('No Payment Status Selected', 'Please select a payment status to apply.')
+      return
+    }
+
+    setBulkUpdating(true)
+    try {
+      const token = localStorage.getItem('julie-crafts-token')
+      const updates: any = {
+        order_ids: Array.from(selectedOrderIds),
+        updates: {}
+      }
+
+      if (bulkAction === 'status') {
+        updates.updates.status = bulkStatusValue
+        // Auto-update dates based on status
+        const now = new Date().toISOString()
+        if (bulkStatusValue === 'shipped') {
+          updates.updates.shipped_date = now
+        }
+        if (bulkStatusValue === 'delivered') {
+          updates.updates.delivered_date = now
+        }
+      } else if (bulkAction === 'payment_status') {
+        updates.updates.payment_status = bulkPaymentStatusValue
+      }
+
+      const response = await fetch('/api/orders/bulk', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Failed to update orders')
+      }
+
+      const result = await response.json()
+      
+      toast.showSuccess(
+        'Bulk Update Successful',
+        `Successfully updated ${result.updated_count} of ${result.total_count} orders.`
+      )
+
+      // Clear selection and reset bulk action
+      setSelectedOrderIds(new Set())
+      setBulkAction(null)
+      setBulkStatusValue('')
+      setBulkPaymentStatusValue('')
+      
+      // Refresh orders
+      refresh()
+    } catch (error) {
+      console.error('Error performing bulk update:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update orders'
+      toast.showError('Bulk Update Failed', errorMessage)
+    } finally {
+      setBulkUpdating(false)
+    }
+  }
 
   if (loading && !ordersData) {
     return (
@@ -223,6 +375,97 @@ export default function OrdersPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Bulk Actions Toolbar */}
+              {selectedOrderIds.size > 0 && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckSquare className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-900">
+                        {selectedOrderIds.size} order{selectedOrderIds.size !== 1 ? 's' : ''} selected
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedOrderIds(new Set())}
+                        className="h-7 px-2 text-xs"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                      <Select
+                        value={bulkAction || ''}
+                        onValueChange={(value) => {
+                          setBulkAction(value as 'status' | 'payment_status' | null)
+                          setBulkStatusValue('')
+                          setBulkPaymentStatusValue('')
+                        }}
+                      >
+                        <SelectTrigger className="w-full sm:w-40 h-8 text-xs">
+                          <SelectValue placeholder="Select action" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="status">Update Status</SelectItem>
+                          <SelectItem value="payment_status">Update Payment Status</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {bulkAction === 'status' && (
+                        <Select
+                          value={bulkStatusValue}
+                          onValueChange={setBulkStatusValue}
+                        >
+                          <SelectTrigger className="w-full sm:w-40 h-8 text-xs">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="processing">Processing</SelectItem>
+                            <SelectItem value="shipped">Shipped</SelectItem>
+                            <SelectItem value="delivered">Delivered</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {bulkAction === 'payment_status' && (
+                        <Select
+                          value={bulkPaymentStatusValue}
+                          onValueChange={setBulkPaymentStatusValue}
+                        >
+                          <SelectTrigger className="w-full sm:w-40 h-8 text-xs">
+                            <SelectValue placeholder="Select payment status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="refunded">Refunded</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      <Button
+                        onClick={handleBulkUpdate}
+                        disabled={bulkUpdating || !bulkAction || (bulkAction === 'status' && !bulkStatusValue) || (bulkAction === 'payment_status' && !bulkPaymentStatusValue)}
+                        size="sm"
+                        className="h-8 px-3 text-xs"
+                      >
+                        {bulkUpdating ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          'Apply'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardHeader>
         
             <CardContent className="p-0">
@@ -230,6 +473,13 @@ export default function OrdersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
+                      <TableHead className="w-12 px-3 sm:px-6">
+                        <Checkbox
+                          checked={ordersData && selectedOrderIds.size === ordersData.orders.length && ordersData.orders.length > 0}
+                          onCheckedChange={handleSelectAll}
+                          aria-label="Select all orders"
+                        />
+                      </TableHead>
                       <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Order</TableHead>
                       <TableHead className="hidden sm:table-cell text-xs sm:text-sm font-semibold px-3 sm:px-6">Customer</TableHead>
                       <TableHead className="hidden md:table-cell text-xs sm:text-sm font-semibold px-3 sm:px-6">Items</TableHead>
@@ -242,7 +492,14 @@ export default function OrdersPage() {
                   </TableHeader>
                   <TableBody>
                     {orders.map((order) => (
-                      <TableRow key={order.id} className="hover:bg-gray-50">
+                      <TableRow key={order.id} className={`hover:bg-gray-50 ${selectedOrderIds.has(order.id) ? 'bg-blue-50' : ''}`}>
+                        <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                          <Checkbox
+                            checked={selectedOrderIds.has(order.id)}
+                            onCheckedChange={() => handleSelectOrder(order.id)}
+                            aria-label={`Select order ${order.order_number}`}
+                          />
+                        </TableCell>
                         <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="font-medium text-xs sm:text-sm">{order.order_number}</div>
                           <div className="text-xs text-gray-500 sm:hidden mt-1">{order.customer_name}</div>
@@ -303,11 +560,14 @@ export default function OrdersPage() {
                         </TableCell>
                         <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center space-x-1">
-                            <Button variant="ghost" size="sm" title="View Order" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              title="View Order" 
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                              onClick={() => handleViewOrder(order)}
+                            >
                               <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" title="Edit Order" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
-                              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -328,6 +588,16 @@ export default function OrdersPage() {
           </Card>
         </div>
       </div>
+
+      {/* Order Detail Modal */}
+      {selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder}
+          open={showOrderDetail}
+          onOpenChange={setShowOrderDetail}
+          onOrderUpdated={handleOrderUpdated}
+        />
+      )}
     </div>
   )
 }

@@ -20,7 +20,23 @@ export function LayoutContent({ children }: LayoutContentProps) {
     return <>{children}</>
   }
   
-  // For regular pages, render with Navigation and Footer
+  // Pages that should not have footer (focused user flows)
+  const noFooterPages = [
+    '/cart',
+    '/orders',
+    '/profile',
+    '/account',
+    '/login',
+    '/register',
+    '/order-confirmation'
+  ]
+  
+  // Check if current page should not have footer
+  const shouldHideFooter = pathname ? noFooterPages.some(page => 
+    pathname === page || pathname.startsWith(`${page}/`)
+  ) : false
+  
+  // For regular pages, render with Navigation and conditionally with Footer
   // Wrap in AdminRedirectGuard to redirect admins away from user pages
   return (
     <AdminRedirectGuard>
@@ -29,7 +45,7 @@ export function LayoutContent({ children }: LayoutContentProps) {
         <main className="flex-1">
           {children}
         </main>
-        <Footer />
+        {!shouldHideFooter && <Footer />}
       </div>
     </AdminRedirectGuard>
   )

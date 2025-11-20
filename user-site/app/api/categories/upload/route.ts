@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { promises as fs } from 'fs'
-import { join } from 'path'
+import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return NextResponse.json({ 
+        error: 'Storage not configured. Please configure Supabase storage buckets.' 
+      }, { status: 503 })
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     const categoryId = formData.get('categoryId') as string | null
@@ -33,25 +39,44 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Convert file to buffer
-    const buffer = Buffer.from(await file.arrayBuffer())
-    
     // Generate unique filename
     const fileExtension = file.name.split('.').pop()
     const uniqueFileName = `${categoryId}_${Date.now()}_${uuidv4()}.${fileExtension}`
-    
-    // Define upload directory and file path
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'categories')
-    const filePath = join(uploadDir, uniqueFileName)
+    const filePath = `categories/${uniqueFileName}`
 
-    // Create upload directory if it doesn't exist
-    await fs.mkdir(uploadDir, { recursive: true })
+    // Convert file to buffer
+    const fileBuffer = await file.arrayBuffer()
 
-    // Write file to disk
-    await fs.writeFile(filePath, buffer)
+    // Upload to Supabase Storage
+    // Try 'media' bucket first (as per StorageService), fallback to 'categories'
+    const storageBucket = 'media' // or 'categories' depending on your setup
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      .from(storageBucket)
+      .upload(filePath, fileBuffer, {
+        contentType: file.type,
+        upsert: false,
+        cacheControl: '3600'
+      })
 
-    // Return the public URL
-    const imageUrl = `/uploads/categories/${uniqueFileName}`
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError)
+      // Check if bucket doesn't exist
+      if (uploadError.message?.includes('Bucket not found') || uploadError.statusCode === '404') {
+        return NextResponse.json({ 
+          error: `Storage bucket not found. Please create a "${storageBucket}" bucket in Supabase Storage.` 
+        }, { status: 500 })
+      }
+      return NextResponse.json({ 
+        error: `Upload failed: ${uploadError.message}` 
+      }, { status: 500 })
+    }
+
+    // Get public URL
+    const { data: urlData } = supabaseAdmin.storage
+      .from(storageBucket)
+      .getPublicUrl(filePath)
+
+    const imageUrl = urlData.publicUrl
 
     return NextResponse.json({
       success: true,
@@ -61,10 +86,10 @@ export async function POST(request: NextRequest) {
       fileType: file.type,
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading category image:', error)
     return NextResponse.json({ 
-      error: 'Failed to upload image.' 
+      error: error?.message || 'Failed to upload image.' 
     }, { status: 500 })
   }
 }
