@@ -11,7 +11,7 @@ import {
   FileText, 
   Layout, 
   Settings, 
-  Footer as FooterIcon,
+  Menu,
   Globe,
   Plus,
   Edit,
@@ -331,7 +331,7 @@ export default function AdminPagesPage() {
                 Homepage
               </TabsTrigger>
               <TabsTrigger value="footer">
-                <FooterIcon className="w-4 h-4 mr-2" />
+                <Menu className="w-4 h-4 mr-2" />
                 Footer
               </TabsTrigger>
               <TabsTrigger value="settings">

@@ -61,6 +61,11 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Database error:', error)
+      // If table doesn't exist, return empty array instead of error
+      if (error.code === 'PGRST205' || error.message?.includes('not found') || error.message?.includes('schema cache')) {
+        console.log('Notifications table does not exist yet. Returning empty notifications.')
+        return NextResponse.json({ notifications: [], unread_count: 0, total: 0 })
+      }
       return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 })
     }
 
@@ -79,7 +84,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { count: unreadCount } = await unreadQuery
+    const { count: unreadCount, error: unreadError } = await unreadQuery
+
+    // Handle missing table for unread count query too
+    if (unreadError && (unreadError.code === 'PGRST205' || unreadError.message?.includes('not found') || unreadError.message?.includes('schema cache'))) {
+      return NextResponse.json({
+        notifications: data || [],
+        unread_count: 0,
+        total: count || 0
+      })
+    }
 
     return NextResponse.json({
       notifications: data || [],

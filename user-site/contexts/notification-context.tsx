@@ -61,6 +61,17 @@ export function NotificationProvider({ children, isAdmin = false }: { children: 
       })
 
       if (!response.ok) {
+        // If table doesn't exist, return empty data instead of error
+        if (response.status === 500) {
+          const errorData = await response.json().catch(() => ({}))
+          if (errorData.error?.includes('not found') || errorData.error?.includes('schema cache')) {
+            console.log('Notifications table does not exist yet. Returning empty notifications.')
+            setNotifications([])
+            setUnreadCount(0)
+            setLoading(false)
+            return
+          }
+        }
         throw new Error('Failed to fetch notifications')
       }
 
@@ -69,7 +80,14 @@ export function NotificationProvider({ children, isAdmin = false }: { children: 
       setUnreadCount(data.unread_count || 0)
     } catch (err) {
       console.error('Error fetching notifications:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load notifications')
+      // Don't set error state if table doesn't exist - just show empty notifications
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load notifications'
+      if (!errorMessage.includes('not found') && !errorMessage.includes('schema cache')) {
+        setError(errorMessage)
+      } else {
+        setNotifications([])
+        setUnreadCount(0)
+      }
     } finally {
       setLoading(false)
     }
