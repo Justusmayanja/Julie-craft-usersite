@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { useNotifications } from "@/contexts/notification-context"
 import { 
   LayoutDashboard, 
   Package, 
@@ -84,7 +85,8 @@ const navigationSections: NavigationSection[] = [
     name: "Orders",
     href: "/admin/orders",
     icon: ShoppingCart,
-        badge: "12",
+    badge: null, // Will be set dynamically
+    badgeColor: "bg-orange-500",
   },
   {
     name: "Categories",
@@ -105,9 +107,8 @@ const navigationSections: NavigationSection[] = [
     items: [
       {
         name: "Pages",
-        href: "/admin/content/pages",
+        href: "/admin/pages",
         icon: FileText,
-        badge: "5",
       },
       {
         name: "Media Library",
@@ -199,10 +200,40 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ onClose }: AdminSidebarProps) {
   const pathname = usePathname()
+  const { unreadCount, notifications } = useNotifications()
+  const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
+
+  // Load logo from site settings
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const token = localStorage.getItem('julie-crafts-token')
+        const response = await fetch('/api/site-content/settings', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        const data = await response.json()
+        if (data.settings?.logo_url?.value) {
+          setLogoUrl(data.settings.logo_url.value)
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error)
+        // Keep default logo on error
+      }
+    }
+    fetchLogo()
+  }, [])
   const [expandedMenus, setExpandedMenus] = useState<string[]>(
     // Auto-expand Settings if we're on a settings page
     pathname.startsWith('/settings') ? ['Settings'] : []
   )
+  
+  // Count order-related notifications (unread only)
+  const orderNotificationsCount = notifications.filter(
+    n => !n.is_read && (n.notification_type.startsWith('order_') || n.notification_type === 'payment_received')
+  ).length
 
   const toggleMenu = (menuName: string) => {
     setExpandedMenus(prev => 
@@ -227,15 +258,20 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
             <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-400/30">
               <Image 
-                src="/julie-logo.jpeg" 
+                src={logoUrl} 
                 alt="JulieCraft Logo" 
                 fill
                 sizes="40px"
                 className="object-contain p-1.5"
                 priority
                 onError={(e) => {
-                  // Fallback to a simple icon if image fails to load
-                  e.currentTarget.style.display = 'none'
+                  // Fallback to default logo if image fails to load
+                  const target = e.target as HTMLImageElement
+                  if (target.src !== '/julie-logo.jpeg') {
+                    target.src = '/julie-logo.jpeg'
+                  } else {
+                    target.style.display = 'none'
+                  }
                 }}
               />
             </div>
@@ -297,17 +333,19 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                         </div>
                         
                         <div className="flex items-center space-x-2">
-                          {/* Enhanced Badge */}
-                          {item.badge && (
+                          {/* Enhanced Badge - Dynamic for Orders */}
+                          {(item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
                             <span className={cn(
-                              "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1",
+                              "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 animate-pulse",
                               item.badgeColor === "bg-red-500" 
                                 ? "bg-red-500 text-white ring-red-200" 
+                                : item.name === 'Orders' && orderNotificationsCount > 0
+                                ? "bg-orange-500 text-white ring-orange-200"
                                 : isActive || hasActiveSubmenu
                                 ? "bg-amber-500 text-white ring-amber-200" 
                                 : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
                             )}>
-                              {item.badge}
+                              {item.name === 'Orders' ? orderNotificationsCount : item.badge}
                             </span>
                           )}
                           
@@ -348,17 +386,19 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                           <span className="tracking-tight truncate text-xs sm:text-sm">{item.name}</span>
                         </div>
                         
-                        {/* Enhanced Badge */}
-                        {item.badge && (
+                        {/* Enhanced Badge - Dynamic for Orders */}
+                        {(item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
                           <span className={cn(
-                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0 animate-pulse",
                             item.badgeColor === "bg-red-500" 
                               ? "bg-red-500 text-white ring-red-200" 
+                              : item.name === 'Orders' && orderNotificationsCount > 0
+                              ? "bg-orange-500 text-white ring-orange-200"
                               : isActive 
                               ? "bg-amber-500 text-white ring-amber-200" 
                               : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
                           )}>
-                            {item.badge}
+                            {item.name === 'Orders' ? orderNotificationsCount : item.badge}
                           </span>
                         )}
                         

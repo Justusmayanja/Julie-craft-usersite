@@ -14,6 +14,17 @@ export function NotificationBell({ className }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { unreadCount, loading } = useNotifications()
+  const [hasNewNotifications, setHasNewNotifications] = useState(false)
+  
+  // Track when new notifications arrive
+  useEffect(() => {
+    if (unreadCount > 0) {
+      setHasNewNotifications(true)
+      // Reset after animation
+      const timer = setTimeout(() => setHasNewNotifications(false), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [unreadCount])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -37,14 +48,21 @@ export function NotificationBell({ className }: NotificationBellProps) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "relative p-2 rounded-full hover:bg-gray-100 transition-colors",
+          "relative p-2 rounded-full hover:bg-gray-100 transition-all duration-300",
+          hasNewNotifications && "animate-pulse",
           className
         )}
-        aria-label="Notifications"
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
-        <Bell className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
+        <Bell className={cn(
+          "h-5 w-5 sm:h-6 sm:w-6 transition-colors",
+          unreadCount > 0 ? "text-orange-600" : "text-gray-700"
+        )} />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-orange-600 text-[10px] sm:text-xs font-bold text-white ring-2 ring-white">
+          <span className={cn(
+            "absolute top-0 right-0 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-orange-600 text-[10px] sm:text-xs font-bold text-white ring-2 ring-white",
+            hasNewNotifications && "animate-bounce"
+          )}>
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

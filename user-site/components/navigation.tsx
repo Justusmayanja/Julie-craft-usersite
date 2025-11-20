@@ -26,9 +26,27 @@ export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
   const isClient = useClientOnly()
   const { state } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
+
+  // Load logo from site settings
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const response = await fetch('/api/site-content/settings')
+        const data = await response.json()
+        if (data.settings?.logo_url?.value) {
+          setLogoUrl(data.settings.logo_url.value)
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error)
+        // Keep default logo on error
+      }
+    }
+    fetchLogo()
+  }, [])
 
   // Load profile image from user data or localStorage
   useEffect(() => {
@@ -71,15 +89,20 @@ export function Navigation() {
             <Link href="/" className="flex items-center space-x-3 group">
               <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 group-hover:border-primary/30 transition-all duration-300">
                 <Image 
-                  src="/julie-logo.jpeg" 
+                  src={logoUrl} 
                   alt="JulieCraft Logo" 
                   fill
                   sizes="40px"
                   className="object-contain p-1.5 group-hover:scale-105 transition-transform duration-300"
                   priority
                   onError={(e) => {
-                    // Fallback to a simple icon if image fails to load
-                    e.currentTarget.style.display = 'none'
+                    // Fallback to default logo if image fails to load
+                    const target = e.target as HTMLImageElement
+                    if (target.src !== '/julie-logo.jpeg') {
+                      target.src = '/julie-logo.jpeg'
+                    } else {
+                      target.style.display = 'none'
+                    }
                   }}
                 />
               </div>

@@ -180,15 +180,43 @@ export function NotificationProvider({ children, isAdmin = false }: { children: 
     }
   }, [fetchNotifications, isAdmin, isAuthenticated])
 
-  // Poll for new notifications every 30 seconds
+  // Poll for new notifications - more frequently for admin (10s) vs customers (30s)
   useEffect(() => {
     if (!isAdmin && !isAuthenticated) return
 
+    const pollInterval = isAdmin ? 10000 : 30000 // Admin: 10s, Customers: 30s
     const interval = setInterval(() => {
       fetchNotifications()
-    }, 30000) // Poll every 30 seconds
+    }, pollInterval)
 
     return () => clearInterval(interval)
+  }, [fetchNotifications, isAdmin, isAuthenticated])
+
+  // Refresh notifications when page becomes visible (for real-time feel)
+  useEffect(() => {
+    if (!isAdmin && !isAuthenticated) return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Immediately fetch when page becomes visible
+        fetchNotifications()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [fetchNotifications, isAdmin, isAuthenticated])
+
+  // Refresh notifications when window regains focus
+  useEffect(() => {
+    if (!isAdmin && !isAuthenticated) return
+
+    const handleFocus = () => {
+      fetchNotifications()
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
   }, [fetchNotifications, isAdmin, isAuthenticated])
 
   // Listen for logout events to clear notifications
