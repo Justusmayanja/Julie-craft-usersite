@@ -20,7 +20,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
 
   const handleSignOut = async () => {
     setShowUserMenu(false)
-    logout()
+    await logout()
     // Redirect will be handled by the logout function in auth-context
   }
 

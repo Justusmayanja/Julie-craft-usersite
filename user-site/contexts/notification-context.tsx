@@ -191,6 +191,23 @@ export function NotificationProvider({ children, isAdmin = false }: { children: 
     return () => clearInterval(interval)
   }, [fetchNotifications, isAdmin, isAuthenticated])
 
+  // Listen for logout events to clear notifications
+  useEffect(() => {
+    const handleLogout = (event: CustomEvent) => {
+      console.log('User logged out, clearing notifications')
+      setNotifications([])
+      setUnreadCount(0)
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('userLogout', handleLogout as EventListener)
+      
+      return () => {
+        window.removeEventListener('userLogout', handleLogout as EventListener)
+      }
+    }
+  }, [])
+
   return (
     <NotificationContext.Provider
       value={{

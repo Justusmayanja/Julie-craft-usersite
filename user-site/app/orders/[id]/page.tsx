@@ -153,164 +153,335 @@ export default function OrderDetailPage() {
 
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
     const margin = 20
     const maxWidth = pageWidth - (margin * 2)
     let yPosition = margin
 
     // Helper function to add text with word wrap
-    const addText = (text: string, fontSize: number, isBold: boolean = false, color: number[] = [0, 0, 0]) => {
+    const addText = (text: string, fontSize: number, isBold: boolean = false, color: number[] = [0, 0, 0], x: number = margin, align: 'left' | 'center' | 'right' = 'left') => {
       doc.setFontSize(fontSize)
       doc.setTextColor(color[0], color[1], color[2])
       if (isBold) {
-        doc.setFont(undefined, 'bold')
+        doc.setFont('helvetica', 'bold')
       } else {
-        doc.setFont(undefined, 'normal')
+        doc.setFont('helvetica', 'normal')
       }
       
-      const lines = doc.splitTextToSize(text, maxWidth)
-      doc.text(lines, margin, yPosition)
-      yPosition += lines.length * (fontSize * 0.4) + 5
+      const textWidth = align === 'left' ? maxWidth : (align === 'center' ? maxWidth : undefined)
+      const lines = textWidth ? doc.splitTextToSize(text, textWidth) : [text]
+      
+      lines.forEach((line: string) => {
+        doc.text(line, x, yPosition, { align })
+        yPosition += fontSize * 0.4 + 2
+      })
+      
+      return yPosition
     }
 
-    // Header
-    doc.setFillColor(59, 130, 246) // Blue color
-    doc.rect(0, 0, pageWidth, 40, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(24)
-    doc.setFont(undefined, 'bold')
-    doc.text('JULIE CRAFTS', margin, 25)
-    doc.setFontSize(12)
-    doc.setFont(undefined, 'normal')
-    doc.text('Order Invoice', pageWidth - margin, 25, { align: 'right' })
+    // Helper to check if new page is needed
+    const checkNewPage = (requiredSpace: number = 20) => {
+      if (yPosition + requiredSpace > pageHeight - 30) {
+        doc.addPage()
+        yPosition = margin
+        return true
+      }
+      return false
+    }
+
+    // Header with gradient-like effect
+    doc.setFillColor(37, 99, 235) // Darker blue
+    doc.rect(0, 0, pageWidth, 45, 'F')
     
-    yPosition = 50
+    // Add subtle pattern
+    doc.setFillColor(59, 130, 246) // Lighter blue
+    doc.rect(0, 0, pageWidth, 5, 'F')
+    
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(28)
+    doc.setFont('helvetica', 'bold')
+    doc.text('JULIE CRAFTS', margin, 30)
+    
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(255, 255, 255)
+    doc.text('Order Invoice', pageWidth - margin, 30, { align: 'right' })
+    
+    yPosition = 55
 
-    // Order Information
-    addText(`Order #${order.order_number}`, 18, true)
-    addText(`Date: ${formatDate(order.order_date)}`, 10)
-    yPosition += 5
-
-    // Status Information
-    doc.setFillColor(240, 240, 240)
-    doc.rect(margin, yPosition, maxWidth, 20, 'F')
+    // Order Information Section
+    doc.setFillColor(249, 250, 251) // Light gray background
+    doc.rect(margin, yPosition, maxWidth, 35, 'F')
+    
+    doc.setDrawColor(229, 231, 235) // Border color
+    doc.setLineWidth(0.5)
+    doc.rect(margin, yPosition, maxWidth, 35, 'S')
+    
     yPosition += 8
-    addText(`Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}`, 11, true)
-    addText(`Payment: ${order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}`, 11)
-    yPosition += 5
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(17, 24, 39) // Dark gray
+    doc.text(`Order #${order.order_number}`, margin + 5, yPosition)
+    
+    yPosition += 8
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(75, 85, 99) // Medium gray
+    doc.text(`Date: ${formatDate(order.order_date)}`, margin + 5, yPosition)
+    
+    yPosition += 6
+    doc.setFontSize(9)
+    doc.setTextColor(75, 85, 99)
+    
+    // Status badges
+    const statusX = margin + 5
+    const statusY = yPosition
+    doc.setFillColor(34, 197, 94) // Green for delivered/paid
+    doc.rect(statusX, statusY - 4, 30, 6, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.text(order.status.toUpperCase(), statusX + 2, statusY)
+    
+    const paymentX = statusX + 35
+    const paymentColor = order.payment_status.toLowerCase() === 'paid' ? [34, 197, 94] : [234, 179, 8]
+    doc.setFillColor(paymentColor[0], paymentColor[1], paymentColor[2])
+    doc.rect(paymentX, statusY - 4, 25, 6, 'F')
+    doc.text(order.payment_status.toUpperCase(), paymentX + 2, statusY)
+    
+    yPosition += 15
 
-    // Customer Information
-    addText('CUSTOMER INFORMATION', 14, true, [59, 130, 246])
-    yPosition += 2
-    addText(`Name: ${order.customer_name}`, 10)
-    addText(`Email: ${order.customer_email}`, 10)
+    // Customer Information Section
+    doc.setFillColor(239, 246, 255) // Light blue background
+    doc.rect(margin, yPosition, maxWidth / 2 - 5, 40, 'F')
+    doc.setDrawColor(191, 219, 254)
+    doc.rect(margin, yPosition, maxWidth / 2 - 5, 40, 'S')
+    
+    yPosition += 8
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(37, 99, 235)
+    doc.text('CUSTOMER INFORMATION', margin + 5, yPosition)
+    
+    yPosition += 7
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(31, 41, 55)
+    doc.text(`Name: ${order.customer_name}`, margin + 5, yPosition)
+    yPosition += 6
+    doc.text(`Email: ${order.customer_email}`, margin + 5, yPosition)
+    yPosition += 6
     if (order.customer_phone) {
-      addText(`Phone: ${order.customer_phone}`, 10)
+      doc.text(`Phone: ${order.customer_phone}`, margin + 5, yPosition)
+      yPosition += 6
     }
-    yPosition += 5
 
-    // Shipping Address
+    // Shipping Address Section
+    const shippingX = margin + maxWidth / 2 + 5
+    let shippingY = yPosition - 26
+    doc.setFillColor(239, 246, 255)
+    doc.rect(shippingX, shippingY, maxWidth / 2 - 5, 40, 'F')
+    doc.setDrawColor(191, 219, 254)
+    doc.rect(shippingX, shippingY, maxWidth / 2 - 5, 40, 'S')
+    
+    shippingY += 8
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(37, 99, 235)
+    doc.text('SHIPPING ADDRESS', shippingX + 5, shippingY)
+    
+    shippingY += 7
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(31, 41, 55)
+    
     if (order.shipping_address) {
-      addText('SHIPPING ADDRESS', 14, true, [59, 130, 246])
-      yPosition += 2
       const addressLines = parseAddress(order.shipping_address).split('\n')
       addressLines.forEach(line => {
         if (line.trim()) {
-          addText(line, 10)
+          doc.text(line, shippingX + 5, shippingY)
+          shippingY += 6
         }
       })
-      yPosition += 5
+    } else {
+      doc.text('N/A', shippingX + 5, shippingY)
     }
 
-    // Order Items Header
-    addText('ORDER ITEMS', 14, true, [59, 130, 246])
-    yPosition += 5
+    yPosition = shippingY + 10
+    checkNewPage(30)
+
+    // Order Items Table
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(37, 99, 235)
+    doc.text('ORDER ITEMS', margin, yPosition)
+    yPosition += 8
 
     // Table Header
-    doc.setFillColor(240, 240, 240)
-    doc.rect(margin, yPosition - 5, maxWidth, 10, 'F')
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'bold')
-    doc.text('Item', margin + 5, yPosition)
-    doc.text('Qty', margin + 100, yPosition)
-    doc.text('Price', margin + 130, yPosition)
-    doc.text('Total', pageWidth - margin - 30, yPosition, { align: 'right' })
-    yPosition += 8
+    const tableStartY = yPosition
+    doc.setFillColor(37, 99, 235) // Blue header
+    doc.rect(margin, yPosition - 5, maxWidth, 8, 'F')
+    
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(255, 255, 255)
+    
+    // Column positions
+    const colItem = margin + 3
+    const colQty = margin + 110
+    const colPrice = margin + 135
+    const colTotal = pageWidth - margin - 3
+    
+    doc.text('Item', colItem, yPosition)
+    doc.text('Qty', colQty, yPosition)
+    doc.text('Unit Price', colPrice, yPosition)
+    doc.text('Total', colTotal, yPosition, { align: 'right' })
+    
+    yPosition += 10
 
-    // Order Items
-    doc.setFont(undefined, 'normal')
-    doc.setFontSize(10)
-    order.order_items.forEach((item) => {
-      // Check if we need a new page
-      if (yPosition > 250) {
-        doc.addPage()
-        yPosition = margin
+    // Table rows
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(31, 41, 55)
+    
+    order.order_items.forEach((item, index) => {
+      checkNewPage(15)
+      
+      // Alternate row colors
+      if (index % 2 === 0) {
+        doc.setFillColor(249, 250, 251)
+        doc.rect(margin, yPosition - 4, maxWidth, 10, 'F')
       }
-
-      const itemName = item.product_name.length > 35 
-        ? item.product_name.substring(0, 32) + '...' 
-        : item.product_name
       
-      const startY = yPosition
-      const itemLines = doc.splitTextToSize(itemName, 80)
-      doc.text(itemLines, margin + 5, yPosition)
-      const itemHeight = itemLines.length * 5
+      // Item name (with wrapping)
+      const itemName = item.product_name
+      const itemLines = doc.splitTextToSize(itemName, 100)
+      const rowHeight = Math.max(itemLines.length * 5, 8)
       
-      // Quantity, Price, Total aligned
-      doc.text(`${item.quantity}`, margin + 100, startY + (itemHeight > 5 ? itemHeight / 2 : 0))
-      doc.text(formatPrice(item.price), margin + 130, startY + (itemHeight > 5 ? itemHeight / 2 : 0))
-      doc.text(formatPrice(item.price * item.quantity), pageWidth - margin - 30, startY + (itemHeight > 5 ? itemHeight / 2 : 0), { align: 'right' })
+      doc.setFontSize(9)
+      doc.setTextColor(31, 41, 55)
+      itemLines.forEach((line: string, lineIndex: number) => {
+        doc.text(line, colItem, yPosition + (lineIndex * 5))
+      })
       
-      yPosition += Math.max(itemHeight, 8) + 3
+      // Quantity (centered in cell)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`${item.quantity}`, colQty, yPosition + (rowHeight > 8 ? rowHeight / 2 - 2 : 0))
+      
+      // Unit Price (right aligned)
+      doc.setFont('helvetica', 'normal')
+      const unitPriceText = formatPrice(item.price)
+      doc.text(unitPriceText, colPrice, yPosition + (rowHeight > 8 ? rowHeight / 2 - 2 : 0))
+      
+      // Total (right aligned, bold)
+      doc.setFont('helvetica', 'bold')
+      const totalText = formatPrice(item.price * item.quantity)
+      doc.text(totalText, colTotal, yPosition + (rowHeight > 8 ? rowHeight / 2 - 2 : 0), { align: 'right' })
+      
+      yPosition += rowHeight + 3
+      
+      // Row separator
+      doc.setDrawColor(229, 231, 235)
+      doc.setLineWidth(0.2)
+      doc.line(margin, yPosition - 1, pageWidth - margin, yPosition - 1)
     })
 
-    yPosition += 5
-
-    // Order Summary
-    doc.setDrawColor(200, 200, 200)
-    doc.line(margin, yPosition, pageWidth - margin, yPosition)
+    // Table bottom border
+    doc.setDrawColor(37, 99, 235)
+    doc.setLineWidth(0.5)
+    doc.line(margin, yPosition - 1, pageWidth - margin, yPosition - 1)
+    
     yPosition += 8
+    checkNewPage(40)
 
-    addText('ORDER SUMMARY', 12, true)
-    yPosition += 2
-
+    // Order Summary Section
+    doc.setFillColor(249, 250, 251)
+    doc.rect(margin, yPosition, maxWidth, 50, 'F')
+    doc.setDrawColor(229, 231, 235)
+    doc.rect(margin, yPosition, maxWidth, 50, 'S')
+    
+    yPosition += 8
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(17, 24, 39)
+    doc.text('ORDER SUMMARY', margin + 5, yPosition)
+    
+    yPosition += 10
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(75, 85, 99)
+    
+    const summaryRightX = pageWidth - margin - 5
+    
     const subtotal = order.subtotal || order.total_amount
-    addText(`Subtotal: ${formatPrice(subtotal)}`, 10)
+    doc.text('Subtotal:', margin + 5, yPosition)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(31, 41, 55)
+    doc.text(formatPrice(subtotal), summaryRightX, yPosition, { align: 'right' })
+    yPosition += 7
     
     if (order.shipping_cost) {
-      addText(`Shipping: ${formatPrice(order.shipping_cost)}`, 10)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(75, 85, 99)
+      doc.text('Shipping:', margin + 5, yPosition)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(31, 41, 55)
+      doc.text(formatPrice(order.shipping_cost), summaryRightX, yPosition, { align: 'right' })
+      yPosition += 7
     }
     
     if (order.tax) {
-      addText(`Tax: ${formatPrice(order.tax)}`, 10)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(75, 85, 99)
+      doc.text('Tax:', margin + 5, yPosition)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(31, 41, 55)
+      doc.text(formatPrice(order.tax), summaryRightX, yPosition, { align: 'right' })
+      yPosition += 7
     }
 
+    // Total line
     yPosition += 3
-    doc.setDrawColor(200, 200, 200)
-    doc.line(margin, yPosition, pageWidth - margin, yPosition)
-    yPosition += 5
+    doc.setDrawColor(37, 99, 235)
+    doc.setLineWidth(1)
+    doc.line(margin + 5, yPosition, pageWidth - margin - 5, yPosition)
+    yPosition += 8
 
-    // Total
     doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(59, 130, 246)
-    doc.text(`TOTAL: ${formatPrice(order.total_amount)}`, pageWidth - margin, yPosition, { align: 'right' })
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(37, 99, 235)
+    doc.text('TOTAL:', margin + 5, yPosition)
+    doc.setFontSize(16)
+    doc.text(formatPrice(order.total_amount), summaryRightX, yPosition, { align: 'right' })
 
-    // Footer
+    // Footer on all pages
     const totalPages = doc.getNumberOfPages()
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i)
+      
+      // Footer background
+      doc.setFillColor(249, 250, 251)
+      doc.rect(0, pageHeight - 20, pageWidth, 20, 'F')
+      
+      // Footer border
+      doc.setDrawColor(229, 231, 235)
+      doc.setLineWidth(0.5)
+      doc.line(0, pageHeight - 20, pageWidth, pageHeight - 20)
+      
       doc.setFontSize(8)
-      doc.setTextColor(128, 128, 128)
+      doc.setTextColor(107, 114, 128)
+      doc.setFont('helvetica', 'normal')
       doc.text(
         `Page ${i} of ${totalPages}`,
         pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 10,
+        pageHeight - 12,
         { align: 'center' }
       )
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(37, 99, 235)
       doc.text(
         'Thank you for your order!',
         pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 5,
+        pageHeight - 6,
         { align: 'center' }
       )
     }

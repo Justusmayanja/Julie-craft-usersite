@@ -222,6 +222,8 @@ export async function PUT(
     const trackingUpdated = body.tracking_number && body.tracking_number !== currentOrder.tracking_number
 
     if (statusChanged || paymentStatusChanged || trackingUpdated) {
+      console.log(`[Orders API] Order #${data.order_number} updated: status=${statusChanged ? `${previousStatus}->${data.status}` : 'unchanged'}, payment=${paymentStatusChanged ? `${previousPaymentStatus}->${data.payment_status}` : 'unchanged'}, tracking=${trackingUpdated ? 'updated' : 'unchanged'}`)
+      
       createOrderNotifications({
         id: data.id,
         order_number: data.order_number,
@@ -232,8 +234,8 @@ export async function PUT(
         tracking_number: data.tracking_number || currentOrder.tracking_number,
         customer_id: data.customer_id,
         user_id: data.user_id || data.customer_id
-      }, previousStatus).catch(err => {
-        console.error('Error creating order notifications:', err)
+      }, previousStatus, previousPaymentStatus).catch(err => {
+        console.error('[Orders API] Error creating order notifications:', err)
         // Don't fail the request if notification creation fails
       })
     }

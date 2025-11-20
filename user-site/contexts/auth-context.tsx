@@ -3,6 +3,7 @@
 import { createContext, useContext, useReducer, useEffect, type ReactNode } from "react"
 import type { User } from "@/lib/types/user"
 import { sessionManager } from "@/lib/session-manager"
+import { performCompleteSessionCleanup } from "@/lib/session-cleanup"
 
 interface AuthState {
   user: User | null
@@ -75,7 +76,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<User | null>
   register: (email: string, password: string, name: string, phone?: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   clearError: () => void
   updateUser: (userData: Partial<User>) => void
   refreshUser: () => Promise<void>
@@ -291,25 +292,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const logout = () => {
+  const logout = async () => {
     // Check if user is on an admin page before logging out
     const isOnAdminPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
     
-    localStorage.removeItem('julie-crafts-token')
-    // Clear the cookie as well
-    document.cookie = 'julie-crafts-token=; path=/; max-age=0'
+    // Get user info before clearing
+    const userId = state.user?.id
+    const sessionId = sessionManager.getSessionId()
+    const token = state.token
+
+    // Call server-side logout API (fire and forget)
+    if (token && typeof window !== 'undefined') {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }).catch(() => {
+          // Ignore errors - client-side cleanup is primary
+        })
+      } catch (error) {
+        // Ignore errors
+        console.log('Logout API call failed (non-critical):', error)
+      }
+    }
+
+    // Perform comprehensive session cleanup
+    await performCompleteSessionCleanup(userId, sessionId || undefined)
+
+    // Clear session manager
     sessionManager.clearSession()
+
+    // Update auth state
     dispatch({ type: "AUTH_LOGOUT" })
 
-    // Dispatch custom event to notify cart context to reload
+    // Dispatch custom event to notify other contexts (cart, notifications, etc.)
     if (typeof window !== 'undefined') {
+      // Notify cart context to clear cart and release reservations
       window.dispatchEvent(new CustomEvent('authStateChanged', { 
-        detail: { user: null, isLogin: false } 
+        detail: { user: null, isLogin: false, isLogout: true } 
+      }))
+
+      // Notify notification context to clear notifications
+      window.dispatchEvent(new CustomEvent('userLogout', { 
+        detail: { userId } 
       }))
       
       // Redirect away from admin pages after logout
       if (isOnAdminPage) {
         window.location.href = '/login?message=logged_out'
+      } else {
+        // Redirect to home page for regular users
+        window.location.href = '/?message=logged_out'
       }
     }
   }

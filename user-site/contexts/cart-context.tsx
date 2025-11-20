@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useReducer, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useReducer, useEffect, useRef, type ReactNode } from "react"
 import { createOrder, generateOrderItemsFromCart, calculateOrderTotals } from "@/lib/api-orders"
 import { sessionManager } from "@/lib/session-manager"
 import { saveUserCart, loadUserCart } from "@/lib/api-user"
@@ -155,6 +155,12 @@ const CartContext = createContext<{
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState)
+  const stateRef = useRef(state)
+  
+  // Keep ref updated with latest state
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
 
   // Load cart from session manager and API
   useEffect(() => {
@@ -222,12 +228,55 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Listen for auth state changes
   useEffect(() => {
-    const handleAuthChange = (event: CustomEvent) => {
-      console.log("Auth state changed, reloading cart:", event.detail)
-      // Add a small delay to ensure session manager is updated
-      setTimeout(() => {
-        reloadCart()
-      }, 100)
+    const handleAuthChange = async (event: CustomEvent) => {
+      const { isLogout } = event.detail || {}
+      
+      if (isLogout) {
+        // User is logging out - clear cart and release reservations
+        console.log("User logging out, clearing cart and releasing reservations")
+        
+        // Get current items from ref (always has latest state)
+        const currentItems = [...stateRef.current.items]
+        
+        // Release any active reservations
+        if (currentItems.some(item => item.reservationId)) {
+          try {
+            const reservationIds = currentItems
+              .filter(item => item.reservationId)
+              .map(item => item.reservationId!)
+            
+            if (reservationIds.length > 0) {
+              const sessionInfo = sessionManager.getSessionInfo()
+              await fetch('/api/inventory/reserve', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  reservation_ids: reservationIds,
+                  session_id: sessionInfo.session_id,
+                  user_id: sessionInfo.user_id
+                })
+              }).catch(err => {
+                console.error('Error releasing reservations on logout:', err)
+              })
+            }
+          } catch (err) {
+            console.error('Error releasing reservations on logout:', err)
+          }
+        }
+        
+        // Clear reservations from state
+        dispatch({ type: "CLEAR_RESERVATIONS" })
+        
+        // Clear cart
+        dispatch({ type: "CLEAR_CART" })
+      } else {
+        // User logged in - reload cart
+        console.log("Auth state changed, reloading cart:", event.detail)
+        // Add a small delay to ensure session manager is updated
+        setTimeout(() => {
+          reloadCart()
+        }, 100)
+      }
     }
 
     if (typeof window !== 'undefined') {
@@ -237,7 +286,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         window.removeEventListener('authStateChanged', handleAuthChange as EventListener)
       }
     }
-  }, [])
+  }, [reloadCart])
 
   // Cleanup reservations when component unmounts
   useEffect(() => {

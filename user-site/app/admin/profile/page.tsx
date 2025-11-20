@@ -67,9 +67,9 @@ export default function ProfilePage() {
     }
   }, [user?.id])
 
-  const handleLogout = () => {
-    logout()
-    router.push('/')
+  const handleLogout = async () => {
+    await logout()
+    // Redirect will be handled by the logout function in auth-context
   }
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

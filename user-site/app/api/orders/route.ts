@@ -284,8 +284,8 @@ export async function POST(request: NextRequest) {
       payment_status: completeOrder.payment_status,
       customer_id: completeOrder.customer_id,
       user_id: completeOrder.user_id || completeOrder.customer_id
-    }).catch(err => {
-      console.error('Error creating order notifications:', err)
+    }, undefined, undefined).catch(err => {
+      console.error('[Orders API] Error creating order notifications:', err)
       // Don't fail the request if notification creation fails
     })
 
