@@ -143,3 +143,139 @@ export async function GET(
   }
 }
 
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+    }
+
+    // Verify admin authentication
+    const authHeader = request.headers.get('authorization')
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : cookieToken
+
+    if (token && isSupabaseConfigured && supabaseAdmin) {
+      try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+        if (error || !user) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+      } catch (error) {
+        return NextResponse.json({ error: 'Token verification failed' }, { status: 401 })
+      }
+    }
+
+    const { id } = await params
+    const body = await request.json()
+
+    // Validate required fields
+    if (!body.name) {
+      return NextResponse.json({ error: 'Category name is required' }, { status: 400 })
+    }
+
+    // First, check if category exists
+    const { data: existingCategory, error: fetchError } = await supabaseAdmin
+      .from('categories')
+      .select('id, name')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !existingCategory) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    }
+
+    // Build update object
+    const updateData: any = {
+      name: body.name,
+      description: body.description || null,
+      is_active: body.is_active !== undefined ? body.is_active : true,
+      updated_at: new Date().toISOString()
+    }
+
+    // Only update fields that are provided
+    if (body.image_url !== undefined) updateData.image_url = body.image_url || null
+    if (body.sort_order !== undefined) updateData.sort_order = body.sort_order || 0
+    if (body.tags !== undefined) updateData.tags = body.tags || null
+
+    // Update category
+    const { data: category, error } = await supabaseAdmin
+      .from('categories')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Category update error:', error)
+      return NextResponse.json({ 
+        error: 'Failed to update category',
+        message: error.message || 'Failed to update category',
+        details: error.details || error.message
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({ category }, { status: 200 })
+
+  } catch (error) {
+    console.error('Admin category update error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+    }
+
+    // Verify admin authentication
+    const authHeader = request.headers.get('authorization')
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : cookieToken
+
+    if (token && isSupabaseConfigured && supabaseAdmin) {
+      try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+        if (error || !user) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+      } catch (error) {
+        return NextResponse.json({ error: 'Token verification failed' }, { status: 401 })
+      }
+    }
+
+    const { id } = await params
+
+    // Delete category
+    const { error: deleteError } = await supabaseAdmin
+      .from('categories')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      console.error('Error deleting category:', deleteError)
+      return NextResponse.json({ 
+        error: 'Failed to delete category',
+        details: deleteError.message 
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({ 
+      message: 'Category deleted successfully',
+      id: id
+    })
+
+  } catch (error) {
+    console.error('Category deletion error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+

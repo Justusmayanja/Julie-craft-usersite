@@ -238,8 +238,15 @@ export default function CategoriesPage() {
         })
 
         if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Failed to update category')
+          let errorMessage = 'Failed to update category'
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorData.message || errorMessage
+          } catch (e) {
+            // Response might not be JSON, use status text
+            errorMessage = response.statusText || errorMessage
+          }
+          throw new Error(errorMessage)
         }
 
         toast({
@@ -396,14 +403,14 @@ export default function CategoriesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50/50">
-                      <TableHead className="font-semibold text-gray-700 w-16">Image</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Name</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Description</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Products</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Status</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Sort Order</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Created</TableHead>
-                      <TableHead className="w-32 font-semibold text-gray-700">Actions</TableHead>
+                      <TableHead className="font-semibold text-gray-700 w-20 sm:w-24 md:w-28">Image</TableHead>
+                      <TableHead className="font-semibold text-gray-700 min-w-[140px]">Name</TableHead>
+                      <TableHead className="font-semibold text-gray-700 hidden md:table-cell">Description</TableHead>
+                      <TableHead className="font-semibold text-gray-700 whitespace-nowrap">Products</TableHead>
+                      <TableHead className="font-semibold text-gray-700 whitespace-nowrap">Status</TableHead>
+                      <TableHead className="font-semibold text-gray-700 hidden lg:table-cell whitespace-nowrap">Sort Order</TableHead>
+                      <TableHead className="font-semibold text-gray-700 hidden xl:table-cell">Created</TableHead>
+                      <TableHead className="w-24 sm:w-32 font-semibold text-gray-700 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -439,33 +446,38 @@ export default function CategoriesPage() {
                         return (
                           <TableRow key={category.id} className="hover:bg-gray-50/50 transition-colors">
                             {/* Image Column */}
-                            <TableCell className="py-4">
-                              <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200">
+                            <TableCell className="py-3 sm:py-4">
+                              <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg sm:rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-200 shadow-sm group-hover:shadow-md transition-shadow">
                                 {category.image_url ? (
                                   <Image
                                     src={category.image_url}
                                     alt={category.name}
                                     fill
-                                    sizes="48px"
-                                    className="object-cover"
+                                    sizes="(max-width: 640px) 64px, (max-width: 768px) 80px, 96px"
+                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none'
                                     }}
                                   />
                                 ) : (
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+                                    <ImageIcon className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-gray-400" />
                                   </div>
                                 )}
                               </div>
                             </TableCell>
                             
                             {/* Name Column */}
-                            <TableCell className="py-4">
-                              <div className="space-y-1">
-                                <div className="font-semibold text-gray-900">{category.name}</div>
+                            <TableCell className="py-3 sm:py-4">
+                              <div className="space-y-1.5 min-w-[140px]">
+                                <div className="font-semibold text-sm sm:text-base text-gray-900 leading-tight">{category.name}</div>
+                                {category.description && (
+                                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 md:hidden max-w-[200px]">
+                                    {category.description}
+                                  </p>
+                                )}
                                 {category.tags && category.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1">
+                                  <div className="flex flex-wrap gap-1 mt-1">
                                     {category.tags.slice(0, 2).map((tag, index) => (
                                       <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5">
                                         {tag}
@@ -481,7 +493,7 @@ export default function CategoriesPage() {
                               </div>
                             </TableCell>
                             {/* Description Column */}
-                            <TableCell className="py-4">
+                            <TableCell className="py-3 sm:py-4 hidden md:table-cell">
                               <div className="max-w-xs">
                                 <p className="text-gray-700 text-sm line-clamp-2">
                                   {category.description || 'No description available'}
@@ -490,20 +502,20 @@ export default function CategoriesPage() {
                             </TableCell>
                             
                             {/* Products Column */}
-                            <TableCell className="py-4">
+                            <TableCell className="py-3 sm:py-4">
                               {stats ? (
-                                <div className="space-y-2">
-                                  <div className="flex items-center space-x-2">
-                                    <span className="font-semibold text-gray-900 text-lg">{stats.total_products}</span>
+                                <div className="space-y-1.5 min-w-[100px]">
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-1.5">
+                                    <span className="font-semibold text-gray-900 text-base sm:text-lg">{stats.total_products}</span>
                                     <span className="text-xs text-gray-500">products</span>
                                   </div>
                                   <div className="flex flex-wrap gap-1">
-                                    <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 px-2 py-1">
+                                    <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 px-1.5 sm:px-2 py-0.5">
                                       {stats.active_products} active
                                     </Badge>
                                     {stats.low_stock_products > 0 && (
-                                      <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 px-2 py-1">
-                                        {stats.low_stock_products} low stock
+                                      <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 px-1.5 sm:px-2 py-0.5">
+                                        {stats.low_stock_products} low
                                       </Badge>
                                     )}
                                   </div>
@@ -514,15 +526,15 @@ export default function CategoriesPage() {
                                   )}
                                 </div>
                               ) : (
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-gray-400">-</span>
+                                <div className="flex items-center">
+                                  <span className="text-gray-400 text-sm">-</span>
                                 </div>
                               )}
                             </TableCell>
                             {/* Status Column */}
-                            <TableCell className="py-4">
+                            <TableCell className="py-3 sm:py-4">
                               <Badge 
-                                className={`px-3 py-1 text-xs font-medium ${
+                                className={`px-2 sm:px-3 py-1 text-xs font-medium whitespace-nowrap ${
                                   category.is_active 
                                     ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
                                     : 'bg-gray-100 text-gray-700 border-gray-200'
@@ -534,15 +546,15 @@ export default function CategoriesPage() {
                                   ) : (
                                     <XCircle className="w-3 h-3" />
                                   )}
-                                  <span>{category.is_active ? 'Active' : 'Inactive'}</span>
+                                  <span className="hidden sm:inline">{category.is_active ? 'Active' : 'Inactive'}</span>
                                 </div>
                               </Badge>
                             </TableCell>
                             
                             {/* Sort Order Column */}
-                            <TableCell className="py-4">
+                            <TableCell className="py-3 sm:py-4 hidden lg:table-cell">
                               <div className="flex items-center space-x-2">
-                                <span className="text-gray-700 font-medium">{category.sort_order ?? 0}</span>
+                                <span className="text-gray-700 font-medium text-sm">{category.sort_order ?? 0}</span>
                                 {category.sort_order && category.sort_order > 0 && (
                                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                 )}
@@ -550,7 +562,7 @@ export default function CategoriesPage() {
                             </TableCell>
                             
                             {/* Created Date Column */}
-                            <TableCell className="py-4">
+                            <TableCell className="py-3 sm:py-4 hidden xl:table-cell">
                               <div className="text-gray-700 text-sm">
                                 {new Date(category.created_at).toLocaleDateString('en-US', {
                                   year: 'numeric',
@@ -560,8 +572,8 @@ export default function CategoriesPage() {
                               </div>
                             </TableCell>
                             {/* Actions Column */}
-                            <TableCell className="py-4">
-                              <div className="flex items-center space-x-1">
+                            <TableCell className="py-3 sm:py-4 text-right">
+                              <div className="flex items-center justify-end space-x-1 sm:space-x-2">
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 

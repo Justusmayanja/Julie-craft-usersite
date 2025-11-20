@@ -375,9 +375,28 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Product creation error:', error)
+      
+      // Handle duplicate SKU error specifically
+      if (error.code === '23505') {
+        // Check if it's a SKU constraint violation
+        const isSkuError = error.message?.toLowerCase().includes('sku') || 
+                          error.details?.toLowerCase().includes('sku') ||
+                          error.constraint === 'products_sku_key'
+        
+        if (isSkuError) {
+          return NextResponse.json({ 
+            error: 'Duplicate SKU',
+            message: `A product with SKU "${body.sku}" already exists. Please use a different SKU.`,
+            details: error.details || error.message,
+            code: error.code
+          }, { status: 409 }) // 409 Conflict
+        }
+      }
+      
       return NextResponse.json({ 
         error: 'Failed to create product',
-        details: error.message,
+        message: error.message || 'Failed to create product',
+        details: error.details || error.message,
         code: error.code 
       }, { status: 500 })
     }

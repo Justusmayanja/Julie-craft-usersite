@@ -248,13 +248,23 @@ export default function AdminProductsPage() {
       const token = localStorage.getItem('julie-crafts-token')
       if (!token) return
 
-      const response = await fetch('/api/admin/products', {
-        method: 'POST',
+      // Check if it's an update (has id) or create (no id)
+      const isUpdate = productData.id && modalMode === 'edit'
+      const url = isUpdate 
+        ? `/api/admin/products/${productData.id}`
+        : '/api/admin/products'
+      const method = isUpdate ? 'PUT' : 'POST'
+
+      // Remove id from body for POST (create), keep it in URL for PUT (update)
+      const { id, ...bodyData } = productData
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(productData)
+        body: JSON.stringify(isUpdate ? bodyData : productData)
       })
 
       if (response.ok) {
@@ -273,12 +283,26 @@ export default function AdminProductsPage() {
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Failed to save product:', errorData)
-        const errorMessage = errorData.details || errorData.error || 'Failed to save product'
+        // Better error message extraction - handle different error formats
+        let errorMessage = 'Failed to save product'
+        if (errorData.message) {
+          errorMessage = errorData.message
+          // If it's a duplicate SKU error, make it more user-friendly
+          if (errorData.message.includes('duplicate key') || errorData.message.includes('sku')) {
+            errorMessage = 'A product with this SKU already exists. Please try again or use a different SKU.'
+          }
+        } else if (errorData.details) {
+          errorMessage = errorData.details
+        } else if (errorData.error) {
+          errorMessage = errorData.error
+        }
         toast({
           title: 'Save Failed',
           description: errorMessage,
           variant: 'destructive'
         })
+        // Re-throw so modal can handle it and reset SKU
+        throw new Error(errorMessage)
       }
     } catch (error) {
       console.error('Error saving product:', error)

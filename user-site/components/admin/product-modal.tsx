@@ -81,7 +81,7 @@ export function ProductModal({
       prevIsOpenRef.current = false
       prevProductIdRef.current = undefined
       prevModeRef.current = undefined
-      initialSkuRef.current = null
+      initialSkuRef.current = null // Reset SKU when modal closes so new one is generated on next open
       isUserTypingRef.current = false
       // Clear typing timeout when modal closes
       if (typingTimeoutRef.current) {
@@ -132,10 +132,9 @@ export function ProductModal({
       prevIsOpenRef.current = true
       isUserTypingRef.current = false
     } else if (mode === 'add') {
-      // Generate SKU only once when adding (preserve it if already generated)
-      if (!initialSkuRef.current) {
-        initialSkuRef.current = `SKU-${Date.now()}`
-      }
+      // Generate unique SKU each time - include random component to avoid duplicates
+      const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase()
+      initialSkuRef.current = `SKU-${Date.now()}-${randomSuffix}`
       
       setFormData({
         name: '',
@@ -195,17 +194,27 @@ export function ProductModal({
         title: mode === 'add' ? 'Product Added' : 'Product Updated',
         description: `Product "${formData.name}" ${mode === 'add' ? 'added' : 'updated'} successfully`
       })
+      // Reset SKU ref on success so new one is generated next time
+      if (mode === 'add') {
+        initialSkuRef.current = null
+      }
       onClose()
       if (onRefresh) {
         await onRefresh()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving product:', error)
+      // Extract error message if available
+      const errorMessage = error?.message || error?.details || 'Failed to save product'
       addToast({
         type: 'error',
         title: 'Save Failed',
-        description: 'Failed to save product'
+        description: errorMessage
       })
+      // Reset SKU ref on error so new one is generated if user tries again
+      if (mode === 'add') {
+        initialSkuRef.current = null
+      }
     } finally {
       setLoading(false)
     }
