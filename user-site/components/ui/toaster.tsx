@@ -1,6 +1,6 @@
 'use client'
 
-import { useToast } from '@/components/ui/toast'
+import { useToast } from '@/contexts/toast-context'
 import { ToastContainer } from '@/components/ui/toast'
 
 export function Toaster() {

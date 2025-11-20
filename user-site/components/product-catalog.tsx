@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/contexts/toast-context"
 import { Search, Grid, List, Loader2 } from "lucide-react"
 import { ProductModal } from "@/components/product-modal"
 import { useCart } from "@/contexts/cart-context"
@@ -253,7 +253,7 @@ export function ProductCatalog() {
   }
 
   const { addItem } = useCart()
-  const { toast } = useToast()
+  const toast = useToast()
 
   const handleAddToCart = async (product: FrontendProduct, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -274,7 +274,7 @@ export function ProductCatalog() {
       })
 
       if (success) {
-        toast.showSuccess("Added to Cart! 🛒", `${product.name} has been added to your cart.`)
+        toast.showSuccess("Added to Cart!", `${product.name} has been added to your cart.`)
       } else {
         toast.showError("Unable to Add", "This item is currently out of stock or unavailable.")
       }

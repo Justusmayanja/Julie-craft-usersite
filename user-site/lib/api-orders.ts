@@ -171,16 +171,18 @@ export function generateOrderItemsFromCart(cartItems: any[]): Omit<any, 'id'>[] 
 }
 
 // Helper function to calculate order totals
-export function calculateOrderTotals(items: any[], shippingCost: number = 0, taxRate: number = 0.18): {
+// Product price is the final price - no shipping or tax charges
+export function calculateOrderTotals(items: any[], shippingCost: number = 0, taxRate: number = 0): {
   subtotal: number
   tax_amount: number
   shipping_amount: number
   total_amount: number
 } {
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-  const tax_amount = subtotal * taxRate
-  const shipping_amount = shippingCost
-  const total_amount = subtotal + tax_amount + shipping_amount
+  // No tax or shipping by default - product price is final price
+  const tax_amount = 0
+  const shipping_amount = 0
+  const total_amount = subtotal
 
   return {
     subtotal: Math.round(subtotal),

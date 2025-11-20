@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/contexts/toast-context"
 import { ShoppingCart, Star, Eye } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 
@@ -197,7 +197,7 @@ export function FeaturedProducts() {
       })
 
       if (success) {
-        toast.showSuccess("Added to Cart! 🛒", `${product.name} has been added to your cart.`)
+        toast.showSuccess("Added to Cart!", `${product.name} has been added to your cart.`)
       } else {
         toast.showError("Unable to Add", "This item is currently out of stock or unavailable.")
       }

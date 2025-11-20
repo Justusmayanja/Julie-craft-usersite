@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,8 @@ import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCart } from "@/contexts/cart-context"
-import { useToast, ToastContainer } from "@/components/ui/toast"
+import { useToast } from "@/contexts/toast-context"
+import { useAuth } from "@/contexts/auth-context"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { CreditCard, Smartphone, MapPin, CheckCircle, Loader2, User, Mail, Phone, Home, MessageSquare } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -26,10 +27,12 @@ interface CheckoutModalProps {
 export function CheckoutModal({ onClose }: CheckoutModalProps) {
   const { state, placeOrder } = useCart()
   const router = useRouter()
-  const { showSuccess, showError, toasts, removeToast } = useToast()
+  const { showSuccess, showError } = useToast()
+  const { user, isAuthenticated } = useAuth()
   const [currentStep, setCurrentStep] = useState<"details" | "payment" | "confirmation">("details")
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const [orderError, setOrderError] = useState<string | null>(null)
+  const [loadingUserData, setLoadingUserData] = useState(false)
   const [formData, setFormData] = useState({
     // Customer Details
     firstName: "",
@@ -44,6 +47,65 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
     // Payment
     paymentMethod: "mobile-money",
   })
+
+  // Load user profile data when authenticated user opens checkout
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!isAuthenticated || !user) return
+
+      try {
+        setLoadingUserData(true)
+        const token = localStorage.getItem('julie-crafts-token')
+        if (!token) return
+
+        const response = await fetch('/api/users/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const profile = data.profile || data
+          
+          // Pre-fill form with user data
+          if (profile) {
+            // Split name into first and last name
+            const nameParts = (profile.name || user.email?.split('@')[0] || '').trim().split(' ')
+            const firstName = nameParts[0] || ''
+            const lastName = nameParts.slice(1).join(' ') || ''
+
+            setFormData(prev => ({
+              ...prev,
+              firstName: firstName,
+              lastName: lastName,
+              email: profile.email || user.email || prev.email,
+              phone: profile.phone || prev.phone,
+              address: profile.address || prev.address,
+              city: profile.city || prev.city || "Kampala",
+              district: profile.district || profile.state || prev.district,
+            }))
+          } else {
+            // Fallback to user email if profile doesn't have name
+            const emailPart = user.email?.split('@')[0] || ''
+            setFormData(prev => ({
+              ...prev,
+              email: user.email || prev.email,
+              firstName: prev.firstName || emailPart,
+            }))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error)
+        // Don't show error, just use empty form
+      } finally {
+        setLoadingUserData(false)
+      }
+    }
+
+    loadUserProfile()
+  }, [isAuthenticated, user])
 
   const formatPrice = (price: number) => {
     return `UGX ${price.toLocaleString()}`
@@ -87,33 +149,34 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
       // Place the order
       const orderConfirmation = await placeOrder(orderData)
       
-      // Show success message
+      // Show success message with longer duration
       showSuccess(
-        "🎉 Order Placed Successfully!",
-        "Your beautiful handcrafted items are being prepared with care. Redirecting to confirmation..."
+        "Order Placed Successfully!",
+        "Your beautiful handcrafted items are being prepared with care. Redirecting to confirmation...",
+        3000
       )
       
       // Small delay to show the success message before redirecting
       setTimeout(() => {
         router.push('/order-confirmation')
         onClose()
-      }, 1500)
+      }, 2000)
     } catch (error) {
       let errorMessage = "Failed to place order. Please try again."
-      let errorTitle = "❌ Order Failed"
+      let errorTitle = "Order Failed"
       
       if (error instanceof Error) {
         errorMessage = error.message
         
         // Handle specific stock-related errors
         if (error.message.includes("Insufficient stock")) {
-          errorTitle = "📦 Stock Issue"
+          errorTitle = "Stock Issue"
           errorMessage = error.message
         } else if (error.message.includes("out of stock")) {
-          errorTitle = "🚫 Out of Stock"
+          errorTitle = "Out of Stock"
           errorMessage = error.message
         } else if (error.message.includes("Product not found")) {
-          errorTitle = "🔍 Product Not Available"
+          errorTitle = "Product Not Available"
           errorMessage = error.message
         }
       }
@@ -666,22 +729,9 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
 
                   {/* Totals */}
                   <div className="space-y-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-medium">{formatPrice(state.total)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span className="font-medium">{formatPrice(10000)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Tax (18%)</span>
-                      <span className="font-medium">{formatPrice(Math.round(state.total * 0.18))}</span>
-                    </div>
-                    <Separator />
                     <div className="flex justify-between text-xl font-bold">
                       <span>Total</span>
-                      <span className="text-primary">{formatPrice(state.total + 10000 + Math.round(state.total * 0.18))}</span>
+                      <span className="text-primary">{formatPrice(state.total)}</span>
                     </div>
                   </div>
 
@@ -691,7 +741,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                       <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       </div>
-                      <span>🔒 Secure checkout • Free delivery in Kampala</span>
+                      <span>🔒 Secure checkout</span>
                     </div>
                   </div>
                 </div>
@@ -701,8 +751,6 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
         </div>
       </DialogContent>
       
-      {/* Toast Container */}
-      <ToastContainer toasts={toasts} onClose={removeToast} />
     </Dialog>
   )
 }

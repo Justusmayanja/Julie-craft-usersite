@@ -4,6 +4,7 @@ import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { RoleProvider } from "@/contexts/role-context"
 import { CartProvider } from "@/contexts/cart-context"
+import { ToastProvider } from "@/contexts/toast-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { LayoutContent } from "@/components/layout-content"
@@ -75,10 +76,12 @@ export default function RootLayout({
           <AuthProvider>
             <RoleProvider>
               <CartProvider>
-                <LayoutContent>
-                  {children}
-                </LayoutContent>
-                <Toaster />
+                <ToastProvider>
+                  <LayoutContent>
+                    {children}
+                  </LayoutContent>
+                  <Toaster />
+                </ToastProvider>
               </CartProvider>
             </RoleProvider>
           </AuthProvider>

@@ -253,16 +253,8 @@ export function ShoppingCartPage() {
                   {/* Price Breakdown */}
                   <div className="space-y-3 lg:space-y-4">
                     <div className="flex justify-between text-xs lg:text-sm">
-                      <span className="text-gray-600">Subtotal ({state.itemCount} items)</span>
+                      <span className="text-gray-600">Total ({state.itemCount} {state.itemCount === 1 ? 'item' : 'items'})</span>
                       <span className="font-medium">{formatPrice(state.total)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs lg:text-sm">
-                      <span className="text-gray-600">Shipping</span>
-                      <span className="font-medium">{formatPrice(10000)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs lg:text-sm">
-                      <span className="text-gray-600">Tax (18%)</span>
-                      <span className="font-medium">{formatPrice(Math.round(state.total * 0.18))}</span>
                     </div>
                   </div>
 
@@ -270,7 +262,7 @@ export function ShoppingCartPage() {
 
                   <div className="flex justify-between text-lg lg:text-xl font-bold">
                     <span className="text-gray-900">Total</span>
-                    <span className="text-primary">{formatPrice(state.total + 10000 + Math.round(state.total * 0.18))}</span>
+                    <span className="text-primary">{formatPrice(state.total)}</span>
                   </div>
 
                   <Button 

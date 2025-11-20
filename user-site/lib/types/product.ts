@@ -26,6 +26,8 @@ export interface Product {
   tags?: string[]
   seo_title?: string
   seo_description?: string
+  include_shipping?: boolean // If true, add shipping charges (default: false - price is final)
+  include_tax?: boolean // If true, add tax charges (default: false - price is final)
   created_at: string
   updated_at: string
 }

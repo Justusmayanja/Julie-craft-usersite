@@ -69,9 +69,10 @@ export function OrderForm({ onSuccess, onError }: OrderFormProps) {
 
   const calculateTotals = () => {
     const subtotal = state.total
-    const shipping = 10000 // 10,000 UGX shipping
-    const tax = Math.round(subtotal * 0.18) // 18% tax
-    const total = subtotal + shipping + tax
+    // Product price is the final price - no shipping or tax charges
+    const shipping = 0
+    const tax = 0
+    const total = subtotal
 
     return { subtotal, shipping, tax, total }
   }

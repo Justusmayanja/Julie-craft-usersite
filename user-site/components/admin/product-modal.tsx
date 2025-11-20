@@ -124,6 +124,8 @@ export function ProductModal({
         tags: product.tags || [],
         seo_title: product.seo_title || '',
         seo_description: product.seo_description || '',
+        include_shipping: product.include_shipping || false,
+        include_tax: product.include_tax || false,
       })
       prevProductIdRef.current = productId
       prevModeRef.current = mode
@@ -150,6 +152,8 @@ export function ProductModal({
         tags: [],
         seo_title: '',
         seo_description: '',
+        include_shipping: false,
+        include_tax: false,
       })
       prevProductIdRef.current = undefined
       prevModeRef.current = mode
@@ -603,6 +607,44 @@ export function ProductModal({
                   />
                   <Label htmlFor="featured" className="text-sm text-gray-700">Mark as featured</Label>
                 </div>
+              </div>
+            </div>
+
+            {/* Shipping & Tax Settings */}
+            <div className="space-y-4 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-900">Additional Charges</h4>
+              <p className="text-xs text-gray-500 mb-3">By default, product price is final. Enable these options to add charges at checkout.</p>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="include_shipping"
+                    checked={formData.include_shipping || false}
+                    onChange={(e) => handleInputChange('include_shipping', e.target.checked)}
+                    disabled={isReadOnly}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="include_shipping" className="text-sm text-gray-700 cursor-pointer">
+                    Add shipping charges at checkout
+                  </Label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">If enabled, shipping cost will be added to the product price at checkout</p>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="include_tax"
+                    checked={formData.include_tax || false}
+                    onChange={(e) => handleInputChange('include_tax', e.target.checked)}
+                    disabled={isReadOnly}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="include_tax" className="text-sm text-gray-700 cursor-pointer">
+                    Add tax charges at checkout
+                  </Label>
+                </div>
+                <p className="text-xs text-gray-500 ml-6">If enabled, tax (18%) will be added to the product price at checkout</p>
               </div>
             </div>
           </div>

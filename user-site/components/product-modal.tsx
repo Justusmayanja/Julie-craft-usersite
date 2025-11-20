@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/contexts/toast-context"
 import { Minus, Plus, ShoppingCart, Heart } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 
@@ -71,7 +71,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
       }
 
       if (allSuccess) {
-        toast.showSuccess("Added to Cart! 🛒", `${quantity} ${quantity === 1 ? 'item' : 'items'} of ${product.name} ${quantity === 1 ? 'has' : 'have'} been added to your cart.`)
+        toast.showSuccess("Added to Cart!", `${quantity} ${quantity === 1 ? 'item' : 'items'} of ${product.name} ${quantity === 1 ? 'has' : 'have'} been added to your cart.`)
         onClose()
       } else {
         toast.showError("Partially Added", "Some items may be out of stock. Please check your cart.")
