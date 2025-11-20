@@ -635,11 +635,18 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
                   <div className="space-y-4">
                     {state.items.map((item) => (
                       <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
-                        <img
-                          src={item.image || "/placeholder.svg"}
-                          alt={item.name}
-                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
-                        />
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={item.image || "/placeholder.svg"}
+                            alt={item.name}
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = '/placeholder.svg'
+                              target.onerror = null
+                            }}
+                          />
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm line-clamp-2 mb-1">{item.name}</p>
                           <p className="text-xs text-muted-foreground mb-1">

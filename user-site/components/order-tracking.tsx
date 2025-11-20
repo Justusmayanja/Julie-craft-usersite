@@ -161,17 +161,28 @@ export function OrderTracking({ orderNumber: initialOrderNumber, onOrderFound }:
                 <div className="grid gap-3">
                   {order.items.map((item: any, index: number) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.product_name}
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                      )}
+                      <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.product_name}
+                            className="w-full h-full object-cover rounded"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = '/placeholder.svg'
+                              target.onerror = null
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                            <Package className="w-6 h-6 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
                       <div className="flex-1">
                         <p className="font-medium">{item.product_name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Quantity: {item.quantity} × {formatPrice(item.unit_price)}
+                          Quantity: {item.quantity} × {formatPrice(item.unit_price || item.price || 0)}
                         </p>
                       </div>
                     </div>

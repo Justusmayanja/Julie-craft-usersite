@@ -283,11 +283,18 @@ export function OrderForm({ onSuccess, onError }: OrderFormProps) {
               <div className="space-y-3">
                 {state.items.map((item) => (
                   <div key={item.id} className="flex items-center gap-3">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-12 h-12 object-cover rounded"
-                    />
+                    <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                      <img
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
+                        className="w-full h-full object-cover rounded"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = '/placeholder.svg'
+                          target.onerror = null
+                        }}
+                      />
+                    </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium">{item.name}</p>
                       <p className="text-xs text-muted-foreground">

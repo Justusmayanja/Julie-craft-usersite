@@ -16,6 +16,24 @@ export async function GET(
       }, { status: 503 })
     }
 
+    // Verify JWT token if provided (for authenticated users)
+    const authHeader = request.headers.get('authorization')
+    let authenticatedUserId: string | null = null
+    let authenticatedUserEmail: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+        if (!error && user) {
+          authenticatedUserId = user.id
+          authenticatedUserEmail = user.email || null
+        }
+      } catch (error) {
+        console.error('Token verification failed:', error)
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('orders')
       .select(`
@@ -31,6 +49,63 @@ export async function GET(
       }
       console.error('Database error:', error)
       return NextResponse.json({ error: 'Failed to fetch order' }, { status: 500 })
+    }
+
+    // Verify order ownership for authenticated users
+    if (authenticatedUserId || authenticatedUserEmail) {
+      const isOwner = 
+        (authenticatedUserId && data.customer_id === authenticatedUserId) ||
+        (authenticatedUserEmail && data.customer_email === authenticatedUserEmail)
+      
+      if (!isOwner) {
+        return NextResponse.json({ 
+          error: 'Unauthorized',
+          message: 'You do not have access to this order' 
+        }, { status: 403 })
+      }
+    }
+
+    // Helper function to normalize image URLs
+    const normalizeImageUrl = (url: string | null | undefined): string | null => {
+      if (!url) return null
+      
+      // If already a full URL, return as is
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url
+      }
+      
+      // If it's a relative path starting with /uploads/, it's a local file
+      if (url.startsWith('/uploads/')) {
+        return url
+      }
+      
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      if (!supabaseUrl) {
+        return url
+      }
+      
+      // If it starts with /storage/, prepend base URL
+      if (url.startsWith('/storage/')) {
+        return `${supabaseUrl}${url}`
+      }
+      
+      // If it looks like a storage path without leading slash
+      if (url.includes('products/') && !url.startsWith('http') && !url.startsWith('/')) {
+        if (url.startsWith('products/')) {
+          return `${supabaseUrl}/storage/v1/object/public/${url}`
+        }
+      }
+      
+      // Return as is if we can't normalize (might be a valid relative path)
+      return url
+    }
+
+    // Normalize product images in order items
+    if (data.order_items && Array.isArray(data.order_items)) {
+      data.order_items = data.order_items.map((item: any) => ({
+        ...item,
+        product_image: normalizeImageUrl(item.product_image) || '/placeholder.svg'
+      }))
     }
 
     return NextResponse.json(data)

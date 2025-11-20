@@ -1,33 +1,36 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Package, Calendar, CreditCard, Truck } from "lucide-react"
+import { Loader2, Package, Calendar, CreditCard, Truck, Eye } from "lucide-react"
 import { getUserOrders } from "@/lib/api-user"
-import { sessionManager } from "@/lib/session-manager"
+import { useAuth } from "@/contexts/auth-context"
 import type { UserOrderHistory } from "@/lib/types/user"
 
 export function UserOrderHistory() {
+  const { user, isAuthenticated } = useAuth()
   const [orders, setOrders] = useState<UserOrderHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadOrders = async () => {
+      if (!isAuthenticated || !user) {
+        setLoading(false)
+        return
+      }
+
       try {
         setLoading(true)
         setError(null)
         
-        const sessionInfo = sessionManager.getSessionInfo()
-        const response = await getUserOrders(
-          sessionInfo.user_id, 
-          sessionInfo.session_id
-        )
+        const response = await getUserOrders(user.id)
         
-        setOrders(response.orders)
+        setOrders(response.orders || [])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load orders')
         console.error('Error loading orders:', err)
@@ -164,12 +167,21 @@ export function UserOrderHistory() {
                   <div className="grid gap-3">
                     {order.items.slice(0, 3).map((item, index) => (
                       <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        {item.image && (
+                        {item.image ? (
                           <img
                             src={item.image}
                             alt={item.product_name}
                             className="w-12 h-12 object-cover rounded"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = '/placeholder.svg'
+                              target.onerror = null
+                            }}
                           />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                            <Package className="w-6 h-6 text-gray-400" />
+                          </div>
                         )}
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.product_name}</p>
@@ -191,18 +203,29 @@ export function UserOrderHistory() {
                   {/* Order Actions */}
                   <div className="flex flex-col sm:flex-row gap-3 justify-between">
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Package className="h-4 w-4 mr-2" />
-                        View Details
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/orders/${order.order_id}`}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Link>
                       </Button>
-                      {order.status === 'shipped' && (
-                        <Button variant="outline" size="sm">
-                          <Truck className="h-4 w-4 mr-2" />
-                          Track Package
+                      {(order.status === 'shipped' || order.status === 'delivered') && (
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/orders/${order.order_id}?tab=tracking`}>
+                            <Truck className="h-4 w-4 mr-2" />
+                            Track Package
+                          </Link>
                         </Button>
                       )}
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        // TODO: Implement reorder functionality
+                        console.log('Reorder order:', order.order_id)
+                      }}
+                    >
                       <CreditCard className="h-4 w-4 mr-2" />
                       Reorder
                     </Button>

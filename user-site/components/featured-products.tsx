@@ -46,7 +46,7 @@ export function FeaturedProducts() {
             name: 'Handmade Ceramic Vase',
             price: 45000,
             description: 'Beautiful handcrafted ceramic vase with traditional Ugandan patterns',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'ceramics',
             stock_quantity: 10,
             featured: true
@@ -56,7 +56,7 @@ export function FeaturedProducts() {
             name: 'Traditional Beaded Necklace',
             price: 25000,
             description: 'Exquisite beaded necklace made with traditional techniques',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'jewelry',
             stock_quantity: 15,
             featured: true
@@ -66,7 +66,7 @@ export function FeaturedProducts() {
             name: 'Woven Textile Wall Hanging',
             price: 35000,
             description: 'Colorful woven textile perfect for home decoration',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'textiles',
             stock_quantity: 8,
             featured: true
@@ -76,7 +76,7 @@ export function FeaturedProducts() {
             name: 'Wooden Carved Bowl',
             price: 30000,
             description: 'Hand-carved wooden bowl from local artisans',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'woodwork',
             stock_quantity: 12,
             featured: true
@@ -86,7 +86,7 @@ export function FeaturedProducts() {
             name: 'Batik Print Scarf',
             price: 20000,
             description: 'Beautiful batik print scarf with African motifs',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'textiles',
             stock_quantity: 20,
             featured: true
@@ -96,7 +96,7 @@ export function FeaturedProducts() {
             name: 'Clay Pottery Set',
             price: 55000,
             description: 'Complete set of traditional clay pottery for cooking',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'ceramics',
             stock_quantity: 6,
             featured: true
@@ -113,7 +113,7 @@ export function FeaturedProducts() {
             name: 'Handmade Ceramic Vase',
             price: 45000,
             description: 'Beautiful handcrafted ceramic vase with traditional Ugandan patterns',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'ceramics',
             stock_quantity: 10,
             featured: true
@@ -123,7 +123,7 @@ export function FeaturedProducts() {
             name: 'Traditional Beaded Necklace',
             price: 25000,
             description: 'Exquisite beaded necklace made with traditional techniques',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'jewelry',
             stock_quantity: 15,
             featured: true
@@ -133,7 +133,7 @@ export function FeaturedProducts() {
             name: 'Woven Textile Wall Hanging',
             price: 35000,
             description: 'Colorful woven textile perfect for home decoration',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'textiles',
             stock_quantity: 8,
             featured: true
@@ -143,7 +143,7 @@ export function FeaturedProducts() {
             name: 'Wooden Carved Bowl',
             price: 30000,
             description: 'Hand-carved wooden bowl from local artisans',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'woodwork',
             stock_quantity: 12,
             featured: true
@@ -153,7 +153,7 @@ export function FeaturedProducts() {
             name: 'Batik Print Scarf',
             price: 20000,
             description: 'Beautiful batik print scarf with African motifs',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'textiles',
             stock_quantity: 20,
             featured: true
@@ -163,7 +163,7 @@ export function FeaturedProducts() {
             name: 'Clay Pottery Set',
             price: 55000,
             description: 'Complete set of traditional clay pottery for cooking',
-            image: '/placeholder-product.jpg',
+            image: '/placeholder.svg',
             category: 'ceramics',
             stock_quantity: 6,
             featured: true

@@ -382,13 +382,11 @@ export default function ProfilePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <ShoppingBag className="w-4 h-4 mr-2" />
-                  View Orders
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Package className="w-4 h-4 mr-2" />
-                  Order History
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <Link href="/orders">
+                    <Package className="w-4 h-4 mr-2" />
+                    Order History
+                  </Link>
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
                   <CreditCard className="w-4 h-4 mr-2" />

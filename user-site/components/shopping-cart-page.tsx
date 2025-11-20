@@ -92,11 +92,16 @@ export function ShoppingCartPage() {
                   {state.items.map((item) => (
                     <div key={item.id} className="flex flex-col sm:flex-row gap-4 lg:gap-6 p-4 lg:p-6 bg-gray-50 rounded-xl">
                       {/* Product Image */}
-                      <div className="w-full sm:w-32 lg:w-40 h-32 sm:h-32 lg:h-40 flex-shrink-0 mx-auto sm:mx-0">
+                      <div className="w-full sm:w-32 lg:w-40 h-32 sm:h-32 lg:h-40 flex-shrink-0 mx-auto sm:mx-0 bg-gray-100 rounded-lg overflow-hidden">
                         <img
                           src={item.image || "/placeholder.svg"}
                           alt={item.name}
                           className="w-full h-full object-cover rounded-lg shadow-sm"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.src = '/placeholder.svg'
+                            target.onerror = null
+                          }}
                         />
                       </div>
 

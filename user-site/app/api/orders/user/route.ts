@@ -99,6 +99,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch user orders' }, { status: 500 })
     }
 
+    // Helper function to normalize image URLs
+    const normalizeImageUrl = (url: string | null | undefined): string | null => {
+      if (!url) return null
+      
+      // If already a full URL, return as is
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url
+      }
+      
+      // If it's a relative path starting with /uploads/, it's a local file
+      if (url.startsWith('/uploads/')) {
+        return url
+      }
+      
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      if (!supabaseUrl) {
+        return url
+      }
+      
+      // If it starts with /storage/, prepend base URL
+      if (url.startsWith('/storage/')) {
+        return `${supabaseUrl}${url}`
+      }
+      
+      // If it looks like a storage path without leading slash
+      if (url.includes('products/') && !url.startsWith('http') && !url.startsWith('/')) {
+        if (url.startsWith('products/')) {
+          return `${supabaseUrl}/storage/v1/object/public/${url}`
+        }
+      }
+      
+      // Return as is if we can't normalize (might be a valid relative path)
+      return url
+    }
+
     // Transform data to match UserOrderHistory interface
     const transformedOrders = (data || []).map(order => ({
       order_id: order.id,
@@ -111,7 +146,7 @@ export async function GET(request: NextRequest) {
         product_name: item.product_name,
         quantity: item.quantity,
         price: item.price, // Database column is 'price', not 'unit_price'
-        image: item.product_image
+        image: normalizeImageUrl(item.product_image) || '/placeholder.svg'
       })) || []
     }))
 
