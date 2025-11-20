@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, Search, User, Settings, LogOut, Menu, ChevronDown, Home, AlertTriangle, ShoppingCart, Banknote } from "lucide-react"
+import { Search, User, Settings, LogOut, Menu, ChevronDown, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 import Image from "next/image"
 
 interface AdminHeaderProps {
@@ -15,7 +15,6 @@ interface AdminHeaderProps {
 
 export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [showNotifications, setShowNotifications] = useState(false)
   const { user, logout } = useAuth()
   const router = useRouter()
 
@@ -65,75 +64,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           </div>
         </div>
 
-        {/* Premium Notifications */}
-        <div className="relative">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-all duration-200 group h-9 w-9 sm:h-10 sm:w-10"
-            onClick={() => setShowNotifications(!showNotifications)}
-          >
-            <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-blue-600 transition-colors" />
-            <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-semibold shadow-lg ring-2 ring-white">
-              3
-            </span>
-          </Button>
-
-          {/* Premium Notifications Dropdown */}
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 sm:mt-3 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-sm bg-white rounded-2xl shadow-xl border border-gray-200/50 py-3 z-50 backdrop-blur-sm">
-              <div className="px-5 py-3 border-b border-gray-100/80">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900 text-base">Notifications</h3>
-                  <Badge className="bg-blue-100 text-blue-700 text-xs font-semibold">3 new</Badge>
-                </div>
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                <div className="px-5 py-4 hover:bg-blue-50/50 cursor-pointer transition-colors border-l-4 border-transparent hover:border-red-500">
-                  <div className="flex items-start space-x-4">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <AlertTriangle className="w-4 h-4 text-red-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">Low stock alert</p>
-                      <p className="text-xs text-gray-600 mt-1">Blue Glazed Vase is running low</p>
-                      <p className="text-xs text-gray-400 mt-1">2 minutes ago</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="px-5 py-4 hover:bg-blue-50/50 cursor-pointer transition-colors border-l-4 border-transparent hover:border-emerald-500">
-                  <div className="flex items-start space-x-4">
-                    <div className="p-2 bg-emerald-100 rounded-lg">
-                      <ShoppingCart className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">New order received</p>
-                      <p className="text-xs text-gray-600 mt-1">Order #ORD-005 from Sarah Johnson</p>
-                      <p className="text-xs text-gray-400 mt-1">5 minutes ago</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="px-5 py-4 hover:bg-blue-50/50 cursor-pointer transition-colors border-l-4 border-transparent hover:border-blue-500">
-                  <div className="flex items-start space-x-4">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Banknote className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">Payment confirmed</p>
-                      <p className="text-xs text-gray-600 mt-1">610,000 UGX payment processed</p>
-                      <p className="text-xs text-gray-400 mt-1">8 minutes ago</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="px-5 py-3 border-t border-gray-100/80">
-                <Button variant="ghost" size="sm" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium">
-                  View all notifications
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Notifications */}
+        <NotificationBell className="h-9 w-9 sm:h-10 sm:w-10" />
 
         {/* Premium User Menu */}
         <div className="relative flex-shrink-0">

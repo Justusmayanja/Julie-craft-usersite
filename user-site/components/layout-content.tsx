@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { AdminRedirectGuard } from "@/components/admin-redirect-guard"
+import { NotificationProvider } from "@/contexts/notification-context"
 
 interface LayoutContentProps {
   children: React.ReactNode
@@ -39,15 +40,17 @@ export function LayoutContent({ children }: LayoutContentProps) {
   // For regular pages, render with Navigation and conditionally with Footer
   // Wrap in AdminRedirectGuard to redirect admins away from user pages
   return (
-    <AdminRedirectGuard>
-      <div className="relative flex min-h-screen flex-col">
-        <Navigation />
-        <main className="flex-1">
-          {children}
-        </main>
-        {!shouldHideFooter && <Footer />}
-      </div>
-    </AdminRedirectGuard>
+    <NotificationProvider isAdmin={false}>
+      <AdminRedirectGuard>
+        <div className="relative flex min-h-screen flex-col">
+          <Navigation />
+          <main className="flex-1">
+            {children}
+          </main>
+          {!shouldHideFooter && <Footer />}
+        </div>
+      </AdminRedirectGuard>
+    </NotificationProvider>
   )
 }
 

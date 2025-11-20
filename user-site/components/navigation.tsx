@@ -10,6 +10,7 @@ import { Menu, ShoppingCart, Search, MessageCircle, User, LogOut, ShoppingBag } 
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useClientOnly } from "@/hooks/use-client-only"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -120,6 +121,11 @@ export function Navigation() {
               >
                 <MessageCircle className="h-4 w-4" />
               </Button>
+
+              {/* Notifications - only show for authenticated users */}
+              {isAuthenticated && (
+                <NotificationBell className="h-9 w-9" />
+              )}
 
               <Link href="/cart">
                 <Button 

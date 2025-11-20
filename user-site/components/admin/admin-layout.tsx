@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react"
 import { Toaster } from "@/components/ui/toaster"
 import { ToastProvider } from "@/components/admin/ui/toast"
 import { SessionGuard } from "@/components/admin/session-guard"
+import { NotificationProvider } from "@/contexts/notification-context"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -93,10 +94,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <ToastProvider>
-      <SessionGuard />
-      <LoadingOverlay />
-      <div className="h-screen w-screen flex min-w-0 overflow-hidden">
+    <NotificationProvider isAdmin={true}>
+      <ToastProvider>
+        <SessionGuard />
+        <LoadingOverlay />
+        <div className="h-screen w-screen flex min-w-0 overflow-hidden">
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div
@@ -127,6 +129,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       </div>
       <Toaster />
-    </ToastProvider>
+      </ToastProvider>
+    </NotificationProvider>
   )
 }

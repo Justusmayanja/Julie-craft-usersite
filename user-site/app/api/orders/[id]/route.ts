@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
+import { createOrderNotifications } from '@/lib/notifications'
 
 export async function GET(
   request: NextRequest,
@@ -151,7 +152,7 @@ export async function PUT(
     // Get current order to check existing status and dates
     const { data: currentOrder, error: fetchError } = await supabaseAdmin
       .from('orders')
-      .select('status, shipped_date, delivered_date')
+      .select('status, payment_status, shipped_date, delivered_date, customer_id, user_id, tracking_number')
       .eq('id', orderId)
       .single()
 
@@ -211,6 +212,30 @@ export async function PUT(
       }
       console.error('Database error:', error)
       return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
+    }
+
+    // Create notifications for status/payment changes (async, don't wait)
+    const previousStatus = currentOrder.status
+    const previousPaymentStatus = currentOrder.payment_status
+    const statusChanged = body.status && body.status !== previousStatus
+    const paymentStatusChanged = body.payment_status && body.payment_status !== previousPaymentStatus
+    const trackingUpdated = body.tracking_number && body.tracking_number !== currentOrder.tracking_number
+
+    if (statusChanged || paymentStatusChanged || trackingUpdated) {
+      createOrderNotifications({
+        id: data.id,
+        order_number: data.order_number,
+        customer_name: data.customer_name,
+        customer_email: data.customer_email,
+        status: data.status,
+        payment_status: data.payment_status || previousPaymentStatus,
+        tracking_number: data.tracking_number || currentOrder.tracking_number,
+        customer_id: data.customer_id,
+        user_id: data.user_id || data.customer_id
+      }, previousStatus).catch(err => {
+        console.error('Error creating order notifications:', err)
+        // Don't fail the request if notification creation fails
+      })
     }
 
     return NextResponse.json(data)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import type { Order, OrderFilters, CreateOrderData } from '@/lib/types/order'
+import { createOrderNotifications } from '@/lib/notifications'
 
 export async function GET(request: NextRequest) {
   try {
@@ -272,6 +273,21 @@ export async function POST(request: NextRequest) {
         tracking_info: 'You will receive tracking information via email once your order ships.'
       }, { status: 201 })
     }
+
+    // Create notifications for order placement (async, don't wait)
+    createOrderNotifications({
+      id: completeOrder.id,
+      order_number: completeOrder.order_number,
+      customer_name: completeOrder.customer_name,
+      customer_email: completeOrder.customer_email,
+      status: completeOrder.status,
+      payment_status: completeOrder.payment_status,
+      customer_id: completeOrder.customer_id,
+      user_id: completeOrder.user_id || completeOrder.customer_id
+    }).catch(err => {
+      console.error('Error creating order notifications:', err)
+      // Don't fail the request if notification creation fails
+    })
 
     // Return complete order with success message
     const response = {
