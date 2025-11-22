@@ -40,6 +40,7 @@ import {
 import { useOrders } from "@/hooks/admin/use-orders"
 import { OrderDetailModal } from "@/components/admin/order-detail-modal"
 import { useToast } from "@/contexts/toast-context"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 const statusOptions = ["All", "pending", "processing", "shipped", "delivered", "cancelled"]
 
@@ -507,9 +508,15 @@ export default function OrdersPage() {
                         </TableCell>
                         <TableCell className="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 sm:w-7 sm:h-7 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs font-medium flex-shrink-0">
-                              {order.customer_name.charAt(0).toUpperCase()}
-                            </div>
+                            <Avatar className="w-6 h-6 sm:w-7 sm:h-7 flex-shrink-0">
+                              <AvatarImage 
+                                src={order.customer_avatar_url || undefined} 
+                                alt={order.customer_name}
+                              />
+                              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
+                                {order.customer_name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="min-w-0">
                               <div className="font-medium text-xs sm:text-sm truncate">{order.customer_name}</div>
                               <div className="text-xs text-gray-500 hidden md:block truncate">{order.customer_email}</div>

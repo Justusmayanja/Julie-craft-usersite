@@ -19,11 +19,29 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<{email?: string; password?: string}>({})
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
 
   const { login, error, clearError, user } = useAuth()
   const { isAdmin, isLoading: roleLoading } = useRole()
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Load logo from site settings
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const response = await fetch('/api/site-content/settings')
+        const data = await response.json()
+        if (data.settings?.logo_url?.value) {
+          setLogoUrl(data.settings.logo_url.value)
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error)
+        // Keep default logo on error
+      }
+    }
+    fetchLogo()
+  }, [])
 
   // Check for message parameter in URL
   useEffect(() => {
@@ -123,13 +141,23 @@ function LoginForm() {
 
         {/* Logo and Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4 shadow-lg">
-            <Shield className="h-8 w-8 text-primary-foreground" />
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative mb-4">
+              <img
+                src={logoUrl}
+                alt="Julie Crafts Logo"
+                className="w-20 h-20 object-contain rounded-xl bg-white p-3 border-2 border-slate-200 shadow-lg"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.src = '/julie-logo.jpeg'
+                }}
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome Back</h1>
+            <p className="text-slate-600 text-sm">
+              Sign in to your Julie's Crafts account to continue shopping
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome Back</h1>
-          <p className="text-slate-600">
-            Sign in to your Julie's Crafts account to continue shopping
-          </p>
         </div>
 
         {/* Login Form */}

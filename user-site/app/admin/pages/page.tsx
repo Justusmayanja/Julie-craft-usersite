@@ -64,6 +64,7 @@ export default function AdminPagesPage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("pages")
   const [loading, setLoading] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
   
   // Pages state
   const [pages, setPages] = useState<SitePage[]>([])
@@ -76,6 +77,29 @@ export default function AdminPagesPage() {
   // Settings state
   const [settings, setSettings] = useState<Record<string, SiteSetting>>({})
   const [settingsForm, setSettingsForm] = useState<Record<string, any>>({})
+
+  // Load logo from site settings
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const token = localStorage.getItem('julie-crafts-token')
+        const response = await fetch('/api/site-content/settings', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        const data = await response.json()
+        if (data.settings?.logo_url?.value) {
+          setLogoUrl(data.settings.logo_url.value)
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error)
+        // Keep default logo on error
+      }
+    }
+    fetchLogo()
+  }, [])
 
   // Fetch data
   const fetchPages = async () => {
@@ -189,7 +213,8 @@ export default function AdminPagesPage() {
 
       toast({
         title: "Success",
-        description: `Page ${page.id ? 'updated' : 'created'} successfully`
+        description: `The page "${page.title}" has been ${page.id ? 'updated' : 'created'} successfully.`,
+        variant: "default"
       })
       
       setEditingPage(null)
@@ -226,7 +251,8 @@ export default function AdminPagesPage() {
 
       toast({
         title: "Success",
-        description: "Page deleted successfully"
+        description: "The page has been deleted successfully.",
+        variant: "default"
       })
       
       fetchPages()
@@ -252,7 +278,7 @@ export default function AdminPagesPage() {
         const setting = settings[key]
         settingsToSave[key] = {
           value: value,
-          type: setting?.type || 'general',
+          type: setting?.setting_type || 'general',
           description: setting?.description
         }
       })
@@ -272,7 +298,8 @@ export default function AdminPagesPage() {
 
       toast({
         title: "Success",
-        description: "Settings saved successfully"
+        description: "Site settings have been saved successfully.",
+        variant: "default"
       })
       
       fetchSettings()
@@ -293,31 +320,50 @@ export default function AdminPagesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Site Content Management</h1>
-              <p className="text-gray-600 mt-1 text-base">Manage all dynamic content on your website</p>
-            </div>
-            <Button 
-              onClick={() => {
-                if (activeTab === 'pages') {
-                  setEditingPage({
-                    id: '',
-                    title: '',
-                    slug: '',
-                    type: 'page',
-                    status: 'draft',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  })
-                }
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {activeTab === 'pages' ? 'Create Page' : 'Add Section'}
-            </Button>
-          </div>
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  {/* Logo */}
+                  <div className="flex-shrink-0">
+                    <img
+                      src={logoUrl}
+                      alt="Site Logo"
+                      className="w-16 h-16 object-contain rounded-lg bg-white p-2 border border-gray-200 shadow-sm"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.src = '/julie-logo.jpeg'
+                      }}
+                    />
+                  </div>
+                  {/* Title Section */}
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Site Content Management</h1>
+                    <p className="text-gray-600 mt-1 text-sm">Manage all dynamic content on your website</p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => {
+                    if (activeTab === 'pages') {
+                      setEditingPage({
+                        id: '',
+                        title: '',
+                        slug: '',
+                        type: 'page',
+                        status: 'draft',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                      })
+                    }
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {activeTab === 'pages' ? 'Create Page' : 'Add Section'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -502,44 +548,95 @@ function PagesList({ pages, onEdit, onDelete, loading }: {
   loading: boolean
 }) {
   if (loading) {
-    return <div className="text-center py-8">Loading pages...</div>
+    return (
+      <div className="text-center py-12">
+        <RefreshCw className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-600">Loading pages...</p>
+      </div>
+    )
   }
 
   if (pages.length === 0) {
     return (
-      <div className="text-center py-12">
-        <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+      <div className="text-center py-16">
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-4">
+          <FileText className="w-10 h-10 text-gray-400" />
+        </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">No pages found</h3>
-        <p className="text-gray-600">Create your first page to get started</p>
+        <p className="text-gray-600 mb-6">Create your first page to get started</p>
+        <Button onClick={() => onEdit({
+          id: '',
+          title: '',
+          slug: '',
+          type: 'page',
+          status: 'draft',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Plus className="w-4 h-4 mr-2" />
+          Create Your First Page
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {pages.map((page) => (
-        <div key={page.id} className="flex items-center justify-between p-4 border rounded-lg">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 text-gray-400" />
-              <div>
-                <h3 className="font-semibold text-gray-900">{page.title}</h3>
-                <p className="text-sm text-gray-600">{page.slug}</p>
+        <Card key={page.id} className="hover:shadow-md transition-shadow duration-200 border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                {/* Icon */}
+                <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                </div>
+                
+                {/* Page Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="font-semibold text-gray-900 text-base truncate">{page.title || 'Untitled Page'}</h3>
+                    <Badge 
+                      variant={page.status === 'published' ? 'default' : 'secondary'}
+                      className="text-xs flex-shrink-0"
+                    >
+                      {page.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span className="flex items-center gap-1">
+                      <Globe className="w-3 h-3" />
+                      <span className="truncate">{page.slug || '/'}</span>
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(page.updated_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <Badge variant={page.status === 'published' ? 'default' : 'secondary'}>
-                {page.status}
-              </Badge>
+              
+              {/* Actions */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => onEdit(page)}
+                  className="hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => onDelete(page.id)}
+                  className="hover:bg-red-50 hover:text-red-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => onEdit(page)}>
-              <Edit className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onDelete(page.id)}>
-              <Trash2 className="w-4 h-4 text-red-600" />
-            </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   )
@@ -574,7 +671,8 @@ function HomepageSectionsEditor({ sections, onUpdate, loading }: {
 
       toast({
         title: "Success",
-        description: `Section ${!section.is_active ? 'activated' : 'deactivated'}`
+        description: `The section "${section.title}" has been ${!section.is_active ? 'activated' : 'deactivated'} successfully.`,
+        variant: "default"
       })
       
       onUpdate()
@@ -607,7 +705,8 @@ function HomepageSectionsEditor({ sections, onUpdate, loading }: {
 
       toast({
         title: "Success",
-        description: "Section deleted successfully"
+        description: "The section has been deleted successfully.",
+        variant: "default"
       })
       
       onUpdate()
@@ -701,7 +800,8 @@ function HomepageSectionsEditor({ sections, onUpdate, loading }: {
               
               toast({
                 title: "Success",
-                description: "Section updated successfully"
+                description: `The section "${updated.title}" has been updated successfully.`,
+                variant: "default"
               })
               
               setEditingSection(null)
@@ -833,7 +933,8 @@ function FooterEditor({ onUpdate, loading }: {
 
       toast({
         title: "Success",
-        description: "Footer content saved successfully"
+        description: "Footer content has been saved successfully.",
+        variant: "default"
       })
       
       fetchFooter()
@@ -1024,7 +1125,8 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
 
       toast({
         title: "Success",
-        description: "Logo uploaded successfully"
+        description: "Logo has been uploaded successfully.",
+        variant: "default"
       })
     } catch (error) {
       console.error('Error uploading logo:', error)
@@ -1065,7 +1167,8 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
 
       toast({
         title: "Success",
-        description: "Logo deleted successfully"
+        description: "Logo has been deleted successfully.",
+        variant: "default"
       })
     } catch (error) {
       console.error('Error deleting logo:', error)

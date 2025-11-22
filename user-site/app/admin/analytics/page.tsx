@@ -41,6 +41,61 @@ export default function AnalyticsPage() {
     refreshInterval: 300000 // 5 minutes
   })
 
+  const handleExport = () => {
+    if (!analyticsData) return
+
+    // Create CSV content
+    const csvRows: string[] = []
+    
+    // Metrics section
+    csvRows.push('Analytics Report')
+    csvRows.push(`Period: ${timeRangeOptions.find(o => o.value === timeRange)?.label || timeRange}`)
+    csvRows.push(`Generated: ${new Date().toLocaleString()}`)
+    csvRows.push('')
+    csvRows.push('METRICS')
+    csvRows.push('Metric,Value,Growth')
+    csvRows.push(`Total Revenue,${analyticsData.metrics.totalRevenue},${analyticsData.metrics.revenueGrowth.toFixed(2)}%`)
+    csvRows.push(`Total Orders,${analyticsData.metrics.totalOrders},${analyticsData.metrics.ordersGrowth.toFixed(2)}%`)
+    csvRows.push(`Total Customers,${analyticsData.metrics.totalCustomers},${analyticsData.metrics.customersGrowth.toFixed(2)}%`)
+    csvRows.push(`Average Order Value,${analyticsData.metrics.avgOrderValue.toFixed(2)},${analyticsData.metrics.aovGrowth.toFixed(2)}%`)
+    csvRows.push('')
+    
+    // Top Products section
+    csvRows.push('TOP PRODUCTS')
+    csvRows.push('Rank,Product Name,Sales,Revenue')
+    analyticsData.topProducts.forEach((product, index) => {
+      csvRows.push(`${index + 1},"${product.name}",${product.sales},${product.revenue}`)
+    })
+    csvRows.push('')
+    
+    // Category Performance section
+    csvRows.push('CATEGORY PERFORMANCE')
+    csvRows.push('Category,Revenue,Percentage')
+    analyticsData.categoryPerformance.forEach(category => {
+      csvRows.push(`"${category.name}",${category.revenue},${category.percentage.toFixed(2)}%`)
+    })
+    csvRows.push('')
+    
+    // Sales Trend section
+    csvRows.push('SALES TREND')
+    csvRows.push('Month,Revenue,Orders,Customers')
+    analyticsData.salesTrend.forEach(trend => {
+      csvRows.push(`"${trend.month}",${trend.revenue},${trend.orders},${trend.customers}`)
+    })
+
+    // Create blob and download
+    const csvContent = csvRows.join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `analytics-report-${timeRange}-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   if (loading && !analyticsData) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -125,7 +180,13 @@ export default function AnalyticsPage() {
                     <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                     Refresh
                   </Button>
-                  <Button variant="outline" size="sm" className="bg-white hover:bg-gray-50 border-gray-300 text-gray-700">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-white hover:bg-gray-50 border-gray-300 text-gray-700"
+                    onClick={handleExport}
+                    disabled={!analyticsData || loading}
+                  >
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </Button>

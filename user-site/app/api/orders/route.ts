@@ -37,12 +37,13 @@ export async function GET(request: NextRequest) {
       offset: searchParams.get('offset') ? Number(searchParams.get('offset')) : 0,
     }
 
-    // Build query
+    // Build query with customer profile data
     let query = supabaseAdmin
       .from('orders')
       .select(`
         *,
-        order_items:order_items(*)
+        order_items:order_items(*),
+        customer:profiles!customer_id(avatar_url, first_name, last_name, full_name)
       `, { count: 'exact' })
 
     // Apply filters
@@ -79,8 +80,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
     }
 
-    // Calculate stats
-    const orders = data || []
+    // Process orders to include customer avatar_url
+    const orders = (data || []).map((order: any) => {
+      const customer = order.customer
+      return {
+        ...order,
+        customer_avatar_url: customer?.avatar_url || null
+      }
+    })
+    
     const stats = {
       totalOrders: count || 0,
       totalRevenue: orders.reduce((sum, order) => sum + (order.total_amount || 0), 0),

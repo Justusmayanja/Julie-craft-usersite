@@ -49,12 +49,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // For now, allow access without authentication for admin analytics
-    // In production, you might want to check for admin role
-    if (!authenticatedUserId) {
-      console.log('No authentication provided, allowing access to analytics')
-    }
-
     // Get query parameters
     const { searchParams } = new URL(request.url)
     const timeRange = searchParams.get('timeRange') || '6months'
@@ -90,7 +84,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get overall metrics
+    // Calculate previous period for growth comparison
+    const periodDuration = dateTo.getTime() - dateFrom.getTime()
+    const previousDateFrom = new Date(dateFrom.getTime() - periodDuration)
+    const previousDateTo = dateFrom
+
+    // Fetch current period data
     const [
       totalRevenueResult,
       totalOrdersResult,
@@ -98,9 +97,14 @@ export async function GET(request: NextRequest) {
       avgOrderValueResult,
       topProductsResult,
       categoryPerformanceResult,
-      salesTrendResult
+      salesTrendResult,
+      // Previous period data for growth calculation
+      previousRevenueResult,
+      previousOrdersResult,
+      previousCustomersResult,
+      previousAOVResult
     ] = await Promise.all([
-      // Total Revenue
+      // Current Period - Total Revenue
       supabaseAdmin
         .from('orders')
         .select('total_amount')
@@ -108,21 +112,22 @@ export async function GET(request: NextRequest) {
         .gte('order_date', dateFrom.toISOString())
         .lte('order_date', dateTo.toISOString()),
 
-      // Total Orders
+      // Current Period - Total Orders
       supabaseAdmin
         .from('orders')
         .select('id', { count: 'exact' })
         .gte('order_date', dateFrom.toISOString())
         .lte('order_date', dateTo.toISOString()),
 
-      // Total Customers
+      // Current Period - Total Customers (using profiles)
       supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('id', { count: 'exact' })
-        .gte('join_date', dateFrom.toISOString())
-        .lte('join_date', dateTo.toISOString()),
+        .eq('is_admin', false)
+        .gte('created_at', dateFrom.toISOString())
+        .lte('created_at', dateTo.toISOString()),
 
-      // Average Order Value
+      // Current Period - Average Order Value
       supabaseAdmin
         .from('orders')
         .select('total_amount')
@@ -130,66 +135,108 @@ export async function GET(request: NextRequest) {
         .gte('order_date', dateFrom.toISOString())
         .lte('order_date', dateTo.toISOString()),
 
-      // Top Products
+      // Current Period - Top Products
       supabaseAdmin
         .from('order_items')
         .select(`
           product_name,
           quantity,
-          unit_price,
+          price,
           total_price,
+          product_id,
           order:orders!inner(status, order_date)
         `)
         .eq('order.status', 'delivered')
         .gte('order.order_date', dateFrom.toISOString())
         .lte('order.order_date', dateTo.toISOString()),
 
-      // Category Performance
+      // Current Period - Category Performance (with product categories)
       supabaseAdmin
         .from('order_items')
         .select(`
-          product_name,
+          product_id,
           total_price,
-          order:orders!inner(status, order_date)
+          order:orders!inner(status, order_date),
+          product:products(category_id, category:categories(name))
         `)
         .eq('order.status', 'delivered')
         .gte('order.order_date', dateFrom.toISOString())
         .lte('order.order_date', dateTo.toISOString()),
 
-      // Sales Trend (monthly data)
+      // Current Period - Sales Trend (with customer tracking)
       supabaseAdmin
         .from('orders')
-        .select('total_amount, order_date')
+        .select('total_amount, order_date, customer_id')
         .eq('status', 'delivered')
         .gte('order_date', dateFrom.toISOString())
         .lte('order_date', dateTo.toISOString())
-        .order('order_date', { ascending: true })
+        .order('order_date', { ascending: true }),
+
+      // Previous Period - Revenue
+      supabaseAdmin
+        .from('orders')
+        .select('total_amount')
+        .eq('status', 'delivered')
+        .gte('order_date', previousDateFrom.toISOString())
+        .lte('order_date', previousDateTo.toISOString()),
+
+      // Previous Period - Orders
+      supabaseAdmin
+        .from('orders')
+        .select('id', { count: 'exact' })
+        .gte('order_date', previousDateFrom.toISOString())
+        .lte('order_date', previousDateTo.toISOString()),
+
+      // Previous Period - Customers
+      supabaseAdmin
+        .from('profiles')
+        .select('id', { count: 'exact' })
+        .eq('is_admin', false)
+        .gte('created_at', previousDateFrom.toISOString())
+        .lte('created_at', previousDateTo.toISOString()),
+
+      // Previous Period - AOV
+      supabaseAdmin
+        .from('orders')
+        .select('total_amount')
+        .eq('status', 'delivered')
+        .gte('order_date', previousDateFrom.toISOString())
+        .lte('order_date', previousDateTo.toISOString())
     ])
 
-    // Calculate total revenue
+    // Calculate current period metrics
     const totalRevenue = totalRevenueResult.data?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0
-
-    // Calculate total orders
     const totalOrders = totalOrdersResult.count || 0
-
-    // Calculate total customers
     const totalCustomers = totalCustomersResult.count || 0
-
-    // Calculate average order value
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
+
+    // Calculate previous period metrics
+    const previousRevenue = previousRevenueResult.data?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0
+    const previousOrders = previousOrdersResult.count || 0
+    const previousCustomers = previousCustomersResult.count || 0
+    const previousAOV = previousOrders > 0 ? previousRevenue / previousOrders : 0
+
+    // Calculate growth rates
+    const revenueGrowth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0
+    const ordersGrowth = previousOrders > 0 ? ((totalOrders - previousOrders) / previousOrders) * 100 : 0
+    const customersGrowth = previousCustomers > 0 ? ((totalCustomers - previousCustomers) / previousCustomers) * 100 : 0
+    const aovGrowth = previousAOV > 0 ? ((avgOrderValue - previousAOV) / previousAOV) * 100 : 0
 
     // Process top products
     const productSales = new Map<string, { sales: number; revenue: number; name: string }>()
     topProductsResult.data?.forEach(item => {
       const productName = item.product_name
+      const itemRevenue = Number(item.total_price || item.price * item.quantity || 0)
+      const itemQuantity = item.quantity || 0
+      
       if (productSales.has(productName)) {
         const existing = productSales.get(productName)!
-        existing.sales += item.quantity
-        existing.revenue += Number(item.total_price)
+        existing.sales += itemQuantity
+        existing.revenue += itemRevenue
       } else {
         productSales.set(productName, {
-          sales: item.quantity,
-          revenue: Number(item.total_price),
+          sales: itemQuantity,
+          revenue: itemRevenue,
           name: productName
         })
       }
@@ -197,75 +244,93 @@ export async function GET(request: NextRequest) {
 
     const topProducts = Array.from(productSales.values())
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5)
+      .slice(0, 10)
+      .map(product => ({
+        ...product,
+        growth: 0 // Could calculate if we track historical product data
+      }))
 
-    // Process category performance (simplified - using product names as categories)
+    // Process category performance using actual categories
     const categoryMap = new Map<string, number>()
-    categoryPerformanceResult.data?.forEach(item => {
-      // Simple category mapping based on product name keywords
-      let category = 'Other'
-      const productName = item.product_name.toLowerCase()
-      
-      if (productName.includes('ceramic') || productName.includes('bowl') || productName.includes('vase')) {
-        category = 'Pottery'
-      } else if (productName.includes('bracelet') || productName.includes('earring') || productName.includes('necklace')) {
-        category = 'Jewelry'
-      } else if (productName.includes('blanket') || productName.includes('scarf') || productName.includes('textile')) {
-        category = 'Textiles'
-      } else if (productName.includes('wood') || productName.includes('carved') || productName.includes('cutting')) {
-        category = 'Woodwork'
-      }
+    
+    // Try to use actual categories from database
+    if (categoryPerformanceResult.data && categoryPerformanceResult.data.length > 0) {
+      categoryPerformanceResult.data.forEach(item => {
+        const categoryName = item.product?.category?.name || 'Uncategorized'
+        const itemRevenue = Number(item.total_price || 0)
+        if (itemRevenue > 0) {
+          categoryMap.set(categoryName, (categoryMap.get(categoryName) || 0) + itemRevenue)
+        }
+      })
+    }
 
-      categoryMap.set(category, (categoryMap.get(category) || 0) + Number(item.total_price))
-    })
+    // If no categories found from database query, fall back to keyword-based categorization
+    if (categoryMap.size === 0 && topProductsResult.data) {
+      topProductsResult.data?.forEach(item => {
+        let category = 'Other'
+        const productName = item.product_name?.toLowerCase() || ''
+        
+        if (productName.includes('ceramic') || productName.includes('bowl') || productName.includes('vase')) {
+          category = 'Pottery'
+        } else if (productName.includes('bracelet') || productName.includes('earring') || productName.includes('necklace')) {
+          category = 'Jewelry'
+        } else if (productName.includes('blanket') || productName.includes('scarf') || productName.includes('textile')) {
+          category = 'Textiles'
+        } else if (productName.includes('wood') || productName.includes('carved') || productName.includes('cutting')) {
+          category = 'Woodwork'
+        }
+
+        const itemRevenue = Number(item.total_price || item.price * item.quantity || 0)
+        categoryMap.set(category, (categoryMap.get(category) || 0) + itemRevenue)
+      })
+    }
 
     const categoryPerformance = Array.from(categoryMap.entries())
       .map(([name, revenue]) => ({
         name,
         revenue,
         percentage: totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0,
-        growth: 0 // Would need historical data to calculate growth
+        growth: 0 // Could calculate if we track historical category data
       }))
       .sort((a, b) => b.revenue - a.revenue)
 
-    // Process sales trend (monthly aggregation)
-    const monthlySales = new Map<string, { revenue: number; orders: number; customers: number }>()
+    // Process sales trend (monthly aggregation with unique customers)
+    const monthlySales = new Map<string, { revenue: number; orders: number; customers: Set<string> }>()
     salesTrendResult.data?.forEach(order => {
       const month = new Date(order.order_date).toISOString().substring(0, 7) // YYYY-MM format
       if (monthlySales.has(month)) {
         const existing = monthlySales.get(month)!
         existing.revenue += Number(order.total_amount)
         existing.orders += 1
+        if (order.customer_id) {
+          existing.customers.add(order.customer_id)
+        }
       } else {
+        const customersSet = new Set<string>()
+        if (order.customer_id) {
+          customersSet.add(order.customer_id)
+        }
         monthlySales.set(month, {
           revenue: Number(order.total_amount),
           orders: 1,
-          customers: 0 // Would need more complex logic to track unique customers per month
+          customers: customersSet
         })
       }
     })
 
     const salesTrend = Array.from(monthlySales.entries())
       .map(([month, data]) => ({
-        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short' }),
+        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
         revenue: data.revenue,
         orders: data.orders,
-        customers: data.customers
+        customers: data.customers.size
       }))
-      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
-
-    // Calculate growth rates (simplified - would need historical data for accurate calculation)
-    const previousPeriodRevenue = totalRevenue * 0.85 // Mock previous period data
-    const revenueGrowth = previousPeriodRevenue > 0 ? ((totalRevenue - previousPeriodRevenue) / previousPeriodRevenue) * 100 : 0
-
-    const previousPeriodOrders = totalOrders * 0.9
-    const ordersGrowth = previousPeriodOrders > 0 ? ((totalOrders - previousPeriodOrders) / previousPeriodOrders) * 100 : 0
-
-    const previousPeriodCustomers = totalCustomers * 0.88
-    const customersGrowth = previousPeriodCustomers > 0 ? ((totalCustomers - previousPeriodCustomers) / previousPeriodCustomers) * 100 : 0
-
-    const previousPeriodAOV = avgOrderValue * 0.95
-    const aovGrowth = previousPeriodAOV > 0 ? ((avgOrderValue - previousPeriodAOV) / previousPeriodAOV) * 100 : 0
+      .sort((a, b) => {
+        // Sort by date properly
+        const dateA = new Date(a.month)
+        const dateB = new Date(b.month)
+        return dateA.getTime() - dateB.getTime()
+      })
 
     const analytics = {
       metrics: {
@@ -296,6 +361,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Analytics API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }

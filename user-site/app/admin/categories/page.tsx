@@ -143,12 +143,14 @@ export default function CategoriesPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to delete category')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Failed to delete category')
       }
 
       toast({
-        title: 'Category Deleted',
-        description: `Category "${category.name}" deleted successfully`
+        title: 'Success',
+        description: `The category "${category.name}" has been deleted successfully.`,
+        variant: 'default'
       })
       
       await refetch()
@@ -156,8 +158,8 @@ export default function CategoriesPage() {
     } catch (error) {
       console.error('Error deleting category:', error)
       toast({
-        title: 'Delete Failed',
-        description: 'Failed to delete category',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete category. Please try again.',
         variant: 'destructive'
       })
     }
@@ -180,8 +182,9 @@ export default function CategoriesPage() {
       }
 
       toast({
-        title: 'Status Updated',
-        description: `Category "${category.name}" is now ${!category.is_active ? 'active' : 'inactive'}`
+        title: 'Success',
+        description: `The category "${category.name}" status has been updated to ${!category.is_active ? 'active' : 'inactive'}.`,
+        variant: 'default'
       })
       
       await refetch()
@@ -189,8 +192,8 @@ export default function CategoriesPage() {
     } catch (error) {
       console.error('Error updating category status:', error)
       toast({
-        title: 'Update Failed',
-        description: 'Failed to update category status',
+        title: 'Error',
+        description: 'Failed to update category status. Please try again.',
         variant: 'destructive'
       })
     }
@@ -225,8 +228,9 @@ export default function CategoriesPage() {
         }
 
         toast({
-          title: 'Category Created',
-          description: `Category "${categoryData.name}" created successfully`
+          title: 'Success',
+          description: `The category "${categoryData.name}" has been created successfully.`,
+          variant: 'default'
         })
       } else if (editingCategory) {
         const response = await fetch(`/api/categories/${editingCategory.id}`, {
@@ -250,8 +254,9 @@ export default function CategoriesPage() {
         }
 
         toast({
-          title: 'Category Updated',
-          description: `Category "${categoryData.name}" updated successfully`
+          title: 'Success',
+          description: `The category "${categoryData.name}" has been updated successfully.`,
+          variant: 'default'
         })
       }
 
@@ -265,8 +270,8 @@ export default function CategoriesPage() {
     } catch (error) {
       console.error('Error saving category:', error)
       toast({
-        title: 'Save Failed',
-        description: error instanceof Error ? error.message : 'Failed to save category',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save category. Please try again.',
         variant: 'destructive'
       })
     }

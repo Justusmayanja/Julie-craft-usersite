@@ -15,6 +15,7 @@ interface Order {
   customer_id?: string
   customer_email: string
   customer_name: string
+  customer_avatar_url?: string | null
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded'
   payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded'
   payment_method?: string

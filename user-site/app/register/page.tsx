@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
@@ -23,6 +23,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
   const [formErrors, setFormErrors] = useState<{
     firstName?: string
     lastName?: string
@@ -34,6 +35,23 @@ export default function RegisterPage() {
 
   const { register, error, clearError } = useAuth()
   const router = useRouter()
+
+  // Load logo from site settings
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const response = await fetch('/api/site-content/settings')
+        const data = await response.json()
+        if (data.settings?.logo_url?.value) {
+          setLogoUrl(data.settings.logo_url.value)
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error)
+        // Keep default logo on error
+      }
+    }
+    fetchLogo()
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -133,13 +151,23 @@ export default function RegisterPage() {
 
         {/* Logo and Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4 shadow-lg">
-            <User className="h-8 w-8 text-primary-foreground" />
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative mb-4">
+              <img
+                src={logoUrl}
+                alt="Julie Crafts Logo"
+                className="w-20 h-20 object-contain rounded-xl bg-white p-3 border-2 border-slate-200 shadow-lg"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.src = '/julie-logo.jpeg'
+                }}
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Join Julie's Crafts</h1>
+            <p className="text-slate-600 text-sm">
+              Create your account to save favorites and track orders
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Join Julie's Crafts</h1>
-          <p className="text-slate-600">
-            Create your account to save favorites and track orders
-          </p>
         </div>
 
         {/* Registration Form */}
