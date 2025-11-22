@@ -246,19 +246,20 @@ export default function AdminOrderDetailPage() {
               Back to Orders
             </Link>
           </Button>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Order #{order.order_number}
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
+                <span className="text-gray-600 font-normal">Order #</span>
+                <span className="break-all">{order.order_number}</span>
               </h1>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {formatDate(order.order_date)}
+              <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
+                <div className="flex items-center gap-1 whitespace-nowrap">
+                  <Calendar className="h-4 w-4 flex-shrink-0" />
+                  <span>{formatDate(order.order_date)}</span>
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-shrink-0">
               <Button variant="outline" size="sm" onClick={() => window.print()}>
                 <Printer className="w-4 h-4 mr-2" />
                 Print

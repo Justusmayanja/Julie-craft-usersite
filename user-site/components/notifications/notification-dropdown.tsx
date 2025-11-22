@@ -18,9 +18,9 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
   }
 
   return (
-    <div className="w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-sm bg-white rounded-lg shadow-lg border border-gray-200 max-h-[calc(100vh-8rem)] sm:max-h-[500px] flex flex-col">
+    <div className="w-[calc(100vw-2rem)] sm:w-80 md:w-96 lg:w-[420px] max-w-sm bg-white rounded-lg shadow-lg border border-gray-200 max-h-[calc(100vh-8rem)] sm:max-h-[600px] lg:max-h-[650px] flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
         <h3 className="font-semibold text-gray-900">Notifications</h3>
         {unreadCount > 0 && (
           <Button
@@ -36,7 +36,7 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
       </div>
 
       {/* Notifications List */}
-      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-12rem)] sm:max-h-[400px]">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -58,13 +58,13 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer - Always visible and accessible */}
       {notifications.length > 0 && (
-        <div className="p-3 border-t border-gray-200 text-center">
+        <div className="p-3 border-t border-gray-200 text-center bg-white flex-shrink-0 sticky bottom-0 z-10">
           <Link
             href={isAdmin ? "/admin/notifications" : "/notifications"}
             onClick={onClose}
-            className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+            className="inline-block text-sm text-orange-600 hover:text-orange-700 font-medium transition-colors px-3 py-1.5 rounded-md hover:bg-orange-50"
           >
             View all notifications
           </Link>

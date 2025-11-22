@@ -75,7 +75,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
             className="fixed inset-0 bg-black/20 z-40 sm:hidden"
             onClick={() => setIsOpen(false)}
           />
-          <div className="fixed right-4 top-16 sm:absolute sm:right-0 sm:top-auto sm:mt-2 z-50">
+          <div className="fixed right-4 top-16 sm:absolute sm:right-0 sm:top-full sm:mt-2 md:mt-2 lg:mt-2 z-50">
             <NotificationDropdown
               onClose={() => setIsOpen(false)}
             />
