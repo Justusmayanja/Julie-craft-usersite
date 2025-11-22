@@ -52,17 +52,38 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch order' }, { status: 500 })
     }
 
-    // Verify order ownership for authenticated users
+    // Verify order ownership for authenticated users (allow admin access to all orders)
     if (authenticatedUserId || authenticatedUserEmail) {
-      const isOwner = 
-        (authenticatedUserId && data.customer_id === authenticatedUserId) ||
-        (authenticatedUserEmail && data.customer_email === authenticatedUserEmail)
+      // Check if user is admin
+      let isAdmin = false
+      if (authenticatedUserId) {
+        try {
+          const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('role, is_admin')
+            .eq('id', authenticatedUserId)
+            .single()
+          
+          if (profile) {
+            isAdmin = profile.role === 'admin' || profile.role === 'super_admin' || profile.is_admin === true
+          }
+        } catch (error) {
+          console.error('Error checking admin status:', error)
+        }
+      }
       
-      if (!isOwner) {
-        return NextResponse.json({ 
-          error: 'Unauthorized',
-          message: 'You do not have access to this order' 
-        }, { status: 403 })
+      // If not admin, check ownership
+      if (!isAdmin) {
+        const isOwner = 
+          (authenticatedUserId && data.customer_id === authenticatedUserId) ||
+          (authenticatedUserEmail && data.customer_email === authenticatedUserEmail)
+        
+        if (!isOwner) {
+          return NextResponse.json({ 
+            error: 'Unauthorized',
+            message: 'You do not have access to this order' 
+          }, { status: 403 })
+        }
       }
     }
 

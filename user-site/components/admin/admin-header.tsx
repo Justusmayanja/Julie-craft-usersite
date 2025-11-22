@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
-import { Search, User, Settings, LogOut, Menu, ChevronDown, Home } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Search, User, Settings, LogOut, Menu, ChevronDown, Home, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { NotificationBell } from "@/components/notifications/notification-bell"
 import Image from "next/image"
 
@@ -15,8 +16,55 @@ interface AdminHeaderProps {
 
 export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showMobileSearch, setShowMobileSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const { user, logout } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+
+  // Get current page name from pathname
+  const getPageName = () => {
+    if (!pathname) return "Dashboard"
+    
+    const pathSegments = pathname.split('/').filter(Boolean)
+    if (pathSegments.length <= 1) return "Dashboard"
+    
+    const pageSegment = pathSegments[pathSegments.length - 1]
+    
+    // Convert route to friendly name
+    const pageNames: Record<string, string> = {
+      'dashboard': 'Dashboard',
+      'orders': 'Orders',
+      'products': 'Products',
+      'categories': 'Categories',
+      'customers': 'Customers',
+      'analytics': 'Analytics',
+      'pages': 'Pages',
+      'notifications': 'Notifications',
+      'settings': 'Settings',
+      'content': 'Content',
+      'media': 'Media Library',
+      'homepage': 'Homepage'
+    }
+    
+    return pageNames[pageSegment] || pageSegment.charAt(0).toUpperCase() + pageSegment.slice(1).replace(/-/g, ' ')
+  }
+
+  const currentPageName = getPageName()
+
+  // Close mobile search when clicking outside
+  useEffect(() => {
+    if (showMobileSearch) {
+      const handleClickOutside = (e: MouseEvent) => {
+        const target = e.target as HTMLElement
+        if (!target.closest('.mobile-search-container')) {
+          setShowMobileSearch(false)
+        }
+      }
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMobileSearch])
 
   const handleSignOut = async () => {
     setShowUserMenu(false)
@@ -24,147 +72,213 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     // Redirect will be handled by the logout function in auth-context
   }
 
-  return (
-    <header className="sticky top-0 z-50 h-14 sm:h-16 bg-white/95 border-b border-gray-200/60 backdrop-blur-md flex items-center justify-between px-3 sm:px-4 md:px-6 shadow-sm min-w-0">
-      {/* Left side - Mobile menu button and breadcrumb */}
-      <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="md:hidden hover:bg-gray-100 rounded-lg flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
-          onClick={onMenuClick}
-        >
-          <Menu className="h-5 w-5 text-gray-600" />
-        </Button>
-        
-        {/* Enhanced Breadcrumb Navigation */}
-        <nav className="hidden md:flex items-center space-x-3 text-sm min-w-0" aria-label="Breadcrumb">
-          <div className="flex items-center space-x-2 text-gray-500">
-            <div className="p-1 bg-gray-100 rounded-md">
-              <Home className="w-3 h-3" />
-            </div>
-            <span className="font-medium">Admin</span>
-          </div>
-          <div className="text-gray-300 font-light">/</div>
-          <span className="text-gray-900 font-semibold bg-blue-50 px-2 py-1 rounded-md">Dashboard</span>
-        </nav>
-      </div>
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!searchQuery.trim()) return
+    
+    // Simple search - can be enhanced later
+    // For now, redirect to products page with search query
+    router.push(`/admin/products?search=${encodeURIComponent(searchQuery)}`)
+    setSearchQuery("")
+    setShowMobileSearch(false)
+  }
 
-      {/* Right side - Search, notifications, and user menu */}
-      <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 min-w-0 flex-shrink-0">
-        {/* Premium Search Bar */}
-        <div className="hidden lg:flex relative">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10 group-focus-within:text-blue-500 transition-colors" />
-            <input
-              type="text"
-              placeholder="Search products, orders, customers..."
-              className="pl-10 pr-4 py-2.5 text-sm text-gray-900 bg-gray-50/80 border border-gray-200/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 focus:bg-white focus:shadow-lg transition-all duration-300 w-64 xl:w-80 placeholder:text-gray-400 font-medium"
-            />
+  return (
+    <header className="sticky top-0 z-50 bg-white/95 border-b border-gray-200/60 backdrop-blur-md shadow-sm min-w-0">
+      {/* Main Header Row */}
+      <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 h-14 sm:h-16 min-w-0">
+        {/* Left side - Mobile menu button, page name, and breadcrumb */}
+        <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 min-w-0 flex-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="md:hidden hover:bg-gray-100 rounded-lg flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
+            onClick={onMenuClick}
+          >
+            <Menu className="h-5 w-5 text-gray-600" />
+          </Button>
+          
+          {/* Mobile Page Title */}
+          <div className="md:hidden flex items-center gap-2 min-w-0 flex-1">
+            <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+              {currentPageName}
+            </h1>
           </div>
+          
+          {/* Desktop Breadcrumb Navigation */}
+          <nav className="hidden md:flex items-center space-x-3 text-sm min-w-0" aria-label="Breadcrumb">
+            <div className="flex items-center space-x-2 text-gray-500">
+              <div className="p-1 bg-gray-100 rounded-md">
+                <Home className="w-3 h-3" />
+              </div>
+              <span className="font-medium">Admin</span>
+            </div>
+            <div className="text-gray-300 font-light">/</div>
+            <span className="text-gray-900 font-semibold bg-blue-50 px-2 py-1 rounded-md">
+              {currentPageName}
+            </span>
+          </nav>
         </div>
 
-        {/* Notifications */}
-        <NotificationBell className="h-9 w-9 sm:h-10 sm:w-10" />
-
-        {/* Premium User Menu */}
-        <div className="relative flex-shrink-0">
-          <button
-            onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 pl-1.5 sm:pl-2 md:pl-4 border-l border-gray-200/60 hover:bg-blue-50/50 rounded-r-xl py-1.5 sm:py-2 pr-1.5 sm:pr-2 md:pr-3 transition-all duration-200 group min-w-0"
+        {/* Right side - Search, notifications, and user menu */}
+        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 min-w-0 flex-shrink-0">
+          {/* Mobile Search Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden hover:bg-gray-100 rounded-lg flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
+            onClick={() => setShowMobileSearch(!showMobileSearch)}
           >
-            <div className="hidden lg:block text-right min-w-0">
-              <p className="text-xs sm:text-sm font-bold text-gray-900 truncate">
-                {user?.name || 'Admin User'}
-              </p>
-              <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">
-                {user?.email || 'admin@juliecraft.com'}
-              </p>
-            </div>
-            <div className="relative flex-shrink-0">
-              <Avatar className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 border-2 border-blue-200/50 shadow-md group-hover:shadow-lg transition-shadow">
-                <AvatarImage 
-                  src={user?.avatar_url} 
-                  alt={user?.name || 'Admin User'}
-                />
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-xs sm:text-sm">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'AU'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm">
-                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-              </div>
-            </div>
-            <ChevronDown className="hidden sm:block w-3 h-3 md:w-4 md:h-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
-          </button>
+            <Search className="h-5 w-5 text-gray-600" />
+          </Button>
 
-          {/* Premium User Dropdown Menu */}
-          {showUserMenu && (
-            <div className="absolute right-0 mt-2 sm:mt-3 w-[calc(100vw-2rem)] sm:w-64 max-w-sm bg-white rounded-2xl shadow-xl border border-gray-200/50 py-3 z-50 backdrop-blur-sm">
-              <div className="px-5 py-4 border-b border-gray-100/80">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="w-12 h-12 shadow-md">
-                    <AvatarImage 
-                      src={user?.avatar_url} 
-                      alt={user?.name || 'Admin User'}
-                    />
-                    <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-                      {user?.name ? user.name.charAt(0).toUpperCase() : 'AU'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-bold text-gray-900">
-                      {user?.name || 'Admin User'}
-                    </p>
-                    <p className="text-sm text-gray-500 font-medium">
-                      {user?.email || 'admin@juliecraft.com'}
-                    </p>
-                  </div>
+          {/* Desktop Search Bar */}
+          <form onSubmit={handleSearch} className="hidden lg:flex relative">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10 group-focus-within:text-blue-500 transition-colors" />
+              <Input
+                type="text"
+                placeholder="Search products, orders, customers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-2.5 text-sm bg-gray-50/80 border border-gray-200/80 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 focus:bg-white focus:shadow-lg transition-all duration-300 w-64 xl:w-80"
+              />
+            </div>
+          </form>
+
+          {/* Notifications */}
+          <NotificationBell className="h-9 w-9 sm:h-10 sm:w-10" />
+
+          {/* Premium User Menu */}
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 pl-1.5 sm:pl-2 md:pl-4 border-l border-gray-200/60 hover:bg-blue-50/50 rounded-r-xl py-1.5 sm:py-2 pr-1.5 sm:pr-2 md:pr-3 transition-all duration-200 group min-w-0"
+            >
+              <div className="hidden lg:block text-right min-w-0">
+                <p className="text-xs sm:text-sm font-bold text-gray-900 truncate">
+                  {user?.name || 'Admin User'}
+                </p>
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">
+                  {user?.email || 'admin@juliecraft.com'}
+                </p>
+              </div>
+              <div className="relative flex-shrink-0">
+                <Avatar className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 border-2 border-blue-200/50 shadow-md group-hover:shadow-lg transition-shadow">
+                  <AvatarImage 
+                    src={user?.avatar_url} 
+                    alt={user?.name || 'Admin User'}
+                  />
+                  <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold text-xs sm:text-sm">
+                    {user?.name ? user.name.charAt(0).toUpperCase() : 'AU'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm">
+                  <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
                 </div>
               </div>
-              
-              <div className="py-2">
-                <button 
-                  onClick={() => {
-                    router.push('/profile')
-                    setShowUserMenu(false)
-                  }}
-                  className="flex items-center space-x-3 w-full px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
-                >
-                  <div className="p-1 bg-blue-100 rounded-md">
-                    <User className="w-3 h-3 text-blue-600" />
+              <ChevronDown className="hidden sm:block w-3 h-3 md:w-4 md:h-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+            </button>
+
+            {/* Premium User Dropdown Menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 sm:mt-3 w-[calc(100vw-2rem)] sm:w-64 max-w-sm bg-white rounded-2xl shadow-xl border border-gray-200/50 py-3 z-50 backdrop-blur-sm">
+                <div className="px-5 py-4 border-b border-gray-100/80">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="w-12 h-12 shadow-md">
+                      <AvatarImage 
+                        src={user?.avatar_url} 
+                        alt={user?.name || 'Admin User'}
+                      />
+                      <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+                        {user?.name ? user.name.charAt(0).toUpperCase() : 'AU'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-bold text-gray-900">
+                        {user?.name || 'Admin User'}
+                      </p>
+                      <p className="text-sm text-gray-500 font-medium">
+                        {user?.email || 'admin@juliecraft.com'}
+                      </p>
+                    </div>
                   </div>
-                  <span>Profile Settings</span>
-                </button>
-                <button 
-                  onClick={() => {
-                    router.push('/account')
-                    setShowUserMenu(false)
-                  }}
-                  className="flex items-center space-x-3 w-full px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
-                >
-                  <div className="p-1 bg-blue-100 rounded-md">
-                    <Settings className="w-3 h-3 text-blue-600" />
-                  </div>
-                  <span>Account Settings</span>
-                </button>
+                </div>
+                
+                <div className="py-2">
+                  <button 
+                    onClick={() => {
+                      router.push('/profile')
+                      setShowUserMenu(false)
+                    }}
+                    className="flex items-center space-x-3 w-full px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
+                  >
+                    <div className="p-1 bg-blue-100 rounded-md">
+                      <User className="w-3 h-3 text-blue-600" />
+                    </div>
+                    <span>Profile Settings</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      router.push('/account')
+                      setShowUserMenu(false)
+                    }}
+                    className="flex items-center space-x-3 w-full px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
+                  >
+                    <div className="p-1 bg-blue-100 rounded-md">
+                      <Settings className="w-3 h-3 text-blue-600" />
+                    </div>
+                    <span>Account Settings</span>
+                  </button>
+                </div>
+                
+                <div className="border-t border-gray-100/80 pt-2">
+                  <button 
+                    onClick={handleSignOut}
+                    className="flex items-center space-x-3 w-full px-5 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors font-medium"
+                  >
+                    <div className="p-1 bg-red-100 rounded-md">
+                      <LogOut className="w-3 h-3 text-red-600" />
+                    </div>
+                    <span>Sign out</span>
+                  </button>
+                </div>
               </div>
-              
-              <div className="border-t border-gray-100/80 pt-2">
-                <button 
-                  onClick={handleSignOut}
-                  className="flex items-center space-x-3 w-full px-5 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors font-medium"
-                >
-                  <div className="p-1 bg-red-100 rounded-md">
-                    <LogOut className="w-3 h-3 text-red-600" />
-                  </div>
-                  <span>Sign out</span>
-                </button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Mobile Search Bar - Expandable */}
+      {showMobileSearch && (
+        <div className="mobile-search-container border-t border-gray-200/60 bg-white px-3 sm:px-4 py-3 md:hidden">
+          <form onSubmit={handleSearch} className="relative">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10 group-focus-within:text-blue-500 transition-colors" />
+              <Input
+                type="text"
+                placeholder="Search products, orders, customers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+                className="pl-10 pr-10 py-2.5 text-sm bg-gray-50/80 border border-gray-200/80 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 focus:bg-white focus:shadow-lg transition-all duration-300 w-full"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 hover:bg-gray-100"
+                onClick={() => {
+                  setShowMobileSearch(false)
+                  setSearchQuery("")
+                }}
+              >
+                <X className="h-4 w-4 text-gray-400" />
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
     </header>
   )
 }

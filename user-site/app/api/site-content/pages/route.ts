@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, slug, content, excerpt, type, status, meta_title, meta_description, featured_image, template, sort_order } = body
+    const { title, slug, content, excerpt, type, status, meta_title, meta_description, meta_keywords, featured_image, template, sort_order } = body
 
     if (!title || !slug || !type) {
       return NextResponse.json({ error: 'Title, slug, and type are required' }, { status: 400 })
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
       status: status || 'draft',
       meta_title: meta_title || null,
       meta_description: meta_description || null,
+      meta_keywords: Array.isArray(meta_keywords) ? meta_keywords : (meta_keywords ? [meta_keywords] : null),
       featured_image: featured_image || null,
       template: template || 'default',
       sort_order: sort_order || 0,

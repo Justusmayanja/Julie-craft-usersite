@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     // Get the form data
     const formData = await request.formData()
     const file = formData.get('file') as File
+    const folder = formData.get('folder') as string || 'avatars'
     
     if (!file) {
       return NextResponse.json({
@@ -50,17 +51,34 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Create unique filename
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`
-    const filePath = `avatars/${fileName}`
+    // Determine storage bucket and path based on folder
+    let storageBucket = 'profile-images'
+    let filePath = ''
+    
+    if (folder === 'pages') {
+      storageBucket = 'media' // or 'pages' if you have a dedicated bucket
+      const fileExt = file.name.split('.').pop()
+      const fileName = `pages/${user.id}-${Date.now()}.${fileExt}`
+      filePath = fileName
+    } else if (folder === 'avatars') {
+      storageBucket = 'profile-images'
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+      filePath = `avatars/${fileName}`
+    } else {
+      // Default to media bucket for other folders
+      storageBucket = 'media'
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${folder}/${user.id}-${Date.now()}.${fileExt}`
+      filePath = fileName
+    }
 
     // Convert file to buffer
     const fileBuffer = await file.arrayBuffer()
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from('profile-images')
+      .from(storageBucket)
       .upload(filePath, fileBuffer, {
         contentType: file.type,
         upsert: false
@@ -75,36 +93,47 @@ export async function POST(request: NextRequest) {
 
     // Get public URL
     const { data: urlData } = supabaseAdmin.storage
-      .from('profile-images')
+      .from(storageBucket)
       .getPublicUrl(filePath)
 
     const publicUrl = urlData.publicUrl
 
-    // Update user profile with avatar URL
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .update({
-        avatar_url: publicUrl,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', user.id)
+    // Only update profile if folder is 'avatars'
+    if (folder === 'avatars') {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
 
-    if (profileError) {
-      console.error('Profile update error:', profileError)
-      // Try to clean up the uploaded file
-      await supabaseAdmin.storage
-        .from('profile-images')
-        .remove([filePath])
-      
+      if (profileError) {
+        console.error('Profile update error:', profileError)
+        // Try to clean up the uploaded file
+        await supabaseAdmin.storage
+          .from(storageBucket)
+          .remove([filePath])
+        
+        return NextResponse.json({
+          error: 'Failed to update profile'
+        }, { status: 500 })
+      }
+
       return NextResponse.json({
-        error: 'Failed to update profile'
-      }, { status: 500 })
+        success: true,
+        message: 'Image uploaded successfully',
+        url: publicUrl,
+        avatar_url: publicUrl,
+        file_path: filePath
+      })
     }
 
+    // For other folders, just return the URL
     return NextResponse.json({
       success: true,
       message: 'Image uploaded successfully',
-      avatar_url: publicUrl,
+      url: publicUrl,
       file_path: filePath
     })
 

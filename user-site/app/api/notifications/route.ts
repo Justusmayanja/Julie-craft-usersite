@@ -69,6 +69,123 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 })
     }
 
+    // Fetch customer avatars for order notifications
+    const orderNotifications = (data || []).filter((n: any) => n.order_id)
+    
+    if (orderNotifications.length > 0) {
+      // Get all order IDs
+      const orderIds = [...new Set(orderNotifications.map((n: any) => n.order_id).filter(Boolean))]
+      
+      if (orderIds.length > 0) {
+        // Fetch orders to get customer_id/user_id
+        const { data: ordersData } = await supabaseAdmin
+          .from('orders')
+          .select('id, customer_id, user_id, customer_email')
+          .in('id', orderIds)
+
+        if (ordersData && ordersData.length > 0) {
+          // Get all unique customer IDs
+          const customerIds = [...new Set(
+            ordersData
+              .map((o: any) => o.customer_id || o.user_id)
+              .filter(Boolean)
+          )]
+
+          // Also get customer emails for fallback lookup
+          const customerEmails = [...new Set(
+            ordersData
+              .map((o: any) => o.customer_email)
+              .filter(Boolean)
+          )]
+
+          let customerProfiles: Record<string, any> = {}
+          let emailToProfileMap: Record<string, any> = {}
+
+          // Fetch profiles by customer IDs
+          if (customerIds.length > 0) {
+            const { data: profilesData } = await supabaseAdmin
+              .from('profiles')
+              .select('id, avatar_url, first_name, last_name, full_name, email')
+              .in('id', customerIds)
+
+            if (profilesData) {
+              profilesData.forEach((profile: any) => {
+                customerProfiles[profile.id] = profile
+                if (profile.email) {
+                  emailToProfileMap[profile.email.toLowerCase()] = profile
+                }
+              })
+            }
+          }
+
+          // Also try to fetch profiles by email (for guest orders that might have registered later)
+          if (customerEmails.length > 0) {
+            const { data: emailProfiles } = await supabaseAdmin
+              .from('profiles')
+              .select('id, avatar_url, first_name, last_name, full_name, email')
+              .in('email', customerEmails)
+
+            if (emailProfiles) {
+              emailProfiles.forEach((profile: any) => {
+                customerProfiles[profile.id] = profile
+                if (profile.email) {
+                  emailToProfileMap[profile.email.toLowerCase()] = profile
+                }
+              })
+            }
+          }
+
+          // Create mapping from order ID to customer profile
+          const orderToCustomerMap: Record<string, any> = {}
+          ordersData.forEach((o: any) => {
+            const customerId = o.customer_id || o.user_id
+            if (customerId && customerProfiles[customerId]) {
+              orderToCustomerMap[o.id] = customerProfiles[customerId]
+            } else if (o.customer_email) {
+              // Fallback to email lookup
+              const profile = emailToProfileMap[o.customer_email.toLowerCase()]
+              if (profile) {
+                orderToCustomerMap[o.id] = profile
+              }
+            }
+          })
+
+          // Add customer data to notifications
+          if (data) {
+            data.forEach((notification: any) => {
+              let profile: any = null
+              
+              // First try: Get profile from order mapping
+              if (notification.order_id && orderToCustomerMap[notification.order_id]) {
+                profile = orderToCustomerMap[notification.order_id]
+              }
+              
+              // Second try: If no profile from order, try email lookup from metadata
+              if (!profile && notification.metadata?.customer_email) {
+                profile = emailToProfileMap[notification.metadata.customer_email.toLowerCase()]
+              }
+              
+              // Set customer data if profile found
+              if (profile) {
+                // Set avatar URL - explicitly check for null/undefined/empty string
+                const avatarUrl = profile.avatar_url
+                notification.customer_avatar_url = (avatarUrl && avatarUrl.trim() !== '') ? avatarUrl : null
+                
+                // Set customer name
+                notification.customer_name = profile.full_name || 
+                                            `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 
+                                            notification.metadata?.customer_name || null
+              } else if (notification.metadata?.customer_name) {
+                // Fallback: Use metadata if no profile found
+                notification.customer_name = notification.metadata.customer_name
+                notification.customer_avatar_url = null
+              }
+            })
+          }
+        }
+      }
+    }
+
     // Get unread count
     let unreadQuery = supabaseAdmin
       .from('notifications')

@@ -37,13 +37,12 @@ export async function GET(request: NextRequest) {
       offset: searchParams.get('offset') ? Number(searchParams.get('offset')) : 0,
     }
 
-    // Build query with customer profile data
+    // Build query for orders
     let query = supabaseAdmin
       .from('orders')
       .select(`
         *,
-        order_items:order_items(*),
-        customer:profiles!customer_id(avatar_url, first_name, last_name, full_name)
+        order_items:order_items(*)
       `, { count: 'exact' })
 
     // Apply filters
@@ -80,11 +79,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
     }
 
+    // Fetch customer profiles separately
+    const customerIds = [...new Set((data || [])
+      .map((order: any) => order.customer_id || order.user_id)
+      .filter((id: any) => id !== null && id !== undefined)
+    )]
+
+    let customerProfiles: Record<string, any> = {}
+    
+    if (customerIds.length > 0) {
+      const { data: profilesData } = await supabaseAdmin
+        .from('profiles')
+        .select('id, avatar_url, first_name, last_name, full_name')
+        .in('id', customerIds)
+
+      if (profilesData) {
+        profilesData.forEach((profile: any) => {
+          customerProfiles[profile.id] = profile
+        })
+      }
+    }
+
     // Process orders to include customer avatar_url
     const orders = (data || []).map((order: any) => {
-      const customer = order.customer
+      const customerId = order.customer_id || order.user_id
+      const customer = customerId ? customerProfiles[customerId] : null
       return {
         ...order,
+        customer: customer ? {
+          avatar_url: customer.avatar_url,
+          first_name: customer.first_name,
+          last_name: customer.last_name,
+          full_name: customer.full_name
+        } : null,
         customer_avatar_url: customer?.avatar_url || null
       }
     })

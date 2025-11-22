@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +22,18 @@ import {
   ExternalLink,
   Upload,
   Image as ImageIcon,
-  X
+  X,
+  Search,
+  Filter,
+  CheckSquare,
+  Square,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  Link as LinkIcon,
+  Maximize2,
+  XCircle
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/components/ui/use-toast"
@@ -37,6 +48,7 @@ interface SitePage {
   status: string
   meta_title?: string
   meta_description?: string
+  meta_keywords?: string[]
   featured_image?: string
   created_at: string
   updated_at: string
@@ -69,6 +81,11 @@ export default function AdminPagesPage() {
   // Pages state
   const [pages, setPages] = useState<SitePage[]>([])
   const [editingPage, setEditingPage] = useState<SitePage | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [typeFilter, setTypeFilter] = useState<string>("all")
+  const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set())
+  const [showPreview, setShowPreview] = useState(false)
   
   // Homepage sections state
   const [sections, setSections] = useState<HomepageSection[]>([])
@@ -397,7 +414,12 @@ export default function AdminPagesPage() {
                     <PageEditor 
                       page={editingPage} 
                       onSave={handleSavePage}
-                      onCancel={() => setEditingPage(null)}
+                      onCancel={() => {
+                        setEditingPage(null)
+                        setShowPreview(false)
+                      }}
+                      onPreview={() => setShowPreview(true)}
+                      showPreview={showPreview}
                     />
                   ) : (
                     <PagesList 
@@ -405,6 +427,118 @@ export default function AdminPagesPage() {
                       onEdit={setEditingPage}
                       onDelete={handleDeletePage}
                       loading={loading}
+                      searchTerm={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      statusFilter={statusFilter}
+                      onStatusFilterChange={setStatusFilter}
+                      typeFilter={typeFilter}
+                      onTypeFilterChange={setTypeFilter}
+                      selectedPages={selectedPages}
+                      onSelectPage={(id) => {
+                        const newSet = new Set(selectedPages)
+                        if (newSet.has(id)) {
+                          newSet.delete(id)
+                        } else {
+                          newSet.add(id)
+                        }
+                        setSelectedPages(newSet)
+                      }}
+                      onSelectAll={(select) => {
+                        if (select) {
+                          setSelectedPages(new Set(pages.map(p => p.id)))
+                        } else {
+                          setSelectedPages(new Set())
+                        }
+                      }}
+                      onBulkAction={async (action) => {
+                        if (selectedPages.size === 0) {
+                          toast({
+                            title: "No Selection",
+                            description: "Please select at least one page.",
+                            variant: "destructive"
+                          })
+                          return
+                        }
+                        
+                        try {
+                          setLoading(true)
+                          const token = localStorage.getItem('julie-crafts-token')
+                          const pageIds = Array.from(selectedPages)
+                          
+                          if (action === 'delete') {
+                            if (!confirm(`Are you sure you want to delete ${pageIds.length} page(s)?`)) {
+                              return
+                            }
+                            
+                            await Promise.all(
+                              pageIds.map(id => 
+                                fetch(`/api/site-content/pages/${id}`, {
+                                  method: 'DELETE',
+                                  headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                  }
+                                })
+                              )
+                            )
+                            
+                            toast({
+                              title: "Success",
+                              description: `${pageIds.length} page(s) deleted successfully.`,
+                              variant: "default"
+                            })
+                          } else if (action === 'publish') {
+                            await Promise.all(
+                              pageIds.map(id => 
+                                fetch(`/api/site-content/pages/${id}`, {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({ status: 'published' })
+                                })
+                              )
+                            )
+                            
+                            toast({
+                              title: "Success",
+                              description: `${pageIds.length} page(s) published successfully.`,
+                              variant: "default"
+                            })
+                          } else if (action === 'archive') {
+                            await Promise.all(
+                              pageIds.map(id => 
+                                fetch(`/api/site-content/pages/${id}`, {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({ status: 'archived' })
+                                })
+                              )
+                            )
+                            
+                            toast({
+                              title: "Success",
+                              description: `${pageIds.length} page(s) archived successfully.`,
+                              variant: "default"
+                            })
+                          }
+                          
+                          setSelectedPages(new Set())
+                          fetchPages()
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to perform bulk action. Please try again.",
+                            variant: "destructive"
+                          })
+                        } finally {
+                          setLoading(false)
+                        }
+                      }}
                     />
                   )}
                 </CardContent>
@@ -466,87 +600,472 @@ export default function AdminPagesPage() {
   )
 }
 
+// Rich Text Editor Toolbar Component
+function RichTextToolbar({ onFormat }: { onFormat: (format: string) => void }) {
+  return (
+    <div className="flex items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 rounded-t-md">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onFormat('bold')}
+        className="h-8 w-8 p-0"
+        title="Bold"
+      >
+        <Bold className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onFormat('italic')}
+        className="h-8 w-8 p-0"
+        title="Italic"
+      >
+        <Italic className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onFormat('underline')}
+        className="h-8 w-8 p-0"
+        title="Underline"
+      >
+        <Underline className="h-4 w-4" />
+      </Button>
+      <div className="w-px h-6 bg-gray-300 mx-1" />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onFormat('ul')}
+        className="h-8 w-8 p-0"
+        title="Bullet List"
+      >
+        <List className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onFormat('link')}
+        className="h-8 w-8 p-0"
+        title="Insert Link"
+      >
+        <LinkIcon className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
 // Page Editor Component
-function PageEditor({ page, onSave, onCancel }: { 
+function PageEditor({ page, onSave, onCancel, onPreview, showPreview }: { 
   page: SitePage
   onSave: (page: SitePage) => void
   onCancel: () => void
+  onPreview?: () => void
+  showPreview?: boolean
 }) {
+  const { toast } = useToast()
   const [formData, setFormData] = useState(page)
+  const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(page.featured_image || null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const contentRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleFormat = (format: string) => {
+    if (!contentRef.current) return
+    
+    const textarea = contentRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = textarea.value.substring(start, end)
+    let formattedText = ''
+    
+    switch (format) {
+      case 'bold':
+        formattedText = `<strong>${selectedText || 'bold text'}</strong>`
+        break
+      case 'italic':
+        formattedText = `<em>${selectedText || 'italic text'}</em>`
+        break
+      case 'underline':
+        formattedText = `<u>${selectedText || 'underlined text'}</u>`
+        break
+      case 'ul':
+        formattedText = `<ul><li>${selectedText || 'List item'}</li></ul>`
+        break
+      case 'link':
+        const url = prompt('Enter URL:')
+        if (url) {
+          formattedText = `<a href="${url}">${selectedText || 'Link text'}</a>`
+        } else {
+          return
+        }
+        break
+    }
+    
+    const newContent = 
+      textarea.value.substring(0, start) + 
+      formattedText + 
+      textarea.value.substring(end)
+    
+    setFormData({ ...formData, content: newContent })
+    
+    // Restore focus and cursor position
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + formattedText.length, start + formattedText.length)
+    }, 0)
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Error",
+        description: "Invalid file type. Only JPEG, PNG, WEBP, and GIF are allowed.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "File size exceeds 5MB limit.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setUploadingImage(true)
+      const token = localStorage.getItem('julie-crafts-token')
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+      uploadFormData.append('folder', 'pages')
+
+      const response = await fetch('/api/media/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: uploadFormData
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upload image')
+      }
+
+      setFeaturedImagePreview(data.url)
+      setFormData({ ...formData, featured_image: data.url })
+
+      toast({
+        title: "Success",
+        description: "Featured image uploaded successfully.",
+        variant: "default"
+      })
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to upload image",
+        variant: "destructive"
+      })
+    } finally {
+      setUploadingImage(false)
+      if (event.target) {
+        event.target.value = ''
+      }
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setFeaturedImagePreview(null)
+    setFormData({ ...formData, featured_image: '' })
+  }
+
+  if (showPreview) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Page Preview</h3>
+          <Button variant="outline" onClick={() => onPreview?.()}>
+            <XCircle className="w-4 h-4 mr-2" />
+            Close Preview
+          </Button>
+        </div>
+        <Card className="border-2">
+          <CardContent className="p-6">
+            {featuredImagePreview && (
+              <div className="mb-6">
+                <img 
+                  src={featuredImagePreview} 
+                  alt={formData.title}
+                  className="w-full h-64 object-cover rounded-lg"
+                />
+              </div>
+            )}
+            <h1 className="text-3xl font-bold mb-4">{formData.title || 'Page Title'}</h1>
+            <div 
+              className="prose max-w-none"
+              dangerouslySetInnerHTML={{ __html: formData.content || '<p>No content yet.</p>' }}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-          <Input
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            placeholder="Page title"
+    <div className="space-y-6">
+      {/* Basic Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Basic Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Page title"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Slug *</label>
+              <Input
+                value={formData.slug}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                placeholder="/page-slug"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="page">Page</option>
+                <option value="about">About</option>
+                <option value="contact">Contact</option>
+                <option value="privacy">Privacy</option>
+                <option value="terms">Terms</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Excerpt</label>
+            <Textarea
+              value={formData.excerpt || ''}
+              onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+              placeholder="Brief description of the page"
+              rows={2}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Featured Image */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Featured Image</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {featuredImagePreview ? (
+            <div className="relative inline-block">
+              <img
+                src={featuredImagePreview}
+                alt="Featured"
+                className="w-48 h-48 object-cover rounded-lg border border-gray-200"
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 p-0"
+                onClick={handleRemoveImage}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+              <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-sm text-gray-600 mb-4">No featured image</p>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                onChange={handleImageUpload}
+                className="hidden"
+                id="featured-image-upload"
+                disabled={uploadingImage}
+              />
+              <label htmlFor="featured-image-upload">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={uploadingImage}
+                  className="cursor-pointer"
+                  asChild
+                >
+                  <span>
+                    <Upload className="w-4 h-4 mr-2" />
+                    {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                  </span>
+                </Button>
+              </label>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Content Editor */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Page Content</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <RichTextToolbar onFormat={handleFormat} />
+          <Textarea
+            ref={contentRef}
+            value={formData.content || ''}
+            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-b-md min-h-[300px] font-mono text-sm"
+            placeholder="Enter page content. HTML is supported. Use the toolbar above to format text."
           />
+          <p className="text-xs text-gray-500">
+            Tip: You can use HTML tags directly or use the toolbar buttons above to format your content.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* SEO Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">SEO Settings</CardTitle>
+          <p className="text-sm text-gray-600">Optimize your page for search engines</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Meta Title</label>
+            <Input
+              value={formData.meta_title || ''}
+              onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
+              placeholder="SEO title (recommended: 50-60 characters)"
+              maxLength={60}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.meta_title?.length || 0}/60 characters
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Meta Description</label>
+            <Textarea
+              value={formData.meta_description || ''}
+              onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
+              placeholder="SEO description (recommended: 150-160 characters)"
+              rows={3}
+              maxLength={160}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.meta_description?.length || 0}/160 characters
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Meta Keywords (comma-separated)</label>
+            <Input
+              value={formData.meta_keywords?.join(', ') || ''}
+              onChange={(e) => {
+                const keywords = e.target.value.split(',').map(k => k.trim()).filter(k => k)
+                setFormData({ ...formData, meta_keywords: keywords })
+              }}
+              placeholder="keyword1, keyword2, keyword3"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex justify-between items-center">
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <div className="flex gap-2">
+          {onPreview && (
+            <Button variant="outline" onClick={onPreview}>
+              <Eye className="w-4 h-4 mr-2" />
+              Preview
+            </Button>
+          )}
+          <Button onClick={() => onSave(formData)} className="bg-blue-600 hover:bg-blue-700">
+            <Save className="w-4 h-4 mr-2" />
+            Save Page
+          </Button>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
-          <Input
-            value={formData.slug}
-            onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-            placeholder="/page-slug"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-          <select
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="page">Page</option>
-            <option value="about">About</option>
-            <option value="contact">Contact</option>
-            <option value="privacy">Privacy</option>
-            <option value="terms">Terms</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <select
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="archived">Archived</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-        <textarea
-          value={formData.content || ''}
-          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md min-h-[200px]"
-          placeholder="Page content (HTML supported)"
-        />
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onSave(formData)}>Save Page</Button>
       </div>
     </div>
   )
 }
 
 // Pages List Component
-function PagesList({ pages, onEdit, onDelete, loading }: {
+function PagesList({ 
+  pages, 
+  onEdit, 
+  onDelete, 
+  loading,
+  searchTerm,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  typeFilter,
+  onTypeFilterChange,
+  selectedPages,
+  onSelectPage,
+  onSelectAll,
+  onBulkAction
+}: {
   pages: SitePage[]
   onEdit: (page: SitePage) => void
   onDelete: (id: string) => void
   loading: boolean
+  searchTerm: string
+  onSearchChange: (term: string) => void
+  statusFilter: string
+  onStatusFilterChange: (filter: string) => void
+  typeFilter: string
+  onTypeFilterChange: (filter: string) => void
+  selectedPages: Set<string>
+  onSelectPage: (id: string) => void
+  onSelectAll: (select: boolean) => void
+  onBulkAction: (action: 'delete' | 'publish' | 'archive') => Promise<void>
 }) {
+  const [showBulkActions, setShowBulkActions] = useState(false)
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -580,64 +1099,246 @@ function PagesList({ pages, onEdit, onDelete, loading }: {
     )
   }
 
+  // Filter pages based on search and filters
+  const filteredPages = pages.filter(page => {
+    const matchesSearch = !searchTerm || 
+      page.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      page.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (page.content && page.content.toLowerCase().includes(searchTerm.toLowerCase()))
+    
+    const matchesStatus = statusFilter === 'all' || page.status === statusFilter
+    const matchesType = typeFilter === 'all' || page.type === typeFilter
+    
+    return matchesSearch && matchesStatus && matchesType
+  })
+
+  useEffect(() => {
+    setShowBulkActions(selectedPages.size > 0)
+  }, [selectedPages.size])
+
   return (
-    <div className="space-y-3">
-      {pages.map((page) => (
-        <Card key={page.id} className="hover:shadow-md transition-shadow duration-200 border-gray-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                {/* Icon */}
-                <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-blue-600" />
-                </div>
-                
-                {/* Page Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className="font-semibold text-gray-900 text-base truncate">{page.title || 'Untitled Page'}</h3>
-                    <Badge 
-                      variant={page.status === 'published' ? 'default' : 'secondary'}
-                      className="text-xs flex-shrink-0"
-                    >
-                      {page.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <Globe className="w-3 h-3" />
-                      <span className="truncate">{page.slug || '/'}</span>
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(page.updated_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Actions */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => onEdit(page)}
-                  className="hover:bg-blue-50 hover:text-blue-600"
+    <div className="space-y-4">
+      {/* Search and Filters */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="md:col-span-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search pages..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+        <div>
+          <select
+            value={statusFilter}
+            onChange={(e) => onStatusFilterChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          >
+            <option value="all">All Status</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+        <div>
+          <select
+            value={typeFilter}
+            onChange={(e) => onTypeFilterChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          >
+            <option value="all">All Types</option>
+            <option value="page">Page</option>
+            <option value="about">About</option>
+            <option value="contact">Contact</option>
+            <option value="privacy">Privacy</option>
+            <option value="terms">Terms</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Bulk Actions Bar */}
+      {showBulkActions && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedPages.size} page(s) selected
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSelectAll(false)}
+                  className="text-xs"
                 >
-                  <Edit className="w-4 h-4" />
+                  Clear
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => onDelete(page.id)}
-                  className="hover:bg-red-50 hover:text-red-600"
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onBulkAction('publish')}
+                  className="text-xs"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  Publish
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onBulkAction('archive')}
+                  className="text-xs"
+                >
+                  Archive
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onBulkAction('delete')}
+                  className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  Delete
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      ))}
+      )}
+
+      {/* Pages List */}
+      {filteredPages.length === 0 ? (
+        <div className="text-center py-12">
+          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No pages found</h3>
+          <p className="text-gray-600">
+            {searchTerm || statusFilter !== 'all' || typeFilter !== 'all' 
+              ? 'Try adjusting your search or filters' 
+              : 'Create your first page to get started'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Select All */}
+          <div className="flex items-center gap-2 pb-2 border-b">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onSelectAll(selectedPages.size !== filteredPages.length)}
+              className="h-8"
+            >
+              {selectedPages.size === filteredPages.length ? (
+                <CheckSquare className="w-4 h-4" />
+              ) : (
+                <Square className="w-4 h-4" />
+              )}
+            </Button>
+            <span className="text-sm text-gray-600">
+              Select all ({filteredPages.length} pages)
+            </span>
+          </div>
+
+          {filteredPages.map((page) => (
+            <Card key={page.id} className="hover:shadow-md transition-shadow duration-200 border-gray-200">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    {/* Checkbox */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onSelectPage(page.id)}
+                      className="h-6 w-6 p-0 flex-shrink-0"
+                    >
+                      {selectedPages.has(page.id) ? (
+                        <CheckSquare className="w-4 h-4 text-blue-600" />
+                      ) : (
+                        <Square className="w-4 h-4 text-gray-400" />
+                      )}
+                    </Button>
+
+                    {/* Icon */}
+                    <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      {page.featured_image ? (
+                        <img 
+                          src={page.featured_image} 
+                          alt={page.title}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <FileText className="w-6 h-6 text-blue-600" />
+                      )}
+                    </div>
+                    
+                    {/* Page Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="font-semibold text-gray-900 text-base truncate">{page.title || 'Untitled Page'}</h3>
+                        <Badge 
+                          variant={page.status === 'published' ? 'default' : 'secondary'}
+                          className="text-xs flex-shrink-0"
+                        >
+                          {page.status}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs flex-shrink-0">
+                          {page.type}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <Globe className="w-3 h-3" />
+                          <span className="truncate">{page.slug || '/'}</span>
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Updated {new Date(page.updated_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => onEdit(page)}
+                      className="hover:bg-blue-50 hover:text-blue-600"
+                      title="Edit"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    {page.status === 'published' && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        asChild
+                        className="hover:bg-green-50 hover:text-green-600"
+                        title="View Page"
+                      >
+                        <a href={page.slug} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => onDelete(page.id)}
+                      className="hover:bg-red-50 hover:text-red-600"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

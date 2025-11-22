@@ -58,7 +58,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { title, slug, content, excerpt, type, status, meta_title, meta_description, featured_image, template, sort_order } = body
+    const { title, slug, content, excerpt, type, status, meta_title, meta_description, meta_keywords, featured_image, template, sort_order } = body
 
     // Check if slug is being changed and if it conflicts
     if (slug) {
@@ -88,6 +88,9 @@ export async function PUT(
     }
     if (meta_title !== undefined) updateData.meta_title = meta_title
     if (meta_description !== undefined) updateData.meta_description = meta_description
+    if (meta_keywords !== undefined) {
+      updateData.meta_keywords = Array.isArray(meta_keywords) ? meta_keywords : (meta_keywords ? [meta_keywords] : null)
+    }
     if (featured_image !== undefined) updateData.featured_image = featured_image
     if (template !== undefined) updateData.template = template
     if (sort_order !== undefined) updateData.sort_order = sort_order

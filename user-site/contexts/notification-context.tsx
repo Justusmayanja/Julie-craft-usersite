@@ -17,6 +17,8 @@ export interface Notification {
   metadata?: Record<string, any>
   created_at: string
   updated_at: string
+  customer_avatar_url?: string
+  customer_name?: string
 }
 
 interface NotificationContextType {
