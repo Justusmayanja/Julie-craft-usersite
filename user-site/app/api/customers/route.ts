@@ -116,10 +116,20 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Verify admin authentication
+    // Verify admin authentication - check both header and cookies
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No authorization header found, returning mock data')
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    
+    let token: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieToken) {
+      token = cookieToken
+    }
+    
+    if (!token) {
+      console.log('No authorization token found (header or cookie), returning mock data')
       return NextResponse.json({
         customers: [
           {
@@ -169,8 +179,6 @@ export async function GET(request: NextRequest) {
         message: 'Mock data - no authentication'
       })
     }
-
-    const token = authHeader.substring(7)
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       if (error || !user) {
@@ -255,11 +263,11 @@ export async function GET(request: NextRequest) {
 
     // Apply search filter
     if (filters.search) {
-      query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`)
+      query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`)
     }
 
     // Apply sorting
-    const sortColumn = filters.sort_by === 'name' ? 'full_name' : filters.sort_by
+    const sortColumn = filters.sort_by === 'name' ? 'created_at' : filters.sort_by
     query = query.order(sortColumn, { ascending: filters.sort_order === 'asc' })
 
     // Apply pagination
@@ -276,6 +284,29 @@ export async function GET(request: NextRequest) {
     const customersWithStats = await Promise.all(
       (profiles || []).map(async (profile) => {
         // Get order count and total spent
+        if (!supabaseAdmin) {
+          return {
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown',
+            email: profile.email,
+            phone: profile.phone || '',
+            avatar: (profile.email || 'U').charAt(0).toUpperCase(),
+            address: {
+              street: profile.address || '',
+              city: profile.city || '',
+              state: profile.state || '',
+              zip: profile.zip_code || ''
+            },
+            totalOrders: 0,
+            totalSpent: 0,
+            lastOrderDate: null,
+            joinDate: profile.created_at || profile.join_date,
+            status: (profile.status || 'active') as 'active' | 'inactive' | 'blocked',
+            isVip: false,
+            tags: ['New Customer']
+          }
+        }
+        
         const { data: orders } = await supabaseAdmin
           .from('orders')
           .select('total_amount, created_at')
@@ -283,16 +314,35 @@ export async function GET(request: NextRequest) {
 
         const totalOrders = orders?.length || 0
         const totalSpent = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
-        const lastOrderDate = orders?.length > 0 
+        const lastOrderDate = (orders && orders.length > 0)
           ? orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at
           : null
 
+        const isVip = totalSpent > 500 // VIP if spent more than 500
+        const status = profile.status || 'active' // Use profile status if available
+
+        // Build full name from first_name and last_name
+        const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown'
+        const displayName = fullName !== 'Unknown' ? fullName : (profile.email || 'Unknown')
+        
+        // Get initials for fallback
+        const getInitials = (name: string) => {
+          return name
+            .split(' ')
+            .map(word => word.charAt(0))
+            .join('')
+            .toUpperCase()
+            .slice(0, 2)
+        }
+        const initials = displayName !== 'Unknown' ? getInitials(displayName) : (profile.email?.charAt(0).toUpperCase() || 'U')
+        
         return {
           id: profile.id,
-          name: profile.full_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown',
+          name: displayName,
           email: profile.email,
-          phone: profile.phone,
-          avatar: profile.full_name?.charAt(0) || profile.email?.charAt(0) || 'U',
+          phone: profile.phone || '',
+          avatar: initials,
+          avatar_url: profile.avatar_url || null,
           address: {
             street: profile.address || '',
             city: profile.city || '',
@@ -302,17 +352,31 @@ export async function GET(request: NextRequest) {
           totalOrders,
           totalSpent,
           lastOrderDate,
-          joinDate: profile.created_at,
-          status: 'active', // All customers are considered active for now
-          isVip: totalSpent > 500, // VIP if spent more than 500
+          joinDate: profile.created_at || profile.join_date,
+          status: status as 'active' | 'inactive' | 'blocked',
+          isVip,
           tags: totalOrders > 3 ? ['Repeat Customer'] : ['New Customer']
         }
       })
     )
 
+    // Apply VIP filter if needed (before pagination)
+    let filteredCustomers = customersWithStats
+    if (filters.status === 'vip') {
+      filteredCustomers = customersWithStats.filter(c => c.isVip)
+    } else if (filters.status && filters.status !== 'all' && filters.status !== 'vip') {
+      filteredCustomers = customersWithStats.filter(c => c.status === filters.status)
+    }
+
+    // If filtering, we need to get the total count of filtered results
+    // For now, return the filtered count, but ideally we'd query the database with the filter
+    const filteredTotal = filteredCustomers.length
+
     return NextResponse.json({
-      customers: customersWithStats,
-      total: count || 0,
+      customers: filteredCustomers,
+      total: filters.status === 'vip' || (filters.status && filters.status !== 'all') 
+        ? filteredTotal 
+        : (count || 0), // Use original count if no filter, filtered count if filtered
       limit: filters.limit,
       offset: filters.offset
     })
@@ -330,13 +394,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    // Verify admin authentication
+    // Verify admin authentication - check both header and cookies
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    
+    let token: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieToken) {
+      token = cookieToken
+    }
+    
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const token = authHeader.substring(7)
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       if (error || !user) {
@@ -353,23 +426,66 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .insert({
         email: body.email,
-        full_name: `${body.first_name} ${body.last_name}`,
         first_name: body.first_name,
         last_name: body.last_name,
-        phone: body.phone,
+        phone: body.phone || null,
         is_admin: false,
+        role: 'customer',
+        status: 'active',
+        is_verified: false,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        join_date: new Date().toISOString(),
+        total_orders: 0,
+        total_spent: 0
       })
       .select()
       .single()
 
     if (createError) {
       console.error('Database error:', createError)
-      return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to create customer', details: createError.message }, { status: 500 })
     }
 
-    return NextResponse.json(newProfile, { status: 201 })
+    // Build full name from first_name and last_name
+    const fullName = `${newProfile.first_name || ''} ${newProfile.last_name || ''}`.trim() || 'Unknown'
+    const displayName = fullName !== 'Unknown' ? fullName : (newProfile.email || 'Unknown')
+    
+    // Get initials for fallback
+    const getInitials = (name: string) => {
+      return name
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    const initials = displayName !== 'Unknown' ? getInitials(displayName) : (newProfile.email?.charAt(0).toUpperCase() || 'U')
+    
+    // Return customer in the expected format
+    const customer = {
+      id: newProfile.id,
+      name: displayName,
+      email: newProfile.email,
+      phone: newProfile.phone || '',
+      avatar: initials,
+      avatar_url: newProfile.avatar_url || null,
+      address: {
+        street: newProfile.address || '',
+        city: newProfile.city || '',
+        state: newProfile.state || '',
+        zip: newProfile.zip_code || ''
+      },
+      totalOrders: 0,
+      totalSpent: 0,
+      lastOrderDate: null,
+      joinDate: newProfile.created_at || newProfile.join_date,
+      status: (newProfile.status || 'active') as 'active' | 'inactive' | 'blocked',
+      isVip: false,
+      tags: ['New Customer']
+    }
+
+    return NextResponse.json(customer, { status: 201 })
 
   } catch (error) {
     console.error('API error:', error)

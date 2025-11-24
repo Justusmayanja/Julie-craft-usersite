@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,7 +33,9 @@ import {
   RefreshCw,
   UserPlus
 } from "lucide-react"
-import { useCustomers, useCustomerStats, type Customer } from "@/hooks/admin/use-customers"
+import { useCustomers, useCustomerStats, useCustomer, type Customer } from "@/hooks/admin/use-customers"
+import { useToast } from "@/contexts/toast-context"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -41,6 +44,26 @@ export default function CustomersPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  
+  // Form states for edit
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    status: 'active' as 'active' | 'inactive' | 'blocked'
+  })
+  
+  // Form states for add
+  const [addForm, setAddForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: ''
+  })
+
+  const { toast } = useToast()
+  const { user } = useAuth()
 
   const { customers, loading, error, total, fetchCustomers, refresh } = useCustomers()
 
@@ -53,7 +76,92 @@ export default function CustomersPage() {
 
   const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer)
+    setEditForm({
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone || '',
+      status: customer.status
+    })
     setIsEditModalOpen(true)
+  }
+
+  const handleUpdateCustomer = async () => {
+    if (!selectedCustomer) return
+
+    try {
+      setIsSaving(true)
+      
+      const token = user?.token || localStorage.getItem('julie-crafts-token')
+      const response = await fetch(`/api/customers/${selectedCustomer.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editForm.name,
+          email: editForm.email,
+          phone: editForm.phone,
+          status: editForm.status,
+          address: selectedCustomer.address
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to update customer')
+      }
+
+      toast.showSuccess('Customer Updated', 'Customer information has been updated successfully.')
+      setIsEditModalOpen(false)
+      refresh() // Refresh the customer list
+    } catch (error) {
+      console.error('Error updating customer:', error)
+      toast.showError('Update Failed', error instanceof Error ? error.message : 'Failed to update customer')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleAddCustomer = async () => {
+    if (!addForm.firstName || !addForm.lastName || !addForm.email) {
+      toast.showError('Validation Error', 'Please fill in all required fields')
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      
+      const token = user?.token || localStorage.getItem('julie-crafts-token')
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          first_name: addForm.firstName,
+          last_name: addForm.lastName,
+          email: addForm.email,
+          phone: addForm.phone || null
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create customer')
+      }
+
+      toast.showSuccess('Customer Created', 'New customer has been created successfully.')
+      setAddForm({ firstName: '', lastName: '', email: '', phone: '' })
+      setIsAddModalOpen(false)
+      refresh() // Refresh the customer list
+    } catch (error) {
+      console.error('Error creating customer:', error)
+      toast.showError('Creation Failed', error instanceof Error ? error.message : 'Failed to create customer')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleSearch = (value: string) => {
@@ -75,10 +183,7 @@ export default function CustomersPage() {
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
+    return `UGX ${amount.toLocaleString('en-US')}`
   }
 
   const formatDate = (dateString: string) => {
@@ -96,24 +201,6 @@ export default function CustomersPage() {
       case 'blocked': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
     }
-  }
-
-  if (error) {
-    return (
-      <div className="h-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <p className="text-red-600 mb-4">Failed to load customers</p>
-              <Button onClick={refresh} variant="outline">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Try Again
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -153,13 +240,17 @@ export default function CustomersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">Total Customers</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statsLoading ? '...' : stats?.totalCustomers || 0}
-                </p>
+                {statsLoading ? (
+                  <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mt-1"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats?.totalCustomers || 0}
+                  </p>
+                )}
               </div>
-              <Users className="h-8 w-8 text-blue-600" />
+              <Users className="h-8 w-8 text-blue-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -167,13 +258,17 @@ export default function CustomersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">VIP Customers</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statsLoading ? '...' : stats?.vipCustomers || 0}
-                </p>
+                {statsLoading ? (
+                  <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mt-1"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats?.vipCustomers || 0}
+                  </p>
+                )}
               </div>
-              <Star className="h-8 w-8 text-yellow-600" />
+              <Star className="h-8 w-8 text-yellow-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -181,13 +276,17 @@ export default function CustomersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">New This Month</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statsLoading ? '...' : stats?.newCustomersThisMonth || 0}
-                </p>
+                {statsLoading ? (
+                  <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mt-1"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats?.newCustomersThisMonth || 0}
+                  </p>
+                )}
               </div>
-              <Calendar className="h-8 w-8 text-green-600" />
+              <Calendar className="h-8 w-8 text-green-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -195,13 +294,17 @@ export default function CustomersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}
-                </p>
+                {statsLoading ? (
+                  <div className="h-8 w-24 bg-gray-200 rounded animate-pulse mt-1"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(stats?.totalRevenue || 0)}
+                  </p>
+                )}
               </div>
-              <Banknote className="h-8 w-8 text-purple-600" />
+              <Banknote className="h-8 w-8 text-purple-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -263,26 +366,68 @@ export default function CustomersPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          {error && (
+            <div className="flex items-center justify-center h-32 mb-4">
+              <div className="text-center">
+                <p className="text-red-600 mb-4">Failed to load customers</p>
+                <Button onClick={refresh} variant="outline" size="sm">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead className="hidden sm:table-cell">Contact</TableHead>
-                    <TableHead className="hidden md:table-cell">Orders</TableHead>
-                    <TableHead className="hidden lg:table-cell">Total Spent</TableHead>
-                    <TableHead className="hidden md:table-cell">Status</TableHead>
-                    <TableHead className="hidden lg:table-cell">Join Date</TableHead>
-                    <TableHead className="w-20">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {customers.length === 0 ? (
+          )}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                  <TableHead className="hidden md:table-cell">Orders</TableHead>
+                  <TableHead className="hidden lg:table-cell">Total Spent</TableHead>
+                  <TableHead className="hidden md:table-cell">Status</TableHead>
+                  <TableHead className="hidden lg:table-cell">Join Date</TableHead>
+                  <TableHead className="w-20">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                  {loading ? (
+                    // Skeleton loaders
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <TableRow key={`skeleton-${index}`}>
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse"></div>
+                            <div className="space-y-2">
+                              <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+                              <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="space-y-2">
+                            <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : customers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                         No customers found
@@ -293,8 +438,29 @@ export default function CustomersPage() {
                       <TableRow key={customer.id}>
                         <TableCell>
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                              <span className="text-sm font-medium text-blue-600">
+                            <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {customer.avatar_url ? (
+                                <Image
+                                  src={customer.avatar_url}
+                                  alt={customer.name}
+                                  fill
+                                  sizes="40px"
+                                  className="object-cover rounded-full"
+                                  onError={(e) => {
+                                    // Fallback to initials if image fails to load
+                                    const target = e.target as HTMLImageElement
+                                    target.style.display = 'none'
+                                    const parent = target.parentElement
+                                    if (parent) {
+                                      const fallback = parent.querySelector('.avatar-fallback')
+                                      if (fallback) {
+                                        (fallback as HTMLElement).style.display = 'flex'
+                                      }
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <span className={`text-sm font-semibold text-white ${customer.avatar_url ? 'avatar-fallback hidden' : ''}`}>
                                 {customer.avatar}
                               </span>
                             </div>
@@ -374,7 +540,6 @@ export default function CustomersPage() {
                 </TableBody>
               </Table>
             </div>
-          )}
         </CardContent>
       </Card>
 
@@ -388,8 +553,29 @@ export default function CustomersPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-xl font-medium text-blue-600">
+                <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {selectedCustomer.avatar_url ? (
+                    <Image
+                      src={selectedCustomer.avatar_url}
+                      alt={selectedCustomer.name}
+                      fill
+                      sizes="64px"
+                      className="object-cover rounded-full"
+                      onError={(e) => {
+                        // Fallback to initials if image fails to load
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                        const parent = target.parentElement
+                        if (parent) {
+                          const fallback = parent.querySelector('.avatar-fallback-modal')
+                          if (fallback) {
+                            (fallback as HTMLElement).style.display = 'flex'
+                          }
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <span className={`text-xl font-semibold text-white ${selectedCustomer.avatar_url ? 'avatar-fallback-modal hidden' : ''}`}>
                     {selectedCustomer.avatar}
                   </span>
                 </div>
@@ -487,24 +673,38 @@ export default function CustomersPage() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="name">Name</Label>
-                  <Input id="name" defaultValue={selectedCustomer.name} />
+                  <Label htmlFor="edit-name">Name</Label>
+                  <Input 
+                    id="edit-name" 
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue={selectedCustomer.email} />
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input 
+                    id="edit-email" 
+                    type="email" 
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  />
                 </div>
               </div>
               <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" defaultValue={selectedCustomer.phone || ''} />
+                <Label htmlFor="edit-phone">Phone</Label>
+                <Input 
+                  id="edit-phone" 
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                />
               </div>
               <div>
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="edit-status">Status</Label>
                 <select 
-                  id="status" 
+                  id="edit-status" 
                   className="w-full p-2 border border-gray-300 rounded-md"
-                  defaultValue={selectedCustomer.status}
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value as 'active' | 'inactive' | 'blocked' })}
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -513,9 +713,11 @@ export default function CustomersPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-              <Button onClick={() => { console.log('Update customer:', selectedCustomer); setIsEditModalOpen(false); }}>
-                Save Changes
+              <Button variant="outline" onClick={() => setIsEditModalOpen(false)} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateCustomer} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -532,27 +734,53 @@ export default function CustomersPage() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" placeholder="Enter first name" />
+                <Label htmlFor="add-firstName">First Name *</Label>
+                <Input 
+                  id="add-firstName" 
+                  placeholder="Enter first name"
+                  value={addForm.firstName}
+                  onChange={(e) => setAddForm({ ...addForm, firstName: e.target.value })}
+                />
               </div>
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" placeholder="Enter last name" />
+                <Label htmlFor="add-lastName">Last Name *</Label>
+                <Input 
+                  id="add-lastName" 
+                  placeholder="Enter last name"
+                  value={addForm.lastName}
+                  onChange={(e) => setAddForm({ ...addForm, lastName: e.target.value })}
+                />
               </div>
             </div>
             <div>
-              <Label htmlFor="newEmail">Email</Label>
-              <Input id="newEmail" type="email" placeholder="Enter email address" />
+              <Label htmlFor="add-email">Email *</Label>
+              <Input 
+                id="add-email" 
+                type="email" 
+                placeholder="Enter email address"
+                value={addForm.email}
+                onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+              />
             </div>
             <div>
-              <Label htmlFor="newPhone">Phone</Label>
-              <Input id="newPhone" placeholder="Enter phone number" />
+              <Label htmlFor="add-phone">Phone</Label>
+              <Input 
+                id="add-phone" 
+                placeholder="Enter phone number"
+                value={addForm.phone}
+                onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-            <Button onClick={() => { console.log('Add new customer'); setIsAddModalOpen(false); }}>
-              Create Customer
+            <Button variant="outline" onClick={() => {
+              setIsAddModalOpen(false)
+              setAddForm({ firstName: '', lastName: '', email: '', phone: '' })
+            }} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddCustomer} disabled={isSaving}>
+              {isSaving ? 'Creating...' : 'Create Customer'}
             </Button>
           </DialogFooter>
         </DialogContent>

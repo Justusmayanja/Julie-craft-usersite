@@ -215,8 +215,9 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
           }
         })
         const data = await response.json()
-        if (data.settings?.logo_url?.value) {
-          setLogoUrl(data.settings.logo_url.value)
+        const logoValue = data.settings?.logo_url?.value
+        if (logoValue && typeof logoValue === 'string' && logoValue.trim() !== '') {
+          setLogoUrl(logoValue)
         }
       } catch (error) {
         console.error('Error fetching logo:', error)
@@ -257,23 +258,25 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
         <div className="flex items-center justify-between min-w-0">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
             <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-400/30">
-              <Image 
-                src={logoUrl} 
-                alt="JulieCraft Logo" 
-                fill
-                sizes="40px"
-                className="object-contain p-1.5"
-                priority
-                onError={(e) => {
-                  // Fallback to default logo if image fails to load
-                  const target = e.target as HTMLImageElement
-                  if (target.src !== '/julie-logo.jpeg') {
-                    target.src = '/julie-logo.jpeg'
-                  } else {
-                    target.style.display = 'none'
-                  }
-                }}
-              />
+              {logoUrl && (
+                <Image 
+                  src={logoUrl} 
+                  alt="JulieCraft Logo" 
+                  fill
+                  sizes="40px"
+                  className="object-contain p-1.5"
+                  priority
+                  onError={(e) => {
+                    // Fallback to default logo if image fails to load
+                    const target = e.target as HTMLImageElement
+                    if (target.src !== '/julie-logo.jpeg') {
+                      target.src = '/julie-logo.jpeg'
+                    } else {
+                      target.style.display = 'none'
+                    }
+                  }}
+                />
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">JulieCraft</h1>

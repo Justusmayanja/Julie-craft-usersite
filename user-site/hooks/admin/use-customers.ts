@@ -9,6 +9,7 @@ export interface Customer {
   email: string
   phone?: string
   avatar: string
+  avatar_url?: string | null
   address: {
     street: string
     city: string
@@ -57,7 +58,7 @@ export function useCustomers() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
-  const { user } = useAuth()
+  const { token } = useAuth()
 
   const fetchCustomers = useCallback(async (filters: CustomerFilters = {}) => {
     try {
@@ -76,8 +77,8 @@ export function useCustomers() {
         'Content-Type': 'application/json',
       }
 
-      if (user?.token) {
-        headers['Authorization'] = `Bearer ${user.token}`
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
       }
 
       const response = await fetch(`/api/customers?${params.toString()}`, {
@@ -98,7 +99,7 @@ export function useCustomers() {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [token])
 
   const refresh = useCallback(() => {
     fetchCustomers()
@@ -122,7 +123,7 @@ export function useCustomerStats() {
   const [stats, setStats] = useState<CustomerStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { user } = useAuth()
+  const { token } = useAuth()
 
   const fetchStats = useCallback(async () => {
     try {
@@ -133,8 +134,8 @@ export function useCustomerStats() {
         'Content-Type': 'application/json',
       }
 
-      if (user?.token) {
-        headers['Authorization'] = `Bearer ${user.token}`
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
       }
 
       const response = await fetch('/api/customers/stats', {
@@ -154,7 +155,7 @@ export function useCustomerStats() {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [token])
 
   const refresh = useCallback(() => {
     fetchStats()
@@ -177,7 +178,7 @@ export function useCustomer(id: string) {
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { user } = useAuth()
+  const { token } = useAuth()
 
   const fetchCustomer = useCallback(async () => {
     if (!id) return
@@ -190,8 +191,8 @@ export function useCustomer(id: string) {
         'Content-Type': 'application/json',
       }
 
-      if (user?.token) {
-        headers['Authorization'] = `Bearer ${user.token}`
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
       }
 
       const response = await fetch(`/api/customers/${id}`, {
@@ -211,7 +212,7 @@ export function useCustomer(id: string) {
     } finally {
       setLoading(false)
     }
-  }, [user, id])
+  }, [token, id])
 
   const updateCustomer = useCallback(async (updates: Partial<Customer>) => {
     if (!id) return
@@ -224,8 +225,8 @@ export function useCustomer(id: string) {
         'Content-Type': 'application/json',
       }
 
-      if (user?.token) {
-        headers['Authorization'] = `Bearer ${user.token}`
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
       }
 
       const response = await fetch(`/api/customers/${id}`, {
@@ -249,7 +250,7 @@ export function useCustomer(id: string) {
     } finally {
       setLoading(false)
     }
-  }, [user, id])
+  }, [token, id])
 
   useEffect(() => {
     fetchCustomer()

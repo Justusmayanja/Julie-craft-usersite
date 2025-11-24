@@ -2,12 +2,31 @@
 
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { Hero } from "@/components/hero"
-import { FeaturedProducts } from "@/components/featured-products"
-import { Categories } from "@/components/categories"
-import { Testimonials } from "@/components/testimonials"
+import dynamic from "next/dynamic"
 import { AlertCircle, X } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { PageLoading } from "@/components/page-loading"
+
+// Lazy load components
+const Hero = dynamic(() => import("@/components/hero").then(mod => ({ default: mod.Hero })), {
+  loading: () => <PageLoading />,
+  ssr: true
+})
+
+const FeaturedProducts = dynamic(() => import("@/components/featured-products").then(mod => ({ default: mod.FeaturedProducts })), {
+  loading: () => <PageLoading />,
+  ssr: true
+})
+
+const Categories = dynamic(() => import("@/components/categories").then(mod => ({ default: mod.Categories })), {
+  loading: () => <PageLoading />,
+  ssr: true
+})
+
+const Testimonials = dynamic(() => import("@/components/testimonials").then(mod => ({ default: mod.Testimonials })), {
+  loading: () => <PageLoading />,
+  ssr: true
+})
 
 function ErrorMessage() {
   const searchParams = useSearchParams()

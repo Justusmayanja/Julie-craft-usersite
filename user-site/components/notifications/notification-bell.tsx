@@ -48,7 +48,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "relative p-2 rounded-full hover:bg-gray-100 transition-all duration-300",
+          "relative p-2 rounded-full hover:bg-slate-700/50 transition-all duration-300",
           hasNewNotifications && "animate-pulse",
           className
         )}
@@ -56,7 +56,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
       >
         <Bell className={cn(
           "h-5 w-5 sm:h-6 sm:w-6 transition-colors",
-          unreadCount > 0 ? "text-orange-600" : "text-gray-700"
+          unreadCount > 0 ? "text-amber-400" : "text-slate-200"
         )} />
         {unreadCount > 0 && (
           <span className={cn(

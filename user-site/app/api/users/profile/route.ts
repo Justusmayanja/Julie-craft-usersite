@@ -103,38 +103,98 @@ export async function PUT(request: NextRequest) {
       avatar_url
     })
 
-    // Build update object with only defined fields
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    }
-
-    // Only include fields that are provided (not undefined)
-    if (finalFirstName !== undefined) updateData.first_name = finalFirstName
-    if (finalLastName !== undefined) updateData.last_name = finalLastName
-    if (phone !== undefined) updateData.phone = phone
-    if (address !== undefined) updateData.address = address
-    if (bio !== undefined) updateData.bio = bio
-    if (location !== undefined) updateData.location = location
-    if (website !== undefined) updateData.website = website
-    if (preferences !== undefined) updateData.preferences = preferences
-    if (avatar_url !== undefined) updateData.avatar_url = avatar_url
-
-    // Update profile
-    const { data: updatedProfile, error: updateError } = await supabaseAdmin
+    // Get user email from auth if not in decoded
+    const userEmail = decoded.user?.email || ''
+    
+    // Check if profile exists, create it if it doesn't
+    const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
       .from('profiles')
-      .update(updateData)
+      .select('id, email')
       .eq('id', decoded.userId)
-      .select()
       .single()
 
-    if (updateError) {
-      console.error('Profile update error:', updateError)
-      return NextResponse.json({ 
-        error: 'Failed to update profile',
-        details: updateError 
-      }, { status: 500 })
+    let updatedProfile
+
+    if (profileCheckError || !existingProfile) {
+      // Profile doesn't exist, create it
+      const { data: newProfile, error: createError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: decoded.userId,
+          email: userEmail,
+          first_name: finalFirstName || '',
+          last_name: finalLastName || '',
+          phone: phone || null,
+          address: address || null,
+          bio: bio || null,
+          location: location || null,
+          website: website || null,
+          preferences: preferences || {
+            sms: false,
+            push: true,
+            email: true,
+            marketing: true
+          },
+          avatar_url: avatar_url || null,
+          is_admin: false,
+          is_verified: true,
+          role: 'customer',
+          total_orders: 0,
+          total_spent: 0,
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          join_date: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        console.error('Error creating profile:', createError)
+        return NextResponse.json({ 
+          error: 'Failed to create profile',
+          details: createError 
+        }, { status: 500 })
+      }
+
+      updatedProfile = newProfile
+    } else {
+      // Profile exists, update it
+      // Build update object with only defined fields
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      }
+
+      // Only include fields that are provided (not undefined)
+      if (finalFirstName !== undefined) updateData.first_name = finalFirstName
+      if (finalLastName !== undefined) updateData.last_name = finalLastName
+      if (phone !== undefined) updateData.phone = phone
+      if (address !== undefined) updateData.address = address
+      if (bio !== undefined) updateData.bio = bio
+      if (location !== undefined) updateData.location = location
+      if (website !== undefined) updateData.website = website
+      if (preferences !== undefined) updateData.preferences = preferences
+      if (avatar_url !== undefined) updateData.avatar_url = avatar_url
+
+      // Update profile
+      const { data: profileData, error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update(updateData)
+        .eq('id', decoded.userId)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.error('Profile update error:', updateError)
+        return NextResponse.json({ 
+          error: 'Failed to update profile',
+          details: updateError 
+        }, { status: 500 })
+      }
+
+      updatedProfile = profileData
     }
-    
+
     console.log('Profile update successful:', updatedProfile)
 
     // Also update the auth.users metadata if name changed

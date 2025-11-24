@@ -37,8 +37,9 @@ export function Navigation() {
       try {
         const response = await fetch('/api/site-content/settings')
         const data = await response.json()
-        if (data.settings?.logo_url?.value) {
-          setLogoUrl(data.settings.logo_url.value)
+        const logoValue = data.settings?.logo_url?.value
+        if (logoValue && typeof logoValue === 'string' && logoValue.trim() !== '') {
+          setLogoUrl(logoValue)
         }
       } catch (error) {
         console.error('Error fetching logo:', error)
@@ -82,33 +83,35 @@ export function Navigation() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 group">
               <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 group-hover:border-primary/30 transition-all duration-300">
-                <Image 
-                  src={logoUrl} 
-                  alt="JulieCraft Logo" 
-                  fill
-                  sizes="40px"
-                  className="object-contain p-1.5 group-hover:scale-105 transition-transform duration-300"
-                  priority
-                  onError={(e) => {
-                    // Fallback to default logo if image fails to load
-                    const target = e.target as HTMLImageElement
-                    if (target.src !== '/julie-logo.jpeg') {
-                      target.src = '/julie-logo.jpeg'
-                    } else {
-                      target.style.display = 'none'
-                    }
-                  }}
-                />
+                {logoUrl && (
+                  <Image 
+                    src={logoUrl} 
+                    alt="JulieCraft Logo" 
+                    fill
+                    sizes="40px"
+                    className="object-contain p-1.5 group-hover:scale-105 transition-transform duration-300"
+                    priority
+                    onError={(e) => {
+                      // Fallback to default logo if image fails to load
+                      const target = e.target as HTMLImageElement
+                      if (target.src !== '/julie-logo.jpeg') {
+                        target.src = '/julie-logo.jpeg'
+                      } else {
+                        target.style.display = 'none'
+                      }
+                    }}
+                  />
+                )}
               </div>
               <div className="flex flex-col">
-                <span className="font-bold text-xl text-foreground group-hover:text-primary transition-colors duration-300">Julie Crafts</span>
-                <span className="text-xs text-muted-foreground -mt-1">Handmade Excellence</span>
+                <span className="font-bold text-xl text-white group-hover:text-amber-400 transition-colors duration-300">Julie Crafts</span>
+                <span className="text-xs text-slate-300 -mt-1">Handmade Excellence</span>
               </div>
             </Link>
 
@@ -118,10 +121,10 @@ export function Navigation() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="relative px-4 py-2 text-slate-700 hover:text-primary transition-all duration-200 font-medium rounded-lg hover:bg-slate-50 group"
+                  className="relative px-4 py-2 text-slate-200 hover:text-white transition-all duration-200 font-medium rounded-lg hover:bg-slate-700/50 group"
                 >
                   {item.name}
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-amber-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
                 </Link>
               ))}
             </nav>
@@ -131,7 +134,7 @@ export function Navigation() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="hidden sm:flex h-9 w-9 hover:bg-slate-100 transition-colors"
+                className="hidden sm:flex h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
               >
                 <Search className="h-4 w-4" />
               </Button>
@@ -140,7 +143,7 @@ export function Navigation() {
                 variant="ghost" 
                 size="icon" 
                 onClick={handleChatToggle} 
-                className="hidden sm:flex h-9 w-9 hover:bg-slate-100 transition-colors"
+                className="hidden sm:flex h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
               >
                 <MessageCircle className="h-4 w-4" />
               </Button>
@@ -154,7 +157,7 @@ export function Navigation() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="relative h-9 w-9 hover:bg-slate-100 transition-colors"
+                  className="relative h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
                 >
                   <ShoppingCart className="h-4 w-4" />
                   {isClient && state.itemCount > 0 && (
@@ -175,7 +178,7 @@ export function Navigation() {
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="rounded-full h-9 w-9 hover:bg-slate-100 transition-colors"
+                      className="rounded-full h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
                     >
                       <Avatar className="h-7 w-7">
                         <AvatarImage src={isClient ? profileImage || undefined : undefined} alt={user?.name || 'Profile'} />
@@ -218,7 +221,7 @@ export function Navigation() {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="h-9 px-4 font-medium hover:bg-slate-100 transition-colors"
+                      className="h-9 px-4 font-medium hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
                     >
                       Sign In
                     </Button>
@@ -226,7 +229,7 @@ export function Navigation() {
                   <Link href="/register">
                     <Button 
                       size="sm" 
-                      className="h-9 px-4 font-medium bg-primary hover:bg-primary/90 transition-colors shadow-sm"
+                      className="h-9 px-4 font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm"
                     >
                       Sign Up
                     </Button>
@@ -240,22 +243,22 @@ export function Navigation() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="md:hidden relative p-2 hover:bg-slate-100 transition-colors"
+                    className="md:hidden relative p-2 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
                   >
                     <div className="flex flex-col space-y-1">
-                      <div className="w-5 h-0.5 bg-slate-600 transition-all duration-200"></div>
-                      <div className="w-5 h-0.5 bg-slate-600 transition-all duration-200"></div>
-                      <div className="w-5 h-0.5 bg-slate-600 transition-all duration-200"></div>
+                      <div className="w-5 h-0.5 bg-slate-200 transition-all duration-200"></div>
+                      <div className="w-5 h-0.5 bg-slate-200 transition-all duration-200"></div>
+                      <div className="w-5 h-0.5 bg-slate-200 transition-all duration-200"></div>
                     </div>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[320px] sm:w-[380px] p-0 bg-white border-l border-slate-200">
+                <SheetContent side="right" className="w-[320px] sm:w-[380px] p-0 bg-slate-800 border-l border-slate-700">
                   <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                   <div className="flex flex-col h-full">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-slate-50">
+                    <div className="flex items-center justify-between p-6 border-b border-slate-700 bg-slate-900">
                       <div className="flex items-center space-x-3">
-                        <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-white/10">
+                        <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-amber-500/20 border border-amber-500/30">
                           <Image 
                             src="/julie-logo.jpeg" 
                             alt="JulieCraft Logo" 
@@ -268,13 +271,13 @@ export function Navigation() {
                             }}
                           />
                         </div>
-                        <span className="font-bold text-lg text-slate-900">Julie Crafts</span>
+                        <span className="font-bold text-lg text-white">Julie Crafts</span>
                       </div>
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         onClick={() => setIsOpen(false)}
-                        className="h-8 w-8 hover:bg-slate-200"
+                        className="h-8 w-8 hover:bg-slate-700 text-slate-300 hover:text-white"
                       >
                         <span className="sr-only">Close menu</span>
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -284,23 +287,23 @@ export function Navigation() {
                     </div>
 
                     {/* Navigation Content */}
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto bg-slate-800">
                       <nav className="p-6 space-y-6">
                         {/* Main Navigation */}
                         <div className="space-y-1">
-                          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
                             Navigation
                           </h3>
                           {navItems.map((item) => (
                             <Link
                               key={item.name}
                               href={item.href}
-                              className="flex items-center px-3 py-2.5 text-slate-700 hover:text-primary hover:bg-slate-50 rounded-lg transition-all duration-200 group"
+                              className="flex items-center px-3 py-2.5 text-slate-200 hover:text-amber-400 hover:bg-slate-700/50 rounded-lg transition-all duration-200 group"
                               onClick={() => setIsOpen(false)}
                             >
                               <span className="font-medium text-base">{item.name}</span>
                               <svg 
-                                className="ml-auto h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" 
+                                className="ml-auto h-4 w-4 text-slate-400 group-hover:text-amber-400 transition-colors" 
                                 fill="none" 
                                 viewBox="0 0 24 24" 
                                 stroke="currentColor"
@@ -313,19 +316,19 @@ export function Navigation() {
 
                         {/* Quick Actions */}
                         <div className="space-y-1">
-                          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
                             Quick Actions
                           </h3>
                           <Button 
                             variant="ghost" 
-                            className="w-full justify-start px-3 py-2.5 h-auto text-slate-700 hover:text-primary hover:bg-slate-50"
+                            className="w-full justify-start px-3 py-2.5 h-auto text-slate-200 hover:text-amber-400 hover:bg-slate-700/50"
                           >
                             <Search className="mr-3 h-4 w-4" />
                             <span className="font-medium">Search Products</span>
                           </Button>
                           <Button 
                             variant="ghost" 
-                            className="w-full justify-start px-3 py-2.5 h-auto text-slate-700 hover:text-primary hover:bg-slate-50"
+                            className="w-full justify-start px-3 py-2.5 h-auto text-slate-200 hover:text-amber-400 hover:bg-slate-700/50"
                             onClick={handleChatToggle}
                           >
                             <MessageCircle className="mr-3 h-4 w-4" />
@@ -335,23 +338,23 @@ export function Navigation() {
                         
                         {/* Authentication Section */}
                         <div className="space-y-1">
-                          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
                             Account
                           </h3>
                           {isAuthenticated ? (
                             <div className="space-y-3">
                               {/* User Info */}
-                              <div className="px-3 py-2.5 bg-slate-50 rounded-lg">
+                              <div className="px-3 py-2.5 bg-slate-700/50 rounded-lg border border-slate-600">
                                 <div className="flex items-center space-x-3">
                                   <Avatar className="h-8 w-8">
                                     <AvatarImage src={isClient ? profileImage || undefined : undefined} alt={user?.name || 'Profile'} />
-                                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                    <AvatarFallback className="bg-amber-500 text-white text-xs">
                                       {user?.name ? user.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-slate-900 truncate">{user?.name}</p>
-                                    <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                                    <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+                                    <p className="text-xs text-slate-400 truncate">{user?.email}</p>
                                   </div>
                                 </div>
                               </div>
@@ -360,7 +363,7 @@ export function Navigation() {
                               <Link href="/profile" onClick={() => setIsOpen(false)}>
                                 <Button 
                                   variant="ghost" 
-                                  className="w-full justify-start px-3 py-2.5 h-auto text-slate-700 hover:text-primary hover:bg-slate-50"
+                                  className="w-full justify-start px-3 py-2.5 h-auto text-slate-200 hover:text-amber-400 hover:bg-slate-700/50"
                                 >
                                   <User className="mr-3 h-4 w-4" />
                                   <span className="font-medium">My Profile</span>
@@ -369,7 +372,7 @@ export function Navigation() {
                               <Link href="/profile?tab=orders" onClick={() => setIsOpen(false)}>
                                 <Button 
                                   variant="ghost" 
-                                  className="w-full justify-start px-3 py-2.5 h-auto text-slate-700 hover:text-primary hover:bg-slate-50"
+                                  className="w-full justify-start px-3 py-2.5 h-auto text-slate-200 hover:text-amber-400 hover:bg-slate-700/50"
                                 >
                                   <ShoppingBag className="mr-3 h-4 w-4" />
                                   <span className="font-medium">My Orders</span>
@@ -377,7 +380,7 @@ export function Navigation() {
                               </Link>
                               <Button 
                                 variant="ghost" 
-                                className="w-full justify-start px-3 py-2.5 h-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="w-full justify-start px-3 py-2.5 h-auto text-red-400 hover:text-red-300 hover:bg-red-900/20"
                                 onClick={() => {
                                   logout()
                                   setIsOpen(false)
@@ -392,14 +395,14 @@ export function Navigation() {
                               <Link href="/login" onClick={() => setIsOpen(false)}>
                                 <Button 
                                   variant="outline" 
-                                  className="w-full h-11 border-slate-300 hover:bg-slate-50 font-medium"
+                                  className="w-full h-11 border-slate-600 hover:bg-slate-700/50 text-slate-200 hover:text-white font-medium"
                                 >
                                   Sign In
                                 </Button>
                               </Link>
                               <Link href="/register" onClick={() => setIsOpen(false)}>
                                 <Button 
-                                  className="w-full h-11 bg-primary hover:bg-primary/90 font-medium shadow-sm"
+                                  className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-medium shadow-sm"
                                 >
                                   Create Account
                                 </Button>
@@ -411,9 +414,9 @@ export function Navigation() {
                     </div>
 
                     {/* Footer */}
-                    <div className="p-6 border-t border-slate-200 bg-slate-50">
-                      <p className="text-xs text-slate-500 text-center">
-                        © 2024 Julie's Crafts. All rights reserved.
+                    <div className="p-6 border-t border-slate-700 bg-slate-900">
+                      <p className="text-xs text-slate-400 text-center">
+                        © {new Date().getFullYear()} Julie's Crafts. All rights reserved.
                       </p>
                     </div>
                   </div>

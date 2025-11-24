@@ -21,10 +21,20 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Verify admin authentication
+    // Verify admin authentication - check both header and cookies
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No authorization header found for stats, returning mock data')
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    
+    let token: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieToken) {
+      token = cookieToken
+    }
+    
+    if (!token) {
+      console.log('No authorization token found for stats (header or cookie), returning mock data')
       return NextResponse.json({
         totalCustomers: 5,
         activeCustomers: 5,
@@ -40,8 +50,6 @@ export async function GET(request: NextRequest) {
         message: 'Mock data - no authentication'
       })
     }
-
-    const token = authHeader.substring(7)
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       if (error || !user) {

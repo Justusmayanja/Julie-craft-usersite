@@ -11,13 +11,22 @@ export async function GET(
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    // Verify admin authentication
+    // Verify admin authentication - check both header and cookies
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    
+    let token: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieToken) {
+      token = cookieToken
+    }
+    
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const token = authHeader.substring(7)
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       if (error || !user) {
@@ -51,12 +60,28 @@ export async function GET(
     const totalOrders = orders?.length || 0
     const totalSpent = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
 
+    // Build full name from first_name and last_name
+    const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown'
+    const displayName = fullName !== 'Unknown' ? fullName : (profile.email || 'Unknown')
+    
+    // Get initials for fallback
+    const getInitials = (name: string) => {
+      return name
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    const initials = displayName !== 'Unknown' ? getInitials(displayName) : (profile.email?.charAt(0).toUpperCase() || 'U')
+    
     const customer = {
       id: profile.id,
-      name: profile.full_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown',
+      name: displayName,
       email: profile.email,
-      phone: profile.phone,
-      avatar: profile.full_name?.charAt(0) || profile.email?.charAt(0) || 'U',
+      phone: profile.phone || '',
+      avatar: initials,
+      avatar_url: profile.avatar_url || null,
       address: {
         street: profile.address || '',
         city: profile.city || '',
@@ -65,8 +90,8 @@ export async function GET(
       },
       totalOrders,
       totalSpent,
-      joinDate: profile.created_at,
-      status: 'active',
+      joinDate: profile.created_at || profile.join_date,
+      status: (profile.status || 'active') as 'active' | 'inactive' | 'blocked',
       isVip: totalSpent > 500,
       tags: totalOrders > 3 ? ['Repeat Customer'] : ['New Customer'],
       recentOrders: orders?.slice(0, 5) || []
@@ -90,13 +115,22 @@ export async function PUT(
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    // Verify admin authentication
+    // Verify admin authentication - check both header and cookies
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    
+    let token: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieToken) {
+      token = cookieToken
+    }
+    
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const token = authHeader.substring(7)
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       if (error || !user) {
@@ -109,19 +143,36 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
 
+    // Split name into first and last name if needed
+    const nameParts = (body.name || '').trim().split(' ')
+    const firstName = nameParts[0] || ''
+    const lastName = nameParts.slice(1).join(' ') || ''
+
     // Update customer profile
+    const updateData: any = {
+      first_name: firstName,
+      last_name: lastName,
+      email: body.email,
+      phone: body.phone || null,
+      updated_at: new Date().toISOString()
+    }
+
+    // Add address fields if provided
+    if (body.address) {
+      updateData.address = body.address.street || null
+      updateData.city = body.address.city || null
+      updateData.state = body.address.state || null
+      updateData.zip_code = body.address.zip || null
+    }
+
+    // Add status if provided
+    if (body.status) {
+      updateData.status = body.status
+    }
+
     const { data: updatedProfile, error: updateError } = await supabaseAdmin
       .from('profiles')
-      .update({
-        full_name: body.name,
-        email: body.email,
-        phone: body.phone,
-        address: body.address?.street,
-        city: body.address?.city,
-        state: body.address?.state,
-        zip_code: body.address?.zip,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', id)
       .eq('is_admin', false) // Ensure it's a customer, not admin
       .select()
@@ -136,7 +187,57 @@ export async function PUT(
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
-    return NextResponse.json(updatedProfile)
+    // Get order statistics for the updated customer
+    const { data: orders } = await supabaseAdmin
+      .from('orders')
+      .select('total_amount, created_at')
+      .eq('customer_id', id)
+
+    const totalOrders = orders?.length || 0
+    const totalSpent = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
+    const lastOrderDate = (orders && orders.length > 0)
+      ? orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at
+      : null
+
+    // Build full name from first_name and last_name
+    const fullName = `${updatedProfile.first_name || ''} ${updatedProfile.last_name || ''}`.trim() || 'Unknown'
+    const displayName = fullName !== 'Unknown' ? fullName : (updatedProfile.email || 'Unknown')
+    
+    // Get initials for fallback
+    const getInitials = (name: string) => {
+      return name
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    const initials = displayName !== 'Unknown' ? getInitials(displayName) : (updatedProfile.email?.charAt(0).toUpperCase() || 'U')
+    
+    // Return customer in the expected format
+    const customer = {
+      id: updatedProfile.id,
+      name: displayName,
+      email: updatedProfile.email,
+      phone: updatedProfile.phone || '',
+      avatar: initials,
+      avatar_url: updatedProfile.avatar_url || null,
+      address: {
+        street: updatedProfile.address || '',
+        city: updatedProfile.city || '',
+        state: updatedProfile.state || '',
+        zip: updatedProfile.zip_code || ''
+      },
+      totalOrders,
+      totalSpent,
+      lastOrderDate,
+      joinDate: updatedProfile.created_at || updatedProfile.join_date,
+      status: (updatedProfile.status || 'active') as 'active' | 'inactive' | 'blocked',
+      isVip: totalSpent > 500,
+      tags: totalOrders > 3 ? ['Repeat Customer'] : ['New Customer']
+    }
+
+    return NextResponse.json(customer)
 
   } catch (error) {
     console.error('API error:', error)
@@ -154,13 +255,22 @@ export async function DELETE(
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    // Verify admin authentication
+    // Verify admin authentication - check both header and cookies
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    
+    let token: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieToken) {
+      token = cookieToken
+    }
+    
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const token = authHeader.substring(7)
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       if (error || !user) {
