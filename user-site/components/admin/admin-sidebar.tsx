@@ -175,7 +175,7 @@ const navigationSections: NavigationSection[] = [
           },
           {
             name: "Users & Permissions",
-            href: "/admin/settings/users",
+            href: "/admin/settings/settings/users",
             icon: Users,
           },
           {

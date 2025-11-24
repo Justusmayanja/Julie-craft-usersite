@@ -233,40 +233,41 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           {statCards.map((stat, index) => {
             const Icon = stat.icon
             return (
               <Link key={index} href={stat.link || "#"} className="block">
-                <Card className="group relative overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-white">
+                <Card className="group relative overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-white h-full">
                   {/* Gradient Background */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
                   
-                  <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
-                    <CardTitle className="text-xs sm:text-sm font-semibold text-gray-700 group-hover:text-gray-900 transition-colors">
+                  <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-1.5 sm:pb-2 px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 lg:pt-6">
+                    <CardTitle className="text-[10px] xs:text-xs sm:text-sm font-semibold text-gray-700 group-hover:text-gray-900 transition-colors leading-tight">
                       {stat.title}
                     </CardTitle>
-                    <div className={`${stat.iconBg} p-2 rounded-lg group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.iconColor}`} />
+                    <div className={`${stat.iconBg} p-1.5 sm:p-2 rounded-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}>
+                      <Icon className={`h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 ${stat.iconColor}`} />
                     </div>
                   </CardHeader>
-                  <CardContent className="relative px-4 sm:px-6 pb-4 sm:pb-6">
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <div className={`text-2xl sm:text-3xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}>
+                  <CardContent className="relative px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 lg:pb-6">
+                    <div className="flex items-baseline gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                      <div className={`text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent leading-tight`}>
                         {stat.value}
                       </div>
                       {stat.alert && (
-                        <Badge variant="destructive" className="text-xs animate-pulse">
+                        <Badge variant="destructive" className="text-[10px] px-1 py-0 animate-pulse flex-shrink-0">
                           Alert
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-[10px] xs:text-xs text-gray-500 mt-0.5 sm:mt-1 leading-tight">
                       {stat.description}
                     </p>
-                    <div className="mt-3 flex items-center text-xs font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
-                      View details
-                      <ArrowRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                    <div className="mt-2 sm:mt-3 flex items-center text-[10px] xs:text-xs font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
+                      <span className="hidden sm:inline">View details</span>
+                      <span className="sm:hidden">View</span>
+                      <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 ml-0.5 sm:ml-1 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </CardContent>
                 </Card>
@@ -276,31 +277,32 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions & Alerts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
           {/* Pending Orders Alert */}
           {stats.pendingOrders > 0 && (
             <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100/30 shadow-md">
-              <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg sm:text-xl text-orange-900 flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-orange-600" />
-                      Pending Orders
+              <CardHeader className="px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 lg:pt-6 pb-2.5 sm:pb-3 lg:pb-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-sm sm:text-lg lg:text-xl text-orange-900 flex items-center gap-1.5 sm:gap-2">
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 flex-shrink-0" />
+                      <span className="truncate">Pending Orders</span>
                     </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm text-orange-700 mt-1">
-                      {stats.pendingOrders} order{stats.pendingOrders !== 1 ? 's' : ''} need{stats.pendingOrders === 1 ? 's' : ''} your attention
+                    <CardDescription className="text-[10px] xs:text-xs sm:text-sm text-orange-700 mt-0.5 sm:mt-1">
+                      {stats.pendingOrders} order{stats.pendingOrders !== 1 ? 's' : ''} need{stats.pendingOrders === 1 ? 's' : ''} attention
                     </CardDescription>
                   </div>
-                  <Badge className="bg-orange-600 text-white text-sm px-3 py-1">
+                  <Badge className="bg-orange-600 text-white text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 flex-shrink-0">
                     {stats.pendingOrders}
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-                <Button asChild className="w-full bg-orange-600 hover:bg-orange-700 text-white">
-                  <Link href="/admin/orders?status=pending">
-                    View Pending Orders
-                    <ArrowRight className="h-4 w-4 ml-2" />
+              <CardContent className="px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 lg:pb-6">
+                <Button asChild className="w-full bg-orange-600 hover:bg-orange-700 text-white text-xs sm:text-sm h-8 sm:h-10">
+                  <Link href="/admin/orders?status=pending" className="flex items-center justify-center">
+                    <span className="hidden sm:inline">View Pending Orders</span>
+                    <span className="sm:hidden">View Orders</span>
+                    <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1.5 sm:ml-2" />
                   </Link>
                 </Button>
               </CardContent>
@@ -310,27 +312,28 @@ export default function AdminDashboard() {
           {/* Low Stock Alert */}
           {stats.lowStockProducts > 0 && (
             <Card className="border-red-200 bg-gradient-to-br from-red-50 to-red-100/30 shadow-md">
-              <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg sm:text-xl text-red-900 flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-red-600" />
-                      Low Stock Alert
+              <CardHeader className="px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 lg:pt-6 pb-2.5 sm:pb-3 lg:pb-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-sm sm:text-lg lg:text-xl text-red-900 flex items-center gap-1.5 sm:gap-2">
+                      <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 flex-shrink-0" />
+                      <span className="truncate">Low Stock Alert</span>
                     </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm text-red-700 mt-1">
+                    <CardDescription className="text-[10px] xs:text-xs sm:text-sm text-red-700 mt-0.5 sm:mt-1">
                       {stats.lowStockProducts} product{stats.lowStockProducts !== 1 ? 's' : ''} need{stats.lowStockProducts === 1 ? 's' : ''} restocking
                     </CardDescription>
                   </div>
-                  <Badge className="bg-red-600 text-white text-sm px-3 py-1">
+                  <Badge className="bg-red-600 text-white text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 flex-shrink-0">
                     {stats.lowStockProducts}
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-                <Button asChild variant="destructive" className="w-full">
-                  <Link href="/admin/products?filter=low_stock">
-                    View Low Stock Items
-                    <ArrowRight className="h-4 w-4 ml-2" />
+              <CardContent className="px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 lg:pb-6">
+                <Button asChild variant="destructive" className="w-full text-xs sm:text-sm h-8 sm:h-10">
+                  <Link href="/admin/products?filter=low_stock" className="flex items-center justify-center">
+                    <span className="hidden sm:inline">View Low Stock Items</span>
+                    <span className="sm:hidden">View Items</span>
+                    <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1.5 sm:ml-2" />
                   </Link>
                 </Button>
               </CardContent>
@@ -340,16 +343,16 @@ export default function AdminDashboard() {
           {/* All Good Status */}
           {stats.pendingOrders === 0 && stats.lowStockProducts === 0 && (
             <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/30 shadow-md lg:col-span-2">
-              <CardContent className="px-4 sm:px-6 py-6 sm:py-8">
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-left">
-                  <div className="bg-emerald-100 p-4 rounded-full">
-                    <CheckCircle2 className="h-8 w-8 sm:h-10 sm:w-10 text-emerald-600" />
+              <CardContent className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-center sm:text-left">
+                  <div className="bg-emerald-100 p-3 sm:p-4 rounded-full flex-shrink-0">
+                    <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-emerald-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg sm:text-xl font-semibold text-emerald-900 mb-1">
+                    <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-emerald-900 mb-0.5 sm:mb-1">
                       All Systems Operational
                     </h3>
-                    <p className="text-sm sm:text-base text-emerald-700">
+                    <p className="text-xs sm:text-sm lg:text-base text-emerald-700">
                       No pending orders or low stock items. Everything is running smoothly!
                     </p>
                   </div>
@@ -361,34 +364,34 @@ export default function AdminDashboard() {
 
         {/* Quick Actions */}
         <Card className="border-0 shadow-md bg-white">
-          <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
-            <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Common tasks and shortcuts</CardDescription>
+          <CardHeader className="px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 lg:pt-6 pb-2.5 sm:pb-3 lg:pb-4">
+            <CardTitle className="text-base sm:text-lg lg:text-xl">Quick Actions</CardTitle>
+            <CardDescription className="text-[10px] xs:text-xs sm:text-sm">Common tasks and shortcuts</CardDescription>
           </CardHeader>
-          <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-              <Button asChild variant="outline" className="flex flex-col h-auto py-4 sm:py-6 hover:bg-blue-50 hover:border-blue-300 transition-colors">
-                <Link href="/admin/products/new" className="flex flex-col items-center gap-2">
-                  <Plus className="h-5 w-5 text-blue-600" />
-                  <span className="text-xs sm:text-sm font-medium">Add Product</span>
+          <CardContent className="px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 lg:pb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+              <Button asChild variant="outline" className="flex flex-col h-auto py-3 sm:py-4 lg:py-6 hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                <Link href="/admin/products/new" className="flex flex-col items-center gap-1.5 sm:gap-2">
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  <span className="text-[10px] xs:text-xs sm:text-sm font-medium text-center">Add Product</span>
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="flex flex-col h-auto py-4 sm:py-6 hover:bg-green-50 hover:border-green-300 transition-colors">
-                <Link href="/admin/orders" className="flex flex-col items-center gap-2">
-                  <Eye className="h-5 w-5 text-green-600" />
-                  <span className="text-xs sm:text-sm font-medium">View Orders</span>
+              <Button asChild variant="outline" className="flex flex-col h-auto py-3 sm:py-4 lg:py-6 hover:bg-green-50 hover:border-green-300 transition-colors">
+                <Link href="/admin/orders" className="flex flex-col items-center gap-1.5 sm:gap-2">
+                  <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                  <span className="text-[10px] xs:text-xs sm:text-sm font-medium text-center">View Orders</span>
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="flex flex-col h-auto py-4 sm:py-6 hover:bg-purple-50 hover:border-purple-300 transition-colors">
-                <Link href="/admin/customers" className="flex flex-col items-center gap-2">
-                  <Users className="h-5 w-5 text-purple-600" />
-                  <span className="text-xs sm:text-sm font-medium">Customers</span>
+              <Button asChild variant="outline" className="flex flex-col h-auto py-3 sm:py-4 lg:py-6 hover:bg-purple-50 hover:border-purple-300 transition-colors">
+                <Link href="/admin/customers" className="flex flex-col items-center gap-1.5 sm:gap-2">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                  <span className="text-[10px] xs:text-xs sm:text-sm font-medium text-center">Customers</span>
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="flex flex-col h-auto py-4 sm:py-6 hover:bg-amber-50 hover:border-amber-300 transition-colors">
-                <Link href="/admin/analytics" className="flex flex-col items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-amber-600" />
-                  <span className="text-xs sm:text-sm font-medium">Analytics</span>
+              <Button asChild variant="outline" className="flex flex-col h-auto py-3 sm:py-4 lg:py-6 hover:bg-amber-50 hover:border-amber-300 transition-colors">
+                <Link href="/admin/analytics" className="flex flex-col items-center gap-1.5 sm:gap-2">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
+                  <span className="text-[10px] xs:text-xs sm:text-sm font-medium text-center">Analytics</span>
                 </Link>
               </Button>
             </div>
