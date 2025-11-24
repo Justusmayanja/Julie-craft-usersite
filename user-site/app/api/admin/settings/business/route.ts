@@ -8,13 +8,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    // Verify admin authentication
+    // Verify admin authentication - check both header and cookies
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    
+    let token: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieToken) {
+      token = cookieToken
+    }
+    
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const token = authHeader.substring(7)
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       if (error || !user) {
@@ -73,13 +81,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    // Verify admin authentication
+    // Verify admin authentication - check both header and cookies
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    
+    let token: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieToken) {
+      token = cookieToken
+    }
+    
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const token = authHeader.substring(7)
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       if (error || !user) {

@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS site_settings (
         'contact',
         'seo',
         'appearance',
+        'business',
         'custom'
     )),
     description TEXT,
@@ -119,27 +120,32 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Triggers for updated_at
+-- Triggers for updated_at (drop if exists to allow re-running)
+DROP TRIGGER IF EXISTS update_site_pages_updated_at ON site_pages;
 CREATE TRIGGER update_site_pages_updated_at
     BEFORE UPDATE ON site_pages
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_homepage_sections_updated_at ON homepage_sections;
 CREATE TRIGGER update_homepage_sections_updated_at
     BEFORE UPDATE ON homepage_sections
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_site_settings_updated_at ON site_settings;
 CREATE TRIGGER update_site_settings_updated_at
     BEFORE UPDATE ON site_settings
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_footer_content_updated_at ON footer_content;
 CREATE TRIGGER update_footer_content_updated_at
     BEFORE UPDATE ON footer_content
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_navigation_items_updated_at ON navigation_items;
 CREATE TRIGGER update_navigation_items_updated_at
     BEFORE UPDATE ON navigation_items
     FOR EACH ROW
