@@ -75,7 +75,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<User | null>
-  register: (email: string, password: string, name: string, phone?: string) => Promise<void>
+  register: (email: string, password: string, name: string, phone?: string) => Promise<{ requiresVerification?: boolean; emailSent?: boolean; user?: any } | void>
   logout: () => Promise<void>
   clearError: () => void
   updateUser: (userData: Partial<User>) => void
@@ -253,7 +253,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Registration response:', { ok: response.ok, data })
 
       if (response.ok) {
-        // Store session data in localStorage
+        // Check if email verification is required
+        if (data.requiresVerification) {
+          // Don't authenticate user yet - they need to verify email
+          dispatch({ type: "AUTH_FAILURE", payload: '' }) // Clear any errors
+          // Return special flag to indicate verification needed
+          return { requiresVerification: true, emailSent: data.emailSent, user: data.user }
+        }
+
+        // Store session data in localStorage (if verification not required)
         const token = data.session?.access_token || data.token
         if (token) {
           localStorage.setItem('julie-crafts-token', token)

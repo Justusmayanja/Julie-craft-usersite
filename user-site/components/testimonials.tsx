@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Star } from "lucide-react"
 const testimonials = [
   {
     id: 1,
-    name: "Sarah Johnson",
+    name: "Sarah Nakimuli",
     role: "Verified Customer",
     content: "Absolutely beautiful products! The quality is exceptional and the craftsmanship is outstanding. I've been a customer for over a year and every purchase exceeds my expectations.",
     rating: 5,

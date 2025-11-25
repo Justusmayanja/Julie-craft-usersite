@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { sendVerificationEmail } from '@/lib/email-service'
+import { randomBytes } from 'crypto'
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,11 +36,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Create user using Supabase Auth
+    // Create user using Supabase Auth (email not confirmed yet)
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email: email.toLowerCase(),
       password: password,
-      email_confirm: true, // Auto-confirm email for now
+      email_confirm: false, // Require email verification
       user_metadata: {
         full_name: full_name,
         phone: phone || null
@@ -58,128 +60,145 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Ensure profile exists - create it if the trigger didn't fire
+    // Ensure profile exists and has correct data
     // Split full_name into first_name and last_name
     const nameParts = full_name.trim().split(' ')
     const firstName = nameParts[0] || ''
     const lastName = nameParts.slice(1).join(' ') || ''
 
-    // Check if profile exists, if not create it
-    const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
+    // Wait a brief moment to allow database trigger to complete (if it exists)
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    // Prepare profile data
+    const profileData = {
+      id: data.user.id,
+      email: data.user.email,
+      first_name: firstName,
+      last_name: lastName,
+      phone: phone || null,
+      is_admin: false,
+      is_verified: false, // Email not verified yet
+      updated_at: new Date().toISOString(),
+      preferences: {
+        sms: false,
+        push: true,
+        email: true,
+        marketing: true
+      },
+      role: 'customer',
+      total_orders: 0,
+      total_spent: 0,
+      status: 'active'
+    }
+
+    // Try to update profile first (handles case where trigger created it)
+    const { data: updateData, error: updateError } = await supabaseAdmin
       .from('profiles')
-      .select('id')
+      .update(profileData)
       .eq('id', data.user.id)
-      .single()
+      .select()
 
-    if (profileCheckError || !existingProfile) {
-      // Profile doesn't exist, create it explicitly
-      const { error: profileCreateError } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          email: data.user.email,
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone || null,
-          is_admin: false,
-          is_verified: true, // Since email_confirm: true
-          created_at: data.user.created_at,
-          updated_at: data.user.created_at,
-          preferences: {
-            sms: false,
-            push: true,
-            email: true,
-            marketing: true
-          },
-          role: 'customer',
-          total_orders: 0,
-          total_spent: 0,
-          join_date: data.user.created_at,
-          status: 'active'
-        })
+    // If update didn't affect any rows or failed, try to insert
+    const profileExists = !updateError && updateData && updateData.length > 0
 
-      if (profileCreateError) {
-        console.error('Error creating profile:', profileCreateError)
-        // Continue anyway - profile might have been created by trigger
+    if (!profileExists) {
+      console.log('Profile does not exist or update failed, attempting insert...')
+      
+      // Add fields required for insert
+      const insertData = {
+        ...profileData,
+        created_at: data.user.created_at,
+        join_date: data.user.created_at
       }
-    } else {
-      // Profile exists, update it with registration data
-      const { error: profileUpdateError } = await supabaseAdmin
+
+      const { error: insertError } = await supabaseAdmin
         .from('profiles')
-        .update({
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone || null,
-          email: data.user.email,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', data.user.id)
+        .insert(insertData)
 
-      if (profileUpdateError) {
-        console.error('Error updating profile:', profileUpdateError)
-      }
-    }
+      if (insertError) {
+        // If insert fails with duplicate key, profile exists (created by trigger after our check)
+        // This is expected - just ensure data is updated
+        if (insertError.code === '23505' || 
+            insertError.message?.includes('duplicate key') || 
+            insertError.message?.includes('unique constraint') ||
+            insertError.message?.includes('profiles_pkey')) {
+          console.log('Profile already exists (created by trigger), ensuring data is updated...')
+          
+          // Final update attempt to ensure all data is correct
+          const { error: finalUpdateError } = await supabaseAdmin
+            .from('profiles')
+            .update({
+              first_name: firstName,
+              last_name: lastName,
+              phone: phone || null,
+              email: data.user.email,
+              is_verified: false,
+              updated_at: new Date().toISOString(),
+              preferences: profileData.preferences,
+              role: profileData.role,
+              status: profileData.status
+            })
+            .eq('id', data.user.id)
 
-    // Get the created user with profile data
-    const { data: userWithProfile, error: profileError } = await supabaseAdmin
-      .rpc('get_user_with_profile', { user_uuid: data.user.id })
-
-    if (profileError) {
-      console.error('Error fetching user profile:', profileError)
-    }
-
-    // Create session for the user by signing them in
-    // Use a regular client instance to sign in (admin client doesn't support user auth)
-    let session = null
-    let token = null
-
-    try {
-      // Create a new client instance for this request using anon key
-      const { createClient } = await import('@supabase/supabase-js')
-      const serverClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false
+          if (finalUpdateError) {
+            console.error('Error updating existing profile:', finalUpdateError)
           }
+        } else {
+          console.error('Error creating profile:', insertError)
+          // Don't fail registration - user can still verify email and login
+          // The trigger might create the profile later
         }
-      )
+      }
+    }
 
-      const { data: signInData, error: signInError } = await serverClient.auth.signInWithPassword({
+    // Generate verification token
+    const verificationToken = randomBytes(32).toString('hex')
+    const expiresAt = new Date()
+    expiresAt.setHours(expiresAt.getHours() + 24) // Token expires in 24 hours
+
+    // Store verification token in database
+    const { error: tokenError } = await supabaseAdmin
+      .from('email_verification_tokens')
+      .insert({
+        user_id: data.user.id,
         email: email.toLowerCase(),
-        password: password
+        token: verificationToken,
+        expires_at: expiresAt.toISOString()
       })
 
-      if (signInError) {
-        console.error('Error signing in user after registration:', signInError)
-        // Continue without session - user can sign in manually
-      } else if (signInData.session) {
-        session = signInData.session
-        token = signInData.session.access_token
-      }
-    } catch (sessionError) {
-      console.error('Error creating session after registration:', sessionError)
-      // Continue without session - user can sign in manually
+    if (tokenError) {
+      console.error('Error storing verification token:', tokenError)
+      // Continue - we'll still try to send the email
+    }
+
+    // Send verification email
+    const emailSent = await sendVerificationEmail(
+      email.toLowerCase(),
+      full_name,
+      verificationToken
+    )
+
+    if (!emailSent) {
+      console.warn('Failed to send verification email, but user was created')
+      // Don't fail registration if email fails - user can request resend
     }
 
     // Prepare user data for response
-    const responseUser = userWithProfile?.[0] || {
+    const responseUser = {
       id: data.user.id,
       email: data.user.email,
       full_name: full_name,
       phone: phone || null,
-      is_verified: true,
+      is_verified: false,
       created_at: data.user.created_at,
       updated_at: data.user.updated_at
     }
 
     return NextResponse.json({
-      message: 'Account created successfully',
+      message: 'Account created successfully. Please check your email to verify your account.',
       user: responseUser,
-      session: session,
-      token: token
+      requiresVerification: true,
+      emailSent: emailSent
     }, { status: 201 })
 
   } catch (error) {

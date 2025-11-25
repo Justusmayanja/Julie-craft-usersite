@@ -207,54 +207,141 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Create profile
-    const { data: profileData, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        id: authData.user.id,
-        email: email.toLowerCase(),
-        first_name: firstName,
-        last_name: lastName,
-        phone: phone || null,
-        role: role,
-        is_admin: shouldBeAdmin,
-        is_verified: true,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        join_date: new Date().toISOString()
-      })
-      .select()
-      .single()
+    // Ensure profile exists and has correct data
+    // Wait a brief moment to allow database trigger to complete (if it exists)
+    await new Promise(resolve => setTimeout(resolve, 300))
 
-    if (profileError) {
-      console.error('Profile creation error:', profileError)
-      // Try to clean up the auth user if profile creation fails
-      try {
-        await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-      } catch (deleteError) {
-        console.error('Failed to clean up auth user:', deleteError)
+    // Prepare profile data
+    const profileData = {
+      id: authData.user.id,
+      email: email.toLowerCase(),
+      first_name: firstName,
+      last_name: lastName,
+      phone: phone || null,
+      role: role,
+      is_admin: shouldBeAdmin,
+      is_verified: true,
+      status: 'active',
+      updated_at: new Date().toISOString(),
+      preferences: {
+        sms: false,
+        push: true,
+        email: true,
+        marketing: true
+      },
+      total_orders: 0,
+      total_spent: 0
+    }
+
+    // Try to update profile first (handles case where trigger created it)
+    const { data: updateData, error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update(profileData)
+      .eq('id', authData.user.id)
+      .select()
+
+    // If update didn't affect any rows or failed, try to insert
+    const profileExists = !updateError && updateData && updateData.length > 0
+
+    let profileDataFinal: any = null
+
+    if (!profileExists) {
+      console.log('Profile does not exist or update failed, attempting insert...')
+      
+      // Add fields required for insert
+      const insertData = {
+        ...profileData,
+        created_at: authData.user.created_at,
+        join_date: authData.user.created_at
       }
+
+      const { data: insertResult, error: insertError } = await supabaseAdmin
+        .from('profiles')
+        .insert(insertData)
+        .select()
+        .single()
+
+      if (insertError) {
+        // If insert fails with duplicate key, profile exists (created by trigger after our check)
+        if (insertError.code === '23505' || 
+            insertError.message?.includes('duplicate key') || 
+            insertError.message?.includes('unique constraint') ||
+            insertError.message?.includes('profiles_pkey')) {
+          console.log('Profile already exists (created by trigger), ensuring data is updated...')
+          
+          // Final update attempt to ensure all data is correct
+          const { data: finalUpdateData, error: finalUpdateError } = await supabaseAdmin
+            .from('profiles')
+            .update({
+              first_name: firstName,
+              last_name: lastName,
+              phone: phone || null,
+              email: email.toLowerCase(),
+              role: role,
+              is_admin: shouldBeAdmin,
+              is_verified: true,
+              status: 'active',
+              updated_at: new Date().toISOString(),
+              preferences: profileData.preferences
+            })
+            .eq('id', authData.user.id)
+            .select()
+            .single()
+
+          if (finalUpdateError) {
+            console.error('Error updating existing profile:', finalUpdateError)
+            // Try to clean up the auth user if profile update fails
+            try {
+              await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+            } catch (deleteError) {
+              console.error('Failed to clean up auth user:', deleteError)
+            }
+            return NextResponse.json({ 
+              error: 'Failed to create user profile',
+              details: finalUpdateError.message 
+            }, { status: 500 })
+          }
+          profileDataFinal = finalUpdateData
+        } else {
+          console.error('Error creating profile:', insertError)
+          // Try to clean up the auth user if profile creation fails
+          try {
+            await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+          } catch (deleteError) {
+            console.error('Failed to clean up auth user:', deleteError)
+          }
+          return NextResponse.json({ 
+            error: 'Failed to create user profile',
+            details: insertError.message 
+          }, { status: 500 })
+        }
+      } else {
+        profileDataFinal = insertResult
+      }
+    } else {
+      profileDataFinal = updateData[0]
+    }
+
+    if (!profileDataFinal) {
       return NextResponse.json({ 
-        error: 'Failed to create user profile',
-        details: profileError.message 
+        error: 'Failed to retrieve created profile' 
       }, { status: 500 })
     }
 
     return NextResponse.json({
       message: 'User created successfully',
       user: {
-        id: profileData.id,
-        email: profileData.email,
-        name: `${profileData.first_name} ${profileData.last_name}`.trim(),
-        firstName: profileData.first_name,
-        lastName: profileData.last_name,
-        phone: profileData.phone,
-        role: profileData.role,
-        isAdmin: profileData.is_admin,
-        isVerified: profileData.is_verified,
-        status: profileData.status,
-        createdAt: profileData.created_at
+        id: profileDataFinal.id,
+        email: profileDataFinal.email,
+        name: `${profileDataFinal.first_name} ${profileDataFinal.last_name}`.trim(),
+        firstName: profileDataFinal.first_name,
+        lastName: profileDataFinal.last_name,
+        phone: profileDataFinal.phone,
+        role: profileDataFinal.role,
+        isAdmin: profileDataFinal.is_admin,
+        isVerified: profileDataFinal.is_verified,
+        status: profileDataFinal.status,
+        createdAt: profileDataFinal.created_at
       }
     }, { status: 201 })
 

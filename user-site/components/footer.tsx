@@ -119,7 +119,7 @@ export function Footer() {
                   href="tel:+256700123456" 
                   className="text-sm sm:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium"
                 >
-                  +256 700 123 456
+                  +256 777796529/+256 57020034
                 </a>
               </div>
               <div className="flex items-center space-x-3">
@@ -132,7 +132,7 @@ export function Footer() {
                   href="mailto:hello@juliecrafts.ug" 
                   className="text-sm sm:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium break-all"
                 >
-                  hello@juliecrafts.ug
+                  kingsjuliet90@gmail.com
                 </a>
               </div>
               <div className="flex space-x-3 pt-2">
