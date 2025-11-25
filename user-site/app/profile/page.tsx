@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { User, Mail, Phone, Calendar, MapPin, ShoppingBag, Package, CreditCard, Edit, Save, X } from "lucide-react"
+import { User, Mail, Phone, Calendar, MapPin, ShoppingBag, Package, CreditCard, Edit, Save, X, Trash2, AlertTriangle } from "lucide-react"
 import { useToast } from "@/contexts/toast-context"
 
 interface UserProfile {
@@ -28,13 +28,15 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading, logout } = useAuth()
   const router = useRouter()
   const toast = useToast()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [editForm, setEditForm] = useState({
     name: '',
     phone: '',
@@ -214,6 +216,50 @@ export default function ProfilePage() {
       ...prev,
       [name]: value
     }))
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return
+
+    setIsDeleting(true)
+
+    try {
+      const token = localStorage.getItem('julie-crafts-token')
+      if (!token) {
+        toast.showError('Authentication Required', 'Please log in again to delete your account.')
+        return
+      }
+
+      const response = await fetch('/api/users/account', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete account')
+      }
+
+      // Show success message
+      toast.showSuccess('Account Deleted', 'Your account has been successfully deleted.')
+
+      // Wait a moment for the toast to show, then logout and redirect
+      setTimeout(async () => {
+        await logout()
+        router.push('/')
+      }, 1500)
+
+    } catch (error) {
+      console.error('Error deleting account:', error)
+      toast.showError(
+        'Delete Failed', 
+        error instanceof Error ? error.message : 'Failed to delete account. Please try again.'
+      )
+      setIsDeleting(false)
+    }
   }
 
   if (isLoading || loading) {
@@ -418,6 +464,14 @@ export default function ProfilePage() {
                 <Button variant="outline" className="w-full">
                   Privacy Settings
                 </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Account
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -550,6 +604,79 @@ export default function ProfilePage() {
                 <>
                   <Save className="w-4 h-4 mr-2" />
                   Save Changes
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Account Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <DialogTitle className="text-2xl text-red-600">Delete Account</DialogTitle>
+            </div>
+            <DialogDescription className="text-base pt-2">
+              This action cannot be undone. Are you sure you want to permanently delete your account?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-semibold text-red-900">What will be deleted:</p>
+              <ul className="text-sm text-red-800 space-y-2 list-disc list-inside">
+                <li>Your profile information and personal data</li>
+                <li>Your account credentials and login access</li>
+                <li>All associated account settings and preferences</li>
+              </ul>
+            </div>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-sm text-amber-900">
+                <strong className="font-semibold">Note:</strong> Your order history may be retained for business records, 
+                but your personal information will be removed.
+              </p>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-slate-700">
+                <strong className="font-semibold text-slate-900">Warning:</strong> This action is permanent. 
+                You will not be able to recover your account or access any of your data after deletion.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
+              className="flex-1 sm:flex-initial"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              className="flex-1 sm:flex-initial bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete My Account
                 </>
               )}
             </Button>

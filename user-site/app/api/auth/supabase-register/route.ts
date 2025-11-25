@@ -151,31 +151,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate verification token
-    const verificationToken = randomBytes(32).toString('hex')
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
     const expiresAt = new Date()
-    expiresAt.setHours(expiresAt.getHours() + 24) // Token expires in 24 hours
+    expiresAt.setHours(expiresAt.getHours() + 24) // Code expires in 24 hours
 
-    // Store verification token in database
+    // Store verification code in database
     const { error: tokenError } = await supabaseAdmin
       .from('email_verification_tokens')
       .insert({
         user_id: data.user.id,
         email: email.toLowerCase(),
-        token: verificationToken,
+        token: verificationCode, // Store code in token field
         expires_at: expiresAt.toISOString()
       })
 
     if (tokenError) {
-      console.error('Error storing verification token:', tokenError)
+      console.error('Error storing verification code:', tokenError)
       // Continue - we'll still try to send the email
     }
 
-    // Send verification email
+    // Send verification email with code
     const emailSent = await sendVerificationEmail(
       email.toLowerCase(),
       full_name,
-      verificationToken
+      verificationCode
     )
 
     if (!emailSent) {

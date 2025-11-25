@@ -5,12 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, CheckCircle, XCircle, Mail, ArrowLeft, RefreshCw } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, Mail, ArrowLeft, RefreshCw, KeyRound } from 'lucide-react'
 
 function VerifyEmailContent() {
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [code, setCode] = useState<string>('')
+  const [email, setEmail] = useState<string>('')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState<string>('')
   const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
   const searchParams = useSearchParams()
@@ -29,42 +33,75 @@ function VerifyEmailContent() {
       }
     }
     fetchLogo()
-  }, [])
 
-  useEffect(() => {
-    const verifyEmail = async () => {
-      const token = searchParams.get('token')
-
-      if (!token) {
-        setStatus('error')
-        setMessage('No verification token provided. Please check your email for the verification link.')
-        return
-      }
-
-      try {
-        const response = await fetch(`/api/auth/verify-email?token=${token}`)
-        const data = await response.json()
-
-        if (response.ok) {
-          setStatus('success')
-          setMessage(data.message || 'Your email has been verified successfully!')
-        } else {
-          setStatus('error')
-          setMessage(data.error || 'Failed to verify email. The link may have expired or is invalid.')
-        }
-      } catch (error) {
-        console.error('Verification error:', error)
-        setStatus('error')
-        setMessage('An error occurred while verifying your email. Please try again.')
-      }
+    // Pre-fill email from URL if provided
+    const emailParam = searchParams.get('email')
+    if (emailParam) {
+      setEmail(emailParam)
     }
-
-    verifyEmail()
   }, [searchParams])
 
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6) // Only digits, max 6
+    setCode(value)
+    if (status === 'error') {
+      setStatus('idle')
+      setMessage('')
+    }
+  }
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value)
+    if (status === 'error') {
+      setStatus('idle')
+      setMessage('')
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!code || code.length !== 6) {
+      setStatus('error')
+      setMessage('Please enter a valid 6-digit verification code')
+      return
+    }
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setStatus('error')
+      setMessage('Please enter a valid email address')
+      return
+    }
+
+    setStatus('loading')
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code, email: email.toLowerCase() }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setStatus('success')
+        setMessage(data.message || 'Your email has been verified successfully!')
+      } else {
+        setStatus('error')
+        setMessage(data.error || 'Failed to verify email. The code may be incorrect or expired.')
+      }
+    } catch (error) {
+      console.error('Verification error:', error)
+      setStatus('error')
+      setMessage('An error occurred while verifying your email. Please try again.')
+    }
+  }
+
   const handleResendEmail = async () => {
-    // This would require the user's email, which we don't have on this page
-    // We could redirect to a resend page or show a form
     router.push('/resend-verification')
   }
 
@@ -107,10 +144,10 @@ function VerifyEmailContent() {
               </div>
               <div className="flex flex-col items-start">
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
-                  Email Verification
+                  Verify Your Email
                 </h1>
                 <p className="text-sm sm:text-base text-slate-600 mt-1 leading-relaxed">
-                  Verifying your email address
+                  Enter the code sent to your email
                 </p>
               </div>
             </div>
@@ -123,28 +160,18 @@ function VerifyEmailContent() {
           
           <CardHeader className="space-y-2 pb-6 pt-8 px-6 sm:px-8">
             <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-900">
-              {status === 'loading' && 'Verifying...'}
-              {status === 'success' && 'Email Verified!'}
-              {status === 'error' && 'Verification Failed'}
+              {status === 'success' ? 'Email Verified!' : 'Enter Verification Code'}
             </CardTitle>
             <CardDescription className="text-center text-slate-600 text-sm sm:text-base">
-              {status === 'loading' && 'Please wait while we verify your email address'}
-              {status === 'success' && 'Your email has been successfully verified'}
-              {status === 'error' && 'We couldn\'t verify your email address'}
+              {status === 'success' 
+                ? 'Your email has been successfully verified'
+                : 'Check your email for the 6-digit verification code'}
             </CardDescription>
           </CardHeader>
           
           <CardContent className="space-y-6 px-6 sm:px-8 pb-8">
-            {/* Loading State */}
-            {status === 'loading' && (
-              <div className="flex flex-col items-center justify-center py-8">
-                <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
-                <p className="text-slate-600 text-center">Verifying your email address...</p>
-              </div>
-            )}
-
             {/* Success State */}
-            {status === 'success' && (
+            {status === 'success' ? (
               <div className="space-y-6">
                 <div className="flex flex-col items-center justify-center py-4">
                   <div className="relative">
@@ -179,37 +206,104 @@ function VerifyEmailContent() {
                   </Link>
                 </div>
               </div>
-            )}
-
-            {/* Error State */}
-            {status === 'error' && (
-              <div className="space-y-6">
-                <div className="flex flex-col items-center justify-center py-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl"></div>
-                    <XCircle className="h-16 w-16 text-red-500 relative" />
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-semibold text-slate-700">
+                    Email Address <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative group">
+                    <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    </div>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={handleEmailChange}
+                      required
+                      disabled={status === 'loading'}
+                      className="h-12 pl-12 pr-4 border-2 border-slate-200 focus:border-primary focus:ring-primary/20 hover:border-primary/50 rounded-lg bg-white shadow-sm focus:shadow-md transition-all duration-200"
+                    />
                   </div>
                 </div>
-                
-                <Alert variant="destructive" className="border-red-200 bg-red-50/80 backdrop-blur-sm">
-                  <XCircle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-800 text-sm">
-                    {message}
-                  </AlertDescription>
-                </Alert>
 
-                <div className="space-y-3">
+                {/* Verification Code Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="code" className="text-sm font-semibold text-slate-700">
+                    Verification Code <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative group">
+                    <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center pointer-events-none">
+                      <KeyRound className="h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    </div>
+                    <Input
+                      id="code"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="000000"
+                      value={code}
+                      onChange={handleCodeChange}
+                      required
+                      maxLength={6}
+                      disabled={status === 'loading'}
+                      className="h-12 pl-12 pr-4 border-2 border-slate-200 focus:border-primary focus:ring-primary/20 hover:border-primary/50 rounded-lg bg-white shadow-sm focus:shadow-md transition-all duration-200 text-center text-2xl font-mono tracking-widest"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Enter the 6-digit code sent to your email address
+                  </p>
+                </div>
+
+                {/* Error Message */}
+                {status === 'error' && (
+                  <Alert variant="destructive" className="border-red-200 bg-red-50/80 backdrop-blur-sm">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-800 text-sm">
+                      {message}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={status === 'loading' || code.length !== 6 || !email}
+                >
+                  {status === 'loading' ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-5 w-5" />
+                      Verify Email
+                    </>
+                  )}
+                </Button>
+
+                {/* Resend Code */}
+                <div className="text-center">
                   <Button
+                    type="button"
+                    variant="ghost"
                     onClick={handleResendEmail}
-                    variant="outline"
-                    className="w-full h-12 border-2 border-primary hover:bg-primary hover:text-primary-foreground font-semibold rounded-lg transition-all duration-200"
+                    className="text-sm text-slate-600 hover:text-primary"
                   >
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    Resend Verification Email
+                    Didn't receive the code? Resend
                   </Button>
-                  
+                </div>
+
+                {/* Back Links */}
+                <div className="space-y-3 pt-4 border-t border-slate-200">
                   <Link href="/register" className="block">
                     <Button
+                      type="button"
                       variant="outline"
                       className="w-full h-12 border-2 border-slate-200 hover:bg-slate-50 hover:border-primary/50 font-semibold rounded-lg transition-all duration-200"
                     >
@@ -220,6 +314,7 @@ function VerifyEmailContent() {
                   
                   <Link href="/" className="block">
                     <Button
+                      type="button"
                       variant="ghost"
                       className="w-full h-12 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-semibold rounded-lg transition-all duration-200"
                     >
@@ -228,7 +323,7 @@ function VerifyEmailContent() {
                     </Button>
                   </Link>
                 </div>
-              </div>
+              </form>
             )}
           </CardContent>
         </Card>
@@ -255,4 +350,3 @@ export default function VerifyEmailPage() {
     </Suspense>
   )
 }
-

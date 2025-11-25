@@ -33,8 +33,6 @@ export default function RegisterPage() {
     password?: string
     confirmPassword?: string
   }>({})
-  const [showVerificationMessage, setShowVerificationMessage] = useState(false)
-  const [verificationEmail, setVerificationEmail] = useState<string>('')
 
   const { register, error, clearError } = useAuth()
   const router = useRouter()
@@ -134,8 +132,8 @@ export default function RegisterPage() {
       
       // Check if email verification is required
       if (result && typeof result === 'object' && 'requiresVerification' in result && result.requiresVerification) {
-        setVerificationEmail(formData.email)
-        setShowVerificationMessage(true)
+        // Redirect to verification page with email pre-filled
+        router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`)
         setIsLoading(false)
         return
       }
@@ -236,57 +234,7 @@ export default function RegisterPage() {
               </Alert>
             )}
 
-            {showVerificationMessage ? (
-              <div className="space-y-6">
-                <div className="flex flex-col items-center justify-center py-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl"></div>
-                    <Mail className="h-16 w-16 text-primary relative" />
-                  </div>
-                </div>
-                
-                <Alert className="border-primary/20 bg-amber-50/80 backdrop-blur-sm">
-                  <Mail className="h-4 w-4 text-primary" />
-                  <AlertDescription className="text-slate-800 text-sm">
-                    <strong>Check your email!</strong>
-                    <br />
-                    We've sent a verification link to <strong>{verificationEmail}</strong>
-                    <br />
-                    Please click the link in the email to verify your account and complete registration.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <p className="text-sm text-slate-600 mb-2">
-                    <strong>Didn't receive the email?</strong>
-                  </p>
-                  <ul className="text-xs text-slate-500 space-y-1 list-disc list-inside">
-                    <li>Check your spam/junk folder</li>
-                    <li>Make sure the email address is correct</li>
-                    <li>Wait a few minutes and try again</li>
-                  </ul>
-                </div>
-
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => router.push('/login')}
-                    className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg"
-                  >
-                    Continue to Sign In
-                  </Button>
-                  
-                  <Link href="/" className="block">
-                    <Button
-                      variant="outline"
-                      className="w-full h-12 border-2 border-slate-200 hover:bg-slate-50 hover:border-primary/50 font-semibold rounded-lg transition-all duration-200"
-                    >
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      Back to Home
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ) : (
+            {(
               <>
               <form onSubmit={handleSubmit} className="space-y-5">
               {/* Name Fields */}

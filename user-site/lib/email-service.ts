@@ -27,8 +27,12 @@ const createTransporter = () => {
   })
 }
 
-// Generate HTML email template for verification
-const generateVerificationEmailHTML = (name: string, verificationUrl: string, siteName: string = 'Julie Crafts') => {
+// Generate HTML email template for verification code
+const generateVerificationEmailHTML = (name: string, verificationCode: string, siteName: string = 'Julie Crafts') => {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+    (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
+  const verificationUrl = `${baseUrl}/verify-email`
+  
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -59,31 +63,44 @@ const generateVerificationEmailHTML = (name: string, verificationUrl: string, si
                             </h2>
                             
                             <p style="margin: 0 0 20px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                                Thank you for creating an account with ${siteName}. To complete your registration and start shopping, please verify your email address by clicking the button below.
+                                Thank you for creating an account with ${siteName}. To complete your registration and start shopping, please verify your email address using the verification code below.
                             </p>
                             
-                            <!-- Verification Button -->
+                            <!-- Verification Code Display -->
+                            <table role="presentation" style="width: 100%; margin: 30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 30px; margin: 20px 0;">
+                                            <p style="margin: 0 0 15px 0; color: #92400e; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                                                Your Verification Code
+                                            </p>
+                                            <div style="font-size: 48px; font-weight: 700; color: #f59e0b; letter-spacing: 8px; font-family: 'Courier New', monospace; text-align: center;">
+                                                ${verificationCode}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 20px 0 0 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                                Enter this code on the verification page to complete your registration:
+                            </p>
+                            
+                            <!-- Verification Link Button -->
                             <table role="presentation" style="width: 100%; margin: 30px 0;">
                                 <tr>
                                     <td align="center">
                                         <a href="${verificationUrl}" 
                                            style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);">
-                                            Verify Email Address
+                                            Go to Verification Page
                                         </a>
                                     </td>
                                 </tr>
                             </table>
                             
-                            <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                                If the button doesn't work, you can copy and paste this link into your browser:
-                            </p>
-                            <p style="margin: 10px 0 0 0; color: #3b82f6; font-size: 14px; word-break: break-all;">
-                                ${verificationUrl}
-                            </p>
-                            
                             <div style="margin: 30px 0; padding: 20px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;">
                                 <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
-                                    <strong>⏰ Important:</strong> This verification link will expire in 24 hours. If you didn't create an account with ${siteName}, please ignore this email.
+                                    <strong>⏰ Important:</strong> This verification code will expire in 24 hours. If you didn't create an account with ${siteName}, please ignore this email.
                                 </p>
                             </div>
                         </td>
@@ -112,11 +129,11 @@ const generateVerificationEmailHTML = (name: string, verificationUrl: string, si
   `
 }
 
-// Send verification email
+// Send verification email with code
 export async function sendVerificationEmail(
   to: string,
   name: string,
-  verificationToken: string
+  verificationCode: string
 ): Promise<boolean> {
   try {
     const transporter = createTransporter()
@@ -128,15 +145,15 @@ export async function sendVerificationEmail(
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
       (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
     
-    const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`
+    const verificationUrl = `${baseUrl}/verify-email`
     const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Julie Crafts'
 
     const mailOptions = {
       from: `"${siteName}" <${emailConfig.auth.user}>`,
       to: to,
       subject: `Verify Your Email - ${siteName}`,
-      html: generateVerificationEmailHTML(name, verificationUrl, siteName),
-      text: `Welcome to ${siteName}, ${name}!\n\nPlease verify your email address by clicking this link: ${verificationUrl}\n\nThis link will expire in 24 hours.\n\nIf you didn't create an account, please ignore this email.`,
+      html: generateVerificationEmailHTML(name, verificationCode, siteName),
+      text: `Welcome to ${siteName}, ${name}!\n\nYour verification code is: ${verificationCode}\n\nEnter this code on the verification page: ${verificationUrl}\n\nThis code will expire in 24 hours.\n\nIf you didn't create an account, please ignore this email.`,
     }
 
     const info = await transporter.sendMail(mailOptions)

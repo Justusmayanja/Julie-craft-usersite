@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     if (!isSupabaseConfigured || !supabaseAdmin) {
       return NextResponse.json({ 
@@ -10,26 +10,33 @@ export async function GET(request: NextRequest) {
       }, { status: 503 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const token = searchParams.get('token')
+    const { code, email } = await request.json()
 
-    if (!token) {
+    if (!code || !email) {
       return NextResponse.json({ 
-        error: 'Verification token is required' 
+        error: 'Verification code and email are required' 
       }, { status: 400 })
     }
 
-    // Find the verification token
+    // Validate code format (6 digits)
+    if (!/^\d{6}$/.test(code)) {
+      return NextResponse.json({ 
+        error: 'Invalid verification code format. Code must be 6 digits.' 
+      }, { status: 400 })
+    }
+
+    // Find the verification code
     const { data: verificationToken, error: tokenError } = await supabaseAdmin
       .from('email_verification_tokens')
       .select('*')
-      .eq('token', token)
-      .is('used_at', null) // Token not used yet
+      .eq('token', code)
+      .eq('email', email.toLowerCase())
+      .is('used_at', null) // Code not used yet
       .single()
 
     if (tokenError || !verificationToken) {
       return NextResponse.json({ 
-        error: 'Invalid or expired verification token' 
+        error: 'Invalid or expired verification code' 
       }, { status: 400 })
     }
 
