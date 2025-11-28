@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
+import { Logo } from '@/components/logo'
 import { useAuth } from '@/contexts/auth-context'
 import { useRole } from '@/contexts/role-context'
 import { Button } from '@/components/ui/button'
@@ -55,6 +55,12 @@ function LoginForm() {
       window.history.replaceState({}, '', url.toString())
     } else if (message === 'session_expired') {
       setInfoMessage('Your session has expired. Please sign in again to continue.')
+      // Clear the message from URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete('message')
+      window.history.replaceState({}, '', url.toString())
+    } else if (message === 'password_reset_success') {
+      setInfoMessage('Your password has been reset successfully! Please sign in with your new password.')
       // Clear the message from URL
       const url = new URL(window.location.href)
       url.searchParams.delete('message')
@@ -151,35 +157,16 @@ function LoginForm() {
             <div className="flex items-center justify-center gap-3 sm:gap-4">
               <div className="relative group">
                 <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
-                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-white p-2.5 border-2 border-primary/20 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                  {logoUrl && typeof logoUrl === 'string' && logoUrl.trim() !== '' ? (
-                    <Image
-                      src={logoUrl}
-                      alt="Julie Crafts Logo"
-                      fill
-                      sizes="80px"
-                      className="object-contain rounded-lg"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        if (target.src !== '/julie-logo.jpeg') {
-                          target.src = '/julie-logo.jpeg'
-                        } else {
-                          target.style.display = 'none'
-                        }
-                      }}
-                    />
-                  ) : (
-                    <Image
-                      src="/julie-logo.jpeg"
-                      alt="Julie Crafts Logo"
-                      fill
-                      sizes="80px"
-                      className="object-contain rounded-lg"
-                    />
-                  )}
+                <div className="relative">
+                  <Logo 
+                    variant="default" 
+                    size="xl" 
+                    dark={false}
+                    className="group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
               </div>
-              <div className="flex flex-col items-start">
+              <div className="flex flex-col items-center">
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
                   Welcome Back
                 </h1>
@@ -258,9 +245,17 @@ function LoginForm() {
 
               {/* Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-semibold text-slate-700">
-                  Password
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-semibold text-slate-700">
+                    Password
+                  </Label>
+                  <Link 
+                    href="/forgot-password" 
+                    className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
                 <div className="relative group">
                   <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center pointer-events-none">
                     <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />

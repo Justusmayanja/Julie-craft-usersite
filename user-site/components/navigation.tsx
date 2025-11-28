@@ -20,34 +20,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import Image from "next/image"
+import { Logo } from "@/components/logo"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(null)
-  const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
   const isClient = useClientOnly()
   const { state } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
-
-  // Load logo from site settings
-  useEffect(() => {
-    const fetchLogo = async () => {
-      try {
-        const response = await fetch('/api/site-content/settings')
-        const data = await response.json()
-        const logoValue = data.settings?.logo_url?.value
-        if (logoValue && typeof logoValue === 'string' && logoValue.trim() !== '') {
-          setLogoUrl(logoValue)
-        }
-      } catch (error) {
-        console.error('Error fetching logo:', error)
-        // Keep default logo on error
-      }
-    }
-    fetchLogo()
-  }, [])
 
   // Load profile image from user data or localStorage
   useEffect(() => {
@@ -88,28 +69,13 @@ export function Navigation() {
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 group-hover:border-primary/30 transition-all duration-300">
-                {logoUrl && (
-                  <Image 
-                    src={logoUrl} 
-                    alt="JulieCraft Logo" 
-                    fill
-                    sizes="40px"
-                    className="object-contain p-1.5 group-hover:scale-105 transition-transform duration-300"
-                    priority
-                    onError={(e) => {
-                      // Fallback to default logo if image fails to load
-                      const target = e.target as HTMLImageElement
-                      if (target.src !== '/julie-logo.jpeg') {
-                        target.src = '/julie-logo.jpeg'
-                      } else {
-                        target.style.display = 'none'
-                      }
-                    }}
-                  />
-                )}
-              </div>
-              <div className="flex flex-col">
+              <Logo 
+                variant="compact" 
+                size="md" 
+                dark={true}
+                className="group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="flex flex-col hidden sm:flex">
                 <span className="font-bold text-xl text-white group-hover:text-amber-400 transition-colors duration-300">Julie Crafts</span>
                 <span className="text-xs text-slate-300 -mt-1">Handmade Excellence</span>
               </div>
@@ -254,25 +220,15 @@ export function Navigation() {
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[320px] sm:w-[380px] p-0 bg-slate-800 border-l border-slate-700">
                   <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                  <div className="flex flex-col h-full">
+                    <div className="flex flex-col h-full">
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 border-b border-slate-700 bg-slate-900">
-                      <div className="flex items-center space-x-3">
-                        <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-amber-500/20 border border-amber-500/30">
-                          <Image 
-                            src="/julie-logo.jpeg" 
-                            alt="JulieCraft Logo" 
-                            fill
-                            sizes="40px"
-                            className="object-contain p-1"
-                            onError={(e) => {
-                              // Fallback to a simple icon if image fails to load
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        </div>
-                        <span className="font-bold text-lg text-white">Julie Crafts</span>
-                      </div>
+                      <Logo 
+                        variant="full" 
+                        size="md" 
+                        dark={true}
+                        showTagline={false}
+                      />
                       <Button 
                         variant="ghost" 
                         size="icon" 

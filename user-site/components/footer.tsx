@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
+import { Logo } from "@/components/logo"
 import { Facebook, Instagram, Phone, Mail, MapPin } from "lucide-react"
 
 export function Footer() {
@@ -13,25 +13,12 @@ export function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-12 mb-8">
           {/* Brand */}
           <div className="space-y-5">
-            <div className="flex items-center space-x-3">
-              <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 shadow-lg">
-                <Image 
-                  src="/julie-logo.jpeg" 
-                  alt="JulieCraft Logo" 
-                  fill
-                  sizes="(max-width: 640px) 48px, 56px"
-                  className="object-contain p-2"
-                  priority
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                  }}
-                />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-xl sm:text-2xl text-white">Julie Crafts</span>
-                <span className="text-xs sm:text-sm text-slate-300 -mt-1">Authentic Handmade</span>
-              </div>
-            </div>
+            <Logo 
+              variant="full" 
+              size="lg" 
+              dark={true}
+              showTagline={true}
+            />
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-sm">
               Authentic handmade crafts from the heart of Uganda, celebrating traditional artistry and contemporary design.
             </p>

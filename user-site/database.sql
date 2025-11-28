@@ -138,6 +138,27 @@ CREATE TABLE public.customers_backup (
   created_at timestamp with time zone,
   updated_at timestamp with time zone
 );
+CREATE TABLE public.email_verification_tokens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  email character varying NOT NULL,
+  token character varying NOT NULL UNIQUE,
+  expires_at timestamp with time zone NOT NULL,
+  used_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT email_verification_tokens_pkey PRIMARY KEY (id),
+  CONSTRAINT email_verification_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.footer_content (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  section character varying NOT NULL CHECK (section::text = ANY (ARRAY['brand'::character varying, 'links'::character varying, 'categories'::character varying, 'contact'::character varying, 'social'::character varying, 'copyright'::character varying]::text[])),
+  content jsonb DEFAULT '{}'::jsonb,
+  sort_order integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT footer_content_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.guest_customers_backup (
   id uuid,
   email character varying,
@@ -145,6 +166,18 @@ CREATE TABLE public.guest_customers_backup (
   phone character varying,
   created_at timestamp with time zone,
   updated_at timestamp with time zone
+);
+CREATE TABLE public.homepage_sections (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  section_type character varying NOT NULL CHECK (section_type::text = ANY (ARRAY['hero'::character varying, 'featured_products'::character varying, 'categories'::character varying, 'about_preview'::character varying, 'testimonials'::character varying, 'newsletter'::character varying, 'gallery'::character varying, 'banner'::character varying, 'text_block'::character varying, 'image_text'::character varying, 'custom'::character varying]::text[])),
+  title character varying NOT NULL,
+  content jsonb DEFAULT '{}'::jsonb,
+  is_active boolean DEFAULT true,
+  sort_order integer DEFAULT 0,
+  display_settings jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT homepage_sections_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.inventory (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -282,6 +315,21 @@ CREATE TABLE public.media (
   CONSTRAINT media_pkey PRIMARY KEY (id),
   CONSTRAINT media_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.profiles(id)
 );
+CREATE TABLE public.navigation_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  label character varying NOT NULL,
+  href character varying NOT NULL,
+  icon character varying,
+  parent_id uuid,
+  sort_order integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  is_external boolean DEFAULT false,
+  target character varying DEFAULT '_self'::character varying CHECK (target::text = ANY (ARRAY['_self'::character varying, '_blank'::character varying]::text[])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT navigation_items_pkey PRIMARY KEY (id),
+  CONSTRAINT navigation_items_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.navigation_items(id)
+);
 CREATE TABLE public.newsletter_subscribers (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   email character varying NOT NULL UNIQUE,
@@ -294,6 +342,23 @@ CREATE TABLE public.newsletter_subscribers (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT newsletter_subscribers_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  recipient_type character varying NOT NULL CHECK (recipient_type::text = ANY (ARRAY['admin'::character varying, 'customer'::character varying]::text[])),
+  notification_type character varying NOT NULL CHECK (notification_type::text = ANY (ARRAY['order_placed'::character varying, 'order_processing'::character varying, 'order_shipped'::character varying, 'order_delivered'::character varying, 'order_cancelled'::character varying, 'payment_received'::character varying, 'payment_failed'::character varying, 'order_updated'::character varying, 'tracking_updated'::character varying]::text[])),
+  title character varying NOT NULL,
+  message text NOT NULL,
+  order_id uuid,
+  order_number character varying,
+  is_read boolean DEFAULT false,
+  read_at timestamp with time zone,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
 CREATE TABLE public.order_fulfillment (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -449,6 +514,17 @@ CREATE TABLE public.pages (
   author_id uuid,
   CONSTRAINT pages_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.password_reset_tokens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  email character varying NOT NULL,
+  token character varying NOT NULL UNIQUE,
+  expires_at timestamp with time zone NOT NULL,
+  used_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT password_reset_tokens_pkey PRIMARY KEY (id),
+  CONSTRAINT password_reset_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
 CREATE TABLE public.product_reviews (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   product_id uuid,
@@ -541,6 +617,8 @@ CREATE TABLE public.products (
   stock_hold_until timestamp with time zone,
   available_stock integer DEFAULT (physical_stock - reserved_stock),
   version integer DEFAULT 1,
+  include_shipping boolean NOT NULL DEFAULT false,
+  include_tax boolean NOT NULL DEFAULT false,
   CONSTRAINT products_pkey PRIMARY KEY (id),
   CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id),
   CONSTRAINT products_location_id_fkey FOREIGN KEY (location_id) REFERENCES public.locations(id),
@@ -611,6 +689,37 @@ CREATE TABLE public.sales_analytics (
   return_rate numeric DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT sales_analytics_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.site_pages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title character varying NOT NULL,
+  slug character varying NOT NULL UNIQUE,
+  content text,
+  excerpt text,
+  type character varying NOT NULL CHECK (type::text = ANY (ARRAY['page'::character varying, 'homepage'::character varying, 'about'::character varying, 'contact'::character varying, 'privacy'::character varying, 'terms'::character varying, 'legal'::character varying, 'custom'::character varying]::text[])),
+  status character varying DEFAULT 'draft'::character varying CHECK (status::text = ANY (ARRAY['draft'::character varying, 'published'::character varying, 'archived'::character varying]::text[])),
+  template character varying DEFAULT 'default'::character varying,
+  meta_title character varying,
+  meta_description text,
+  meta_keywords ARRAY,
+  featured_image text,
+  author_id uuid,
+  sort_order integer DEFAULT 0,
+  is_homepage boolean DEFAULT false,
+  published_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT site_pages_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.site_settings (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  setting_key character varying NOT NULL UNIQUE,
+  setting_value jsonb DEFAULT '{}'::jsonb,
+  setting_type character varying DEFAULT 'general'::character varying CHECK (setting_type::text = ANY (ARRAY['general'::character varying, 'footer'::character varying, 'header'::character varying, 'navigation'::character varying, 'social'::character varying, 'contact'::character varying, 'seo'::character varying, 'appearance'::character varying, 'business'::character varying, 'custom'::character varying]::text[])),
+  description text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT site_settings_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.stock_movements (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

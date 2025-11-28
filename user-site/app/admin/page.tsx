@@ -20,6 +20,7 @@ import {
   Eye,
   RefreshCw
 } from "lucide-react"
+import { HeaderSummary } from "@/components/admin/header-summary"
 
 interface DashboardStats {
   totalProducts: number
@@ -232,49 +233,8 @@ export default function AdminDashboard() {
           </Button>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          {statCards.map((stat, index) => {
-            const Icon = stat.icon
-            return (
-              <Link key={index} href={stat.link || "#"} className="block">
-                <Card className="group relative overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-white h-full">
-                  {/* Gradient Background */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-                  
-                  <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-1.5 sm:pb-2 px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 lg:pt-6">
-                    <CardTitle className="text-[10px] xs:text-xs sm:text-sm font-semibold text-gray-700 group-hover:text-gray-900 transition-colors leading-tight">
-                      {stat.title}
-                    </CardTitle>
-                    <div className={`${stat.iconBg} p-1.5 sm:p-2 rounded-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}>
-                      <Icon className={`h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 ${stat.iconColor}`} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="relative px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 lg:pb-6">
-                    <div className="flex items-baseline gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                      <div className={`text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent leading-tight`}>
-                        {stat.value}
-                      </div>
-                      {stat.alert && (
-                        <Badge variant="destructive" className="text-[10px] px-1 py-0 animate-pulse flex-shrink-0">
-                          Alert
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-[10px] xs:text-xs text-gray-500 mt-0.5 sm:mt-1 leading-tight">
-                      {stat.description}
-                    </p>
-                    <div className="mt-2 sm:mt-3 flex items-center text-[10px] xs:text-xs font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
-                      <span className="hidden sm:inline">View details</span>
-                      <span className="sm:hidden">View</span>
-                      <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 ml-0.5 sm:ml-1 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            )
-          })}
-        </div>
+        {/* KPI Header Summary - Real-time Metrics */}
+        <HeaderSummary />
 
         {/* Quick Actions & Alerts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
