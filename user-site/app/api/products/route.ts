@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
       offset: searchParams.get('offset') ? Number(searchParams.get('offset')) : 0,
     }
 
-    // Build query - only fetch active products for public API
+    // Build query - only fetch active products with stock for public API
     let query = supabaseAdmin
       .from('products')
       .select(`
@@ -144,6 +144,7 @@ export async function GET(request: NextRequest) {
         category:categories(*)
       `, { count: 'exact' })
       .eq('status', 'active') // Only show active products to public
+      .gt('stock_quantity', 0) // Only show products that are in stock
 
     // Apply filters
     if (filters.search) {
@@ -514,8 +515,10 @@ export async function GET(request: NextRequest) {
       return images.map(img => normalizeImageUrl(img)).filter((img): img is string => img !== null)
     }
 
-    // Transform products to frontend format
-    const transformedProducts: FrontendProduct[] = (data || []).map((product: Product) => {
+    // Transform products to frontend format and filter out out-of-stock products
+    const transformedProducts: FrontendProduct[] = (data || [])
+      .filter((product: Product) => product.stock_quantity > 0) // Additional safety check
+      .map((product: Product) => {
       // Normalize image URLs
       const normalizedFeaturedImage = normalizeImageUrl(product.featured_image)
       const normalizedImages = normalizeImageArray(product.images)

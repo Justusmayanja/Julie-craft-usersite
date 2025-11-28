@@ -65,19 +65,19 @@ export function Navigation() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-lg">
-        <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="flex h-14 sm:h-16 items-center justify-between gap-2">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-3 group">
+            <Link href="/" className="flex items-center space-x-2 sm:space-x-3 group flex-shrink-0">
               <Logo 
                 variant="compact" 
                 size="md" 
                 dark={true}
                 className="group-hover:scale-105 transition-transform duration-300"
               />
-              <div className="flex flex-col hidden sm:flex">
-                <span className="font-bold text-xl text-white group-hover:text-amber-400 transition-colors duration-300">Julie Crafts</span>
-                <span className="text-xs text-slate-300 -mt-1">Handmade Excellence</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-sm sm:text-base md:text-xl text-white group-hover:text-amber-400 transition-colors duration-300 leading-tight whitespace-nowrap">Julie Crafts</span>
+                <span className="text-[10px] sm:text-xs text-slate-300 -mt-0.5 sm:-mt-1 leading-tight hidden sm:block">Handmade Excellence</span>
               </div>
             </Link>
 
@@ -96,11 +96,12 @@ export function Navigation() {
             </nav>
 
             {/* Right side actions */}
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 flex-shrink-0">
+              {/* Desktop Search & Chat */}
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="hidden sm:flex h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
+                className="hidden md:flex h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
               >
                 <Search className="h-4 w-4" />
               </Button>
@@ -109,46 +110,67 @@ export function Navigation() {
                 variant="ghost" 
                 size="icon" 
                 onClick={handleChatToggle} 
-                className="hidden sm:flex h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
+                className="hidden md:flex h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
               >
                 <MessageCircle className="h-4 w-4" />
               </Button>
 
               {/* Notifications - only show for authenticated users */}
               {isAuthenticated && (
-                <NotificationBell className="h-9 w-9" />
+                <NotificationBell className="h-8 w-8 sm:h-9 sm:w-9" />
               )}
 
+              {/* Cart */}
               <Link href="/cart">
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="relative h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
+                  className="relative h-8 w-8 sm:h-9 sm:w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
                 >
                   <ShoppingCart className="h-4 w-4" />
                   {isClient && state.itemCount > 0 && (
                     <Badge
                       variant="destructive"
-                      className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs text-white bg-red-500 border-0"
+                      className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[10px] text-white bg-red-500 border-0"
                     >
-                      {state.itemCount}
+                      {state.itemCount > 9 ? '9+' : state.itemCount}
                     </Badge>
                   )}
                 </Button>
               </Link>
 
-              {/* User Menu */}
-              {isAuthenticated ? (
+              {/* Auth Buttons - Mobile & Desktop */}
+              {!isAuthenticated ? (
+                <div className="flex items-center space-x-1.5 sm:space-x-2">
+                  <Link href="/login">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 px-2 sm:h-9 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm font-medium hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors whitespace-nowrap"
+                    >
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button 
+                      size="sm" 
+                      className="h-8 px-2 sm:h-9 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm whitespace-nowrap"
+                    >
+                      Sign Up
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="rounded-full h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
+                      className="rounded-full h-8 w-8 sm:h-9 sm:w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
                     >
-                      <Avatar className="h-7 w-7">
+                      <Avatar className="h-6 w-6 sm:h-7 sm:w-7">
                         <AvatarImage src={isClient ? profileImage || undefined : undefined} alt={user?.name || 'Profile'} />
-                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-[10px] sm:text-xs">
                           {user?.name ? user.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -181,26 +203,6 @@ export function Navigation() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <div className="hidden sm:flex items-center space-x-3">
-                  <Link href="/login">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-9 px-4 font-medium hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
-                    >
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button 
-                      size="sm" 
-                      className="h-9 px-4 font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm"
-                    >
-                      Sign Up
-                    </Button>
-                  </Link>
-                </div>
               )}
 
               {/* Mobile menu */}
@@ -209,12 +211,12 @@ export function Navigation() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="md:hidden relative p-2 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
+                    className="md:hidden relative p-1.5 sm:p-2 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
                   >
                     <div className="flex flex-col space-y-1">
-                      <div className="w-5 h-0.5 bg-slate-200 transition-all duration-200"></div>
-                      <div className="w-5 h-0.5 bg-slate-200 transition-all duration-200"></div>
-                      <div className="w-5 h-0.5 bg-slate-200 transition-all duration-200"></div>
+                      <div className="w-4 sm:w-5 h-0.5 bg-slate-200 transition-all duration-200"></div>
+                      <div className="w-4 sm:w-5 h-0.5 bg-slate-200 transition-all duration-200"></div>
+                      <div className="w-4 sm:w-5 h-0.5 bg-slate-200 transition-all duration-200"></div>
                     </div>
                   </Button>
                 </SheetTrigger>

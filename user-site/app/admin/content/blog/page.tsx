@@ -244,6 +244,72 @@ export default function BlogManagementPage() {
     }
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setFormError('Invalid file type. Only JPEG, PNG, and WEBP images are allowed.')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      setFormError('File size must be less than 5MB.')
+      return
+    }
+
+    setUploadingImage(true)
+    setFormError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      // Get auth token
+      const token = typeof window !== 'undefined' 
+        ? localStorage.getItem('julie-crafts-token') 
+        : null
+
+      if (!token) {
+        throw new Error('Authentication required')
+      }
+
+      const response = await fetch('/api/blog/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to upload image')
+      }
+
+      const data = await response.json()
+      
+      // Update form data with the uploaded image URL
+      setFormData(prev => ({ ...prev, featured_image: data.url }))
+      setImagePreview(data.url)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to upload image')
+    } finally {
+      setUploadingImage(false)
+      // Reset input
+      e.target.value = ''
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, featured_image: '' }))
+    setImagePreview(null)
+  }
+
   const totalPosts = stats?.totalPosts || posts.length
   const publishedPosts = stats?.publishedPosts || posts.filter(p => p.status === "published").length
   const draftPosts = stats?.draftPosts || posts.filter(p => p.status === "draft").length

@@ -432,27 +432,82 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
+    // Map frontend fields to database fields
+    // Database has: title, slug, content, excerpt, featured_image, author_id, category, status, view_count, published_at
+    // Frontend sends: title, slug, content, excerpt, featured_image, status, category, publish_date, scheduled_date, featured
+    
+    // Map status: 'scheduled' -> 'draft' (database doesn't support scheduled, use draft)
+    const dbStatus = body.status === 'scheduled' ? 'draft' : (body.status || 'draft')
+    
+    // Ensure status is valid for database constraint
+    const validStatuses = ['draft', 'published', 'archived']
+    const finalStatus = validStatuses.includes(dbStatus) ? dbStatus : 'draft'
+
+    // Prepare insert data - only include fields that exist in the database
+    const insertData: any = {
+      title: body.title,
+      slug: body.slug,
+      content: body.content || null,
+      excerpt: body.excerpt || null,
+      featured_image: body.featured_image || null,
+      author_id: user.id,
+      category: body.category || null,
+      status: finalStatus,
+      view_count: 0, // Database uses view_count, not views
+      published_at: body.publish_date || (finalStatus === 'published' ? new Date().toISOString() : null),
+      meta_title: body.meta_title || null,
+      meta_description: body.meta_description || null,
+      tags: body.tags || null,
+      seo_title: body.meta_title || null,
+      seo_description: body.meta_description || null,
+      seo_keywords: body.tags || null,
+    }
+
     // Create new blog post
     const { data, error } = await supabaseAdmin
       .from('blog_posts')
-      .insert({
-        ...body,
-        author_id: user.id,
-        views: 0,
-        likes: 0,
-        comments_count: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (error) {
       console.error('Error creating blog post:', error)
-      return NextResponse.json({ error: 'Failed to create blog post' }, { status: 500 })
+      // Return more detailed error message
+      const errorMessage = error.message || 'Failed to create blog post'
+      const errorDetails = error.details || error.hint || ''
+      return NextResponse.json({ 
+        error: 'Failed to create blog post',
+        details: errorMessage,
+        hint: errorDetails
+      }, { status: 500 })
     }
 
-    return NextResponse.json({ post: data }, { status: 201 })
+    // Transform database response to match frontend format
+    const transformedPost = {
+      id: data.id,
+      title: data.title,
+      slug: data.slug,
+      content: data.content || '',
+      excerpt: data.excerpt || '',
+      status: data.status === 'published' ? 'published' : data.status === 'archived' ? 'archived' : 'draft',
+      category: data.category || '',
+      author_id: data.author_id,
+      author_name: '', // Will be populated by join in GET requests
+      publish_date: data.published_at,
+      scheduled_date: null, // Not supported in database
+      featured_image: data.featured_image,
+      featured: false, // Not supported in database
+      views: data.view_count || 0,
+      likes: 0, // Not in database
+      comments_count: 0, // Not in database
+      meta_title: data.meta_title,
+      meta_description: data.meta_description,
+      tags: data.tags || [],
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    }
+
+    return NextResponse.json({ post: transformedPost }, { status: 201 })
 
   } catch (error) {
     console.error('Blog creation error:', error)

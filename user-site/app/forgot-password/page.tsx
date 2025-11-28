@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, ArrowLeft, Mail, Lock, Shield, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Loader2, ArrowLeft, Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -55,15 +55,25 @@ export default function ForgotPasswordPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Failed to send reset code. Please try again.')
+        // Handle specific error cases
+        if (response.status === 404 && data.code === 'EMAIL_NOT_FOUND') {
+          setError('No account found with this email address. Please check your email and try again, or sign up for a new account.')
+        } else {
+          setError(data.error || 'Failed to send reset code. Please try again.')
+        }
         return
       }
 
-      setSuccess(true)
-      // Redirect to reset password page with email
-      setTimeout(() => {
-        router.push(`/reset-password?email=${encodeURIComponent(email)}`)
-      }, 2000)
+      // Success - code was sent
+      if (data.success) {
+        setSuccess(true)
+        // Redirect to reset password page with email
+        setTimeout(() => {
+          router.push(`/reset-password?email=${encodeURIComponent(email)}`)
+        }, 2000)
+      } else {
+        setError('Failed to send reset code. Please try again.')
+      }
     } catch (err) {
       console.error('Password reset request error:', err)
       setError('An error occurred. Please try again later.')
@@ -146,7 +156,19 @@ export default function ForgotPasswordPage() {
             {error && (
               <Alert variant="destructive" className="border-red-200 bg-red-50/80 backdrop-blur-sm shadow-sm">
                 <AlertCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-800 text-sm">{error}</AlertDescription>
+                <AlertDescription className="text-red-800 text-sm">
+                  {error}
+                  {error.includes('No account found') && (
+                    <div className="mt-2">
+                      <Link 
+                        href="/register" 
+                        className="text-red-700 hover:text-red-900 font-semibold underline"
+                      >
+                        Create a new account instead
+                      </Link>
+                    </div>
+                  )}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -220,14 +242,6 @@ export default function ForgotPasswordPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="mt-6 sm:mt-8 text-center">
-          <p className="text-xs sm:text-sm text-slate-500 flex items-center justify-center gap-1.5">
-            <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
-            Secure password reset protected by industry-standard encryption
-          </p>
-        </div>
       </div>
     </div>
   )

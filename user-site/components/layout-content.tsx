@@ -29,6 +29,9 @@ export function LayoutContent({ children }: LayoutContentProps) {
     '/account',
     '/login',
     '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
     '/order-confirmation'
   ]
   

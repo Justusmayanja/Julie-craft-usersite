@@ -214,12 +214,15 @@ export function ProductCatalog() {
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
     if (useApiData && apiProducts.length > 0) {
-      // API data is already filtered and sorted
-      return apiProducts
+      // API data is already filtered and sorted - filter out out-of-stock products
+      return apiProducts.filter((product) => product.inStock !== false)
     }
 
-    // Fallback filtering for hardcoded data
+    // Fallback filtering for hardcoded data - filter out out-of-stock products
     const filtered = fallbackProducts.filter((product) => {
+      // Only show in-stock products
+      if (!product.inStock) return false
+      
       const matchesSearch =
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||

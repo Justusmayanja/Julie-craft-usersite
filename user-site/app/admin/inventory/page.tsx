@@ -34,7 +34,8 @@ import {
   ArrowUpDown,
   Settings,
   X,
-  Database
+  Database,
+  Loader2
 } from "lucide-react"
 import { useRobustInventory } from "@/hooks/admin/use-robust-inventory"
 import { StockAdjustmentModal } from "@/components/admin/inventory/stock-adjustment-modal"
@@ -104,6 +105,7 @@ export default function InventoryPage() {
   const [showRobustDashboard, setShowRobustDashboard] = useState(false)
   const [isInitializingDatabase, setIsInitializingDatabase] = useState(false)
   const [isMigratingStock, setIsMigratingStock] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Use robust inventory data
   const { 
@@ -288,6 +290,76 @@ export default function InventoryPage() {
     })
   }
 
+  const handleExport = async () => {
+    setIsExporting(true)
+    try {
+      const token = typeof window !== 'undefined' 
+        ? localStorage.getItem('julie-crafts-token') 
+        : null
+
+      if (!token) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in again to export data.",
+          variant: "destructive"
+        })
+        setIsExporting(false)
+        return
+      }
+
+      // Build query parameters based on current filters
+      const params = new URLSearchParams()
+      params.append('format', 'csv')
+      params.append('status', filters.status)
+      if (filters.search) {
+        params.append('search', filters.search)
+      }
+
+      const response = await fetch(`/api/admin/inventory/export?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to export inventory data')
+      }
+
+      // Get the CSV content
+      const csvContent = await response.text()
+      
+      // Create a blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute('href', url)
+      link.setAttribute('download', `inventory-export-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Clean up
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: "Export Successful",
+        description: "Inventory data has been exported successfully.",
+      })
+    } catch (error) {
+      console.error('Export error:', error)
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : 'Failed to export inventory data. Please try again.',
+        variant: "destructive"
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -322,9 +394,20 @@ export default function InventoryPage() {
                   variant="outline" 
                   size="sm" 
                   className="bg-white hover:bg-slate-50 border-slate-300 text-slate-700 font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                  onClick={handleExport}
+                  disabled={isExporting}
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export Data
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export CSV
+                    </>
+                  )}
                 </Button>
                 <Button 
                   size="sm" 

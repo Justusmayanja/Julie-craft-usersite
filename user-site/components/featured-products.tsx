@@ -38,78 +38,89 @@ export function FeaturedProducts() {
         
         // Check if we got products from the API, otherwise use fallback data
         if (data.products && data.products.length > 0) {
-          setProducts(data.products)
+          // Filter out out-of-stock products
+          const inStockProducts = data.products.filter((p: Product) => 
+            (p.stock_quantity > 0) || (p.inStock === true)
+          )
+          setProducts(inStockProducts)
         } else {
-          // Use fallback data when API returns empty results
+          // Use fallback data when API returns empty results (only in-stock products)
           console.log('API returned empty products, using fallback data')
-          setProducts([
-          {
-            id: '1',
-            name: 'Handmade Ceramic Vase',
-            price: 45000,
-            description: 'Beautiful handcrafted ceramic vase with traditional Ugandan patterns',
-            image: '/placeholder.svg',
-            category: 'ceramics',
-            stock_quantity: 10,
-            featured: true
-          },
-          {
-            id: '2',
-            name: 'Traditional Beaded Necklace',
-            price: 25000,
-            description: 'Exquisite beaded necklace made with traditional techniques',
-            image: '/placeholder.svg',
-            category: 'jewelry',
-            stock_quantity: 15,
-            featured: true
-          },
-          {
-            id: '3',
-            name: 'Woven Textile Wall Hanging',
-            price: 35000,
-            description: 'Colorful woven textile perfect for home decoration',
-            image: '/placeholder.svg',
-            category: 'textiles',
-            stock_quantity: 8,
-            featured: true
-          },
-          {
-            id: '4',
-            name: 'Wooden Carved Bowl',
-            price: 30000,
-            description: 'Hand-carved wooden bowl from local artisans',
-            image: '/placeholder.svg',
-            category: 'woodwork',
-            stock_quantity: 12,
-            featured: true
-          },
-          {
-            id: '5',
-            name: 'Batik Print Scarf',
-            price: 20000,
-            description: 'Beautiful batik print scarf with African motifs',
-            image: '/placeholder.svg',
-            category: 'textiles',
-            stock_quantity: 20,
-            featured: true
-          },
-          {
-            id: '6',
-            name: 'Clay Pottery Set',
-            price: 55000,
-            description: 'Complete set of traditional clay pottery for cooking',
-            image: '/placeholder.svg',
-            category: 'ceramics',
-            stock_quantity: 6,
-            featured: true
-          }
-        ])
+          const fallbackProducts = [
+            {
+              id: '1',
+              name: 'Handmade Ceramic Vase',
+              price: 45000,
+              description: 'Beautiful handcrafted ceramic vase with traditional Ugandan patterns',
+              image: '/placeholder.svg',
+              category: 'ceramics',
+              stock_quantity: 10,
+              featured: true,
+              inStock: true
+            },
+            {
+              id: '2',
+              name: 'Traditional Beaded Necklace',
+              price: 25000,
+              description: 'Exquisite beaded necklace made with traditional techniques',
+              image: '/placeholder.svg',
+              category: 'jewelry',
+              stock_quantity: 15,
+              featured: true,
+              inStock: true
+            },
+            {
+              id: '3',
+              name: 'Woven Textile Wall Hanging',
+              price: 35000,
+              description: 'Colorful woven textile perfect for home decoration',
+              image: '/placeholder.svg',
+              category: 'textiles',
+              stock_quantity: 8,
+              featured: true,
+              inStock: true
+            },
+            {
+              id: '4',
+              name: 'Wooden Carved Bowl',
+              price: 30000,
+              description: 'Hand-carved wooden bowl from local artisans',
+              image: '/placeholder.svg',
+              category: 'woodwork',
+              stock_quantity: 12,
+              featured: true,
+              inStock: true
+            },
+            {
+              id: '5',
+              name: 'Batik Print Scarf',
+              price: 20000,
+              description: 'Beautiful batik print scarf with African motifs',
+              image: '/placeholder.svg',
+              category: 'textiles',
+              stock_quantity: 20,
+              featured: true,
+              inStock: true
+            },
+            {
+              id: '6',
+              name: 'Clay Pottery Set',
+              price: 55000,
+              description: 'Complete set of traditional clay pottery for cooking',
+              image: '/placeholder.svg',
+              category: 'ceramics',
+              stock_quantity: 6,
+              featured: true,
+              inStock: true
+            }
+          ].filter(p => p.stock_quantity > 0 && p.inStock !== false)
+          setProducts(fallbackProducts)
         setError('Using sample data - database not configured')
       }
     } catch (err) {
         console.error('Error fetching products:', err)
-        // Fallback to sample products when API fails
-        setProducts([
+        // Fallback to sample products when API fails (only in-stock products)
+        const fallbackProducts = [
           {
             id: '1',
             name: 'Handmade Ceramic Vase',
@@ -118,7 +129,8 @@ export function FeaturedProducts() {
             image: '/placeholder.svg',
             category: 'ceramics',
             stock_quantity: 10,
-            featured: true
+            featured: true,
+            inStock: true
           },
           {
             id: '2',
@@ -128,7 +140,8 @@ export function FeaturedProducts() {
             image: '/placeholder.svg',
             category: 'jewelry',
             stock_quantity: 15,
-            featured: true
+            featured: true,
+            inStock: true
           },
           {
             id: '3',
@@ -138,7 +151,8 @@ export function FeaturedProducts() {
             image: '/placeholder.svg',
             category: 'textiles',
             stock_quantity: 8,
-            featured: true
+            featured: true,
+            inStock: true
           },
           {
             id: '4',
@@ -148,7 +162,8 @@ export function FeaturedProducts() {
             image: '/placeholder.svg',
             category: 'woodwork',
             stock_quantity: 12,
-            featured: true
+            featured: true,
+            inStock: true
           },
           {
             id: '5',
@@ -158,7 +173,8 @@ export function FeaturedProducts() {
             image: '/placeholder.svg',
             category: 'textiles',
             stock_quantity: 20,
-            featured: true
+            featured: true,
+            inStock: true
           },
           {
             id: '6',
@@ -168,9 +184,11 @@ export function FeaturedProducts() {
             image: '/placeholder.svg',
             category: 'ceramics',
             stock_quantity: 6,
-            featured: true
+            featured: true,
+            inStock: true
           }
-        ])
+        ].filter(p => p.stock_quantity > 0 && p.inStock !== false)
+        setProducts(fallbackProducts)
         setError('Using sample data - API error occurred')
       } finally {
         setLoading(false)

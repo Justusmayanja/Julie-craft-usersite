@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,10 +15,27 @@ export function ShoppingCartPage() {
   const { state, removeItem, updateQuantity, clearCart, hasOutOfStockItems, removeOutOfStockItems } = useCart()
   const [promoCode, setPromoCode] = useState("")
   const [showCheckout, setShowCheckout] = useState(false)
+  // Track input values separately to allow free typing
+  const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>({})
 
   const formatPrice = (price: number) => {
     return `UGX ${price.toLocaleString()}`
   }
+
+  // Initialize quantity inputs when items change
+  useEffect(() => {
+    const newInputs: Record<string, string> = {}
+    state.items.forEach(item => {
+      if (!quantityInputs[item.id]) {
+        newInputs[item.id] = item.quantity.toString()
+      } else {
+        newInputs[item.id] = quantityInputs[item.id]
+      }
+    })
+    if (Object.keys(newInputs).length > 0) {
+      setQuantityInputs(prev => ({ ...prev, ...newInputs }))
+    }
+  }, [state.items.map(i => i.id).join(',')])
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
     // Validate quantity range - only enforce minimum of 1, no maximum limit
@@ -28,6 +45,39 @@ export function ShoppingCartPage() {
       removeItem(id)
     } else {
       updateQuantity(id, validatedQuantity)
+      // Update input value to match
+      setQuantityInputs(prev => ({ ...prev, [id]: validatedQuantity.toString() }))
+    }
+  }
+
+  const handleQuantityInputChange = (id: string, value: string) => {
+    // Allow free typing - store the raw input value
+    setQuantityInputs(prev => ({ ...prev, [id]: value }))
+  }
+
+  const handleQuantityInputBlur = (id: string) => {
+    const inputValue = quantityInputs[id] || ''
+    const trimmedValue = inputValue.trim()
+    
+    // If empty or invalid, reset to current quantity
+    if (trimmedValue === '' || isNaN(parseInt(trimmedValue, 10))) {
+      const item = state.items.find(i => i.id === id)
+      if (item) {
+        setQuantityInputs(prev => ({ ...prev, [id]: item.quantity.toString() }))
+      }
+      return
+    }
+    
+    // Parse and validate
+    const numValue = parseInt(trimmedValue, 10)
+    if (!isNaN(numValue) && numValue >= 1) {
+      handleQuantityChange(id, numValue)
+    } else {
+      // Invalid value, reset to current quantity
+      const item = state.items.find(i => i.id === id)
+      if (item) {
+        setQuantityInputs(prev => ({ ...prev, [id]: item.quantity.toString() }))
+      }
     }
   }
 
@@ -152,18 +202,20 @@ export function ShoppingCartPage() {
                               </Button>
                               <div className="relative">
                                 <Input
-                                  type="number"
-                                  min="1"
-                                  value={item.quantity}
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={quantityInputs[item.id] ?? item.quantity.toString()}
                                   onChange={(e) => {
-                                    const newQuantity = parseInt(e.target.value) || 1
-                                    if (newQuantity >= 1) {
-                                      handleQuantityChange(item.id, newQuantity)
-                                    }
+                                    // Only allow digits
+                                    const value = e.target.value.replace(/\D/g, '')
+                                    handleQuantityInputChange(item.id, value)
                                   }}
-                                  onBlur={(e) => {
-                                    const newQuantity = parseInt(e.target.value) || 1
-                                    handleQuantityChange(item.id, Math.max(1, newQuantity))
+                                  onBlur={() => handleQuantityInputBlur(item.id)}
+                                  onKeyDown={(e) => {
+                                    // Allow Enter key to blur and validate
+                                    if (e.key === 'Enter') {
+                                      e.currentTarget.blur()
+                                    }
                                   }}
                                   className="w-12 lg:w-16 h-8 lg:h-10 text-center font-semibold border-gray-300 focus:border-primary focus:ring-primary text-sm lg:text-base"
                                   disabled={!(item.inStock ?? true)}

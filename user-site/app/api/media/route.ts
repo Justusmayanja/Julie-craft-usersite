@@ -223,10 +223,23 @@ export async function GET(request: NextRequest) {
       offset: searchParams.get('offset') ? Number(searchParams.get('offset')) : 0,
     }
 
-    // Build query
+    // Build query - use 'media' table
     let query = supabaseAdmin
-      .from('media_files')
-      .select('*', { count: 'exact' })
+      .from('media')
+      .select(`
+        id,
+        filename,
+        original_name,
+        file_path,
+        file_size,
+        mime_type,
+        alt_text,
+        caption,
+        file_type,
+        uploaded_by,
+        created_at,
+        updated_at
+      `, { count: 'exact' })
 
     // Apply filters
     if (filters.search) {
@@ -234,7 +247,15 @@ export async function GET(request: NextRequest) {
     }
 
     if (filters.category) {
-      query = query.eq('category', filters.category)
+      // Map category to file_type
+      const fileTypeMap: Record<string, string> = {
+        'images': 'image',
+        'videos': 'video',
+        'documents': 'document',
+        'other': 'audio'
+      }
+      const fileType = fileTypeMap[filters.category] || filters.category
+      query = query.eq('file_type', fileType)
     }
 
     if (filters.mime_type) {
@@ -245,8 +266,15 @@ export async function GET(request: NextRequest) {
       query = query.eq('uploaded_by', filters.uploaded_by)
     }
 
-    // Apply sorting
-    query = query.order(filters.sort_by, { ascending: filters.sort_order === 'asc' })
+    // Apply sorting - map sort_by to actual column names
+    const sortColumnMap: Record<string, string> = {
+      'created_at': 'created_at',
+      'updated_at': 'updated_at',
+      'filename': 'filename',
+      'file_size': 'file_size'
+    }
+    const sortColumn = sortColumnMap[filters.sort_by || 'created_at'] || 'created_at'
+    query = query.order(sortColumn, { ascending: filters.sort_order === 'asc' })
 
     // Apply pagination
     query = query.range(filters.offset, filters.offset + filters.limit - 1)
@@ -264,8 +292,60 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Get all uploaded_by user IDs
+    const uploadedByIds = [...new Set((data || []).map((item: any) => item.uploaded_by).filter(Boolean))]
+    
+    // Fetch profiles for all uploaders
+    let profilesMap: Record<string, { first_name?: string; last_name?: string }> = {}
+    if (uploadedByIds.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', uploadedByIds)
+      
+      if (profiles) {
+        profiles.forEach((profile: any) => {
+          profilesMap[profile.id] = {
+            first_name: profile.first_name,
+            last_name: profile.last_name
+          }
+        })
+      }
+    }
+
+    // Transform data to match MediaFile interface
+    const transformedFiles = (data || []).map((item: any) => {
+      // Determine category from file_type
+      let category: 'images' | 'documents' | 'videos' | 'other' = 'other'
+      if (item.file_type === 'image') category = 'images'
+      else if (item.file_type === 'video') category = 'videos'
+      else if (item.file_type === 'document') category = 'documents'
+      
+      // Get uploaded_by_name from profile
+      const profile = item.uploaded_by ? profilesMap[item.uploaded_by] : null
+      const uploadedByName = profile 
+        ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown'
+        : 'Unknown'
+
+      return {
+        id: item.id,
+        filename: item.filename || item.original_name || '',
+        original_name: item.original_name || item.filename || '',
+        file_path: item.file_path || '',
+        file_size: item.file_size || 0,
+        mime_type: item.mime_type || '',
+        alt_text: item.alt_text || null,
+        caption: item.caption || null,
+        category,
+        uploaded_by: item.uploaded_by || '',
+        uploaded_by_name: uploadedByName,
+        created_at: item.created_at || new Date().toISOString(),
+        updated_at: item.updated_at || item.created_at || new Date().toISOString()
+      }
+    })
+
     return NextResponse.json({
-      files: data || [],
+      files: transformedFiles,
       total: count || 0,
       limit: filters.limit,
       offset: filters.offset
@@ -310,9 +390,35 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Delete media file
+    // First, get the file to delete from storage
+    const { data: mediaFile, error: fetchError } = await supabaseAdmin
+      .from('media')
+      .select('file_path')
+      .eq('id', fileId)
+      .single()
+
+    if (fetchError) {
+      console.error('Error fetching media file:', fetchError)
+      return NextResponse.json({ error: 'Media file not found' }, { status: 404 })
+    }
+
+    // Delete from storage if file_path exists
+    if (mediaFile?.file_path) {
+      // Extract bucket and path from file_path
+      // Assuming file_path is a full URL or path
+      const pathParts = mediaFile.file_path.split('/')
+      const bucket = pathParts[pathParts.length - 2] || 'media'
+      const fileName = pathParts[pathParts.length - 1]
+      
+      // Try to delete from storage (ignore errors if file doesn't exist)
+      await supabaseAdmin.storage
+        .from(bucket)
+        .remove([fileName])
+    }
+
+    // Delete media file record
     const { error } = await supabaseAdmin
-      .from('media_files')
+      .from('media')
       .delete()
       .eq('id', fileId)
 

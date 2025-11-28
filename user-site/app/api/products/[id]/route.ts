@@ -161,7 +161,7 @@ export async function GET(
       return images.map(img => normalizeImageUrl(img)).filter((img): img is string => img !== null)
     }
 
-    // Fetch product from database
+    // Fetch product from database - only show active products with stock
     const { data, error } = await supabaseAdmin
       .from('products')
       .select(`
@@ -170,6 +170,7 @@ export async function GET(
       `)
       .eq('id', productId)
       .eq('status', 'active') // Only show active products to public
+      .gt('stock_quantity', 0) // Only show products that are in stock
       .single()
 
     if (error) {
@@ -185,6 +186,14 @@ export async function GET(
     }
 
     const product = data as Product
+
+    // Check if product is in stock - don't show out-of-stock products on user site
+    if (product.stock_quantity <= 0 || product.status !== 'active') {
+      return NextResponse.json(
+        { error: 'Product not available' },
+        { status: 404 }
+      )
+    }
 
     // Normalize image URLs
     const normalizedFeaturedImage = normalizeImageUrl(product.featured_image)

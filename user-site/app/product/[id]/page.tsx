@@ -240,20 +240,14 @@ export default function ProductDetailPage() {
                   -
                 </Button>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   id="quantity"
-                  min="1"
-                  max={product.stock_quantity}
                   value={quantityInput}
                   onChange={(e) => {
-                    const value = e.target.value
-                    // Allow typing freely
+                    // Only allow digits
+                    const value = e.target.value.replace(/\D/g, '')
                     setQuantityInput(value)
-                    // Parse and update quantity if valid
-                    const numValue = parseInt(value, 10)
-                    if (!isNaN(numValue) && numValue >= 1) {
-                      setQuantity(Math.min(numValue, product.stock_quantity))
-                    }
                   }}
                   onBlur={(e) => {
                     const value = e.target.value.trim()
@@ -265,6 +259,12 @@ export default function ProductDetailPage() {
                       const validQuantity = Math.max(1, Math.min(numValue, product.stock_quantity))
                       setQuantity(validQuantity)
                       setQuantityInput(validQuantity.toString())
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // Allow Enter key to blur and validate
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur()
                     }
                   }}
                   className="w-16 h-10 text-center font-medium border-0 focus:outline-none focus:ring-0 px-2"

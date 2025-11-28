@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, ArrowLeft, Mail, Lock, Shield, CheckCircle2, AlertCircle, Eye, EyeOff, KeyRound } from 'lucide-react'
+import { Loader2, ArrowLeft, Mail, Lock, CheckCircle2, AlertCircle, Eye, EyeOff, KeyRound } from 'lucide-react'
 
 function ResetPasswordContent() {
   const [code, setCode] = useState('')
@@ -439,14 +439,6 @@ function ResetPasswordContent() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="mt-6 sm:mt-8 text-center">
-          <p className="text-xs sm:text-sm text-slate-500 flex items-center justify-center gap-1.5">
-            <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
-            Secure password reset protected by industry-standard encryption
-          </p>
-        </div>
       </div>
     </div>
   )

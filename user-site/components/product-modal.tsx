@@ -165,18 +165,13 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                       <Minus className="h-4 w-4" />
                     </Button>
                     <input
-                      type="number"
-                      min="1"
+                      type="text"
+                      inputMode="numeric"
                       value={quantityInput}
                       onChange={(e) => {
-                        const value = e.target.value
-                        // Allow typing freely
+                        // Only allow digits
+                        const value = e.target.value.replace(/\D/g, '')
                         setQuantityInput(value)
-                        // Parse and update quantity if valid
-                        const numValue = parseInt(value, 10)
-                        if (!isNaN(numValue) && numValue >= 1) {
-                          setQuantity(numValue)
-                        }
                       }}
                       onBlur={(e) => {
                         const value = e.target.value.trim()
@@ -188,6 +183,12 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                           const validQuantity = Math.max(1, numValue)
                           setQuantity(validQuantity)
                           setQuantityInput(validQuantity.toString())
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        // Allow Enter key to blur and validate
+                        if (e.key === 'Enter') {
+                          e.currentTarget.blur()
                         }
                       }}
                       className="w-16 h-10 text-center font-medium border border-gray-300 rounded-md focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"

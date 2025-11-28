@@ -134,7 +134,9 @@ export function useBlog() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create blog post')
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.details || errorData.error || 'Failed to create blog post'
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()

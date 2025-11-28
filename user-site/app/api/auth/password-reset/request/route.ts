@@ -58,11 +58,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!userId) {
-      // Don't reveal if email exists or not (security best practice)
-      // Return success even if user doesn't exist
-      return NextResponse.json({
-        message: 'If an account exists with this email, a password reset code has been sent.'
-      }, { status: 200 })
+      // Email not found in database
+      return NextResponse.json({ 
+        error: 'No account found with this email address. Please check your email and try again.',
+        code: 'EMAIL_NOT_FOUND'
+      }, { status: 404 })
     }
 
     // Generate 6-digit reset code
@@ -107,7 +107,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'If an account exists with this email, a password reset code has been sent.'
+      message: 'Password reset code has been sent to your email address.',
+      success: true
     }, { status: 200 })
 
   } catch (error) {

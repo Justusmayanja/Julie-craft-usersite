@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Lock, Shield, Info, Sparkles } from 'lucide-react'
+import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Lock, Info, Sparkles, Shield } from 'lucide-react'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -344,14 +344,6 @@ function LoginForm() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="mt-6 sm:mt-8 text-center">
-          <p className="text-xs sm:text-sm text-slate-500 flex items-center justify-center gap-1.5">
-            <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
-            Secure login protected by industry-standard encryption
-          </p>
-        </div>
       </div>
     </div>
   )
