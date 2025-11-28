@@ -23,7 +23,7 @@ const Categories = dynamic(() => import("@/components/categories").then(mod => (
   ssr: true
 })
 
-const Testimonials = dynamic(() => import("@/components/testimonials").then(mod => ({ default: mod.Testimonials })), {
+const BlogCarousel = dynamic(() => import("@/components/blog-carousel").then(mod => ({ default: mod.BlogCarousel })), {
   loading: () => <PageLoading />,
   ssr: true
 })
@@ -77,7 +77,7 @@ export default function HomePage() {
       <Hero />
       <FeaturedProducts />
       <Categories />
-      <Testimonials />
+      <BlogCarousel />
     </>
   )
 }

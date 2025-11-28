@@ -74,9 +74,10 @@ export function useBlog() {
       if (filters.limit) params.append('limit', filters.limit.toString())
       if (filters.offset) params.append('offset', filters.offset.toString())
 
+      const token = user?.token || (typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null)
       const response = await fetch(`/api/blog?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
       })
@@ -99,9 +100,10 @@ export function useBlog() {
 
   const fetchPostById = useCallback(async (id: string) => {
     try {
+      const token = user?.token || (typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null)
       const response = await fetch(`/api/blog/${id}`, {
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
       })
@@ -121,10 +123,11 @@ export function useBlog() {
 
   const createPost = useCallback(async (postData: Partial<BlogPost>) => {
     try {
+      const token = user?.token || (typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null)
       const response = await fetch('/api/blog', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(postData),
@@ -145,10 +148,11 @@ export function useBlog() {
 
   const updatePost = useCallback(async (id: string, postData: Partial<BlogPost>) => {
     try {
+      const token = user?.token || (typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null)
       const response = await fetch(`/api/blog/${id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(postData),
@@ -169,10 +173,11 @@ export function useBlog() {
 
   const deletePost = useCallback(async (id: string) => {
     try {
+      const token = user?.token || (typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null)
       const response = await fetch(`/api/blog/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
       })
@@ -224,9 +229,10 @@ export function useBlogStats() {
       setLoading(true)
       setError(null)
 
+      const token = user?.token || (typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null)
       const response = await fetch('/api/blog/stats', {
         headers: {
-          'Authorization': `Bearer ${user?.token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
       })

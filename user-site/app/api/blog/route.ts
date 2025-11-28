@@ -226,45 +226,103 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Verify admin authentication
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No authorization header found for blog, returning mock data')
-      return NextResponse.json({
-        posts: mockBlogPosts.slice(0, 5),
-        total: mockBlogPosts.length,
-        limit: 5,
-        offset: 0,
-        message: 'Mock data - no authentication'
-      })
-    }
-
-    const token = authHeader.substring(7)
-    try {
-      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
-      if (error || !user) {
-        console.log('Token verification failed for blog, returning mock data')
-        return NextResponse.json({
-          posts: mockBlogPosts.slice(0, 3),
-          total: mockBlogPosts.length,
-          limit: 3,
-          offset: 0,
-          message: 'Mock data - authentication failed'
-        })
-      }
-    } catch (error) {
-      console.log('Token verification error for blog, returning mock data')
-      return NextResponse.json({
-        posts: mockBlogPosts.slice(0, 3),
-        total: mockBlogPosts.length,
-        limit: 3,
-        offset: 0,
-        message: 'Mock data - token verification error'
-      })
-    }
-
     // Get query parameters
     const { searchParams } = new URL(request.url)
+    const requestedStatus = searchParams.get('status')
+    const isPublicRequest = requestedStatus === 'published'
+    
+    // For published posts, allow public access without authentication
+    // For admin operations (drafts, all posts), require authentication
+    let isAuthenticated = false
+    if (!isPublicRequest) {
+      const authHeader = request.headers.get('authorization')
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.log('No authorization header found for blog, returning published posts only')
+        // Return only published posts for unauthenticated requests
+        const { data, error: queryError } = await supabaseAdmin
+          .from('blog_posts')
+          .select('*', { count: 'exact' })
+          .eq('status', 'published')
+          .order('publish_date', { ascending: false })
+          .limit(50)
+        
+        if (queryError || !data) {
+          return NextResponse.json({
+            posts: mockBlogPosts.filter(p => p.status === 'published').slice(0, 5),
+            total: mockBlogPosts.filter(p => p.status === 'published').length,
+            limit: 5,
+            offset: 0,
+            message: 'Mock data - no authentication (public posts only)'
+          })
+        }
+        
+        return NextResponse.json({
+          posts: data || [],
+          total: data?.length || 0,
+          limit: 50,
+          offset: 0
+        })
+      }
+
+      const token = authHeader.substring(7)
+      try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+        if (error || !user) {
+          console.log('Token verification failed for blog, returning published posts only')
+          // Return only published posts for failed auth
+          const { data, error: queryError } = await supabaseAdmin
+            .from('blog_posts')
+            .select('*', { count: 'exact' })
+            .eq('status', 'published')
+            .order('publish_date', { ascending: false })
+            .limit(50)
+          
+          if (queryError || !data) {
+            return NextResponse.json({
+              posts: mockBlogPosts.filter(p => p.status === 'published').slice(0, 5),
+              total: mockBlogPosts.filter(p => p.status === 'published').length,
+              limit: 5,
+              offset: 0,
+              message: 'Mock data - authentication failed'
+            })
+          }
+          
+          return NextResponse.json({
+            posts: data || [],
+            total: data?.length || 0,
+            limit: 50,
+            offset: 0
+          })
+        }
+        isAuthenticated = true
+      } catch (error) {
+        console.log('Token verification error for blog, returning published posts only')
+        // Try to return published posts even on auth error
+        const { data, error: queryError } = await supabaseAdmin
+          .from('blog_posts')
+          .select('*', { count: 'exact' })
+          .eq('status', 'published')
+          .order('publish_date', { ascending: false })
+          .limit(50)
+        
+        if (queryError || !data) {
+          return NextResponse.json({
+            posts: mockBlogPosts.filter(p => p.status === 'published').slice(0, 5),
+            total: mockBlogPosts.filter(p => p.status === 'published').length,
+            limit: 5,
+            offset: 0,
+            message: 'Mock data - token verification error'
+          })
+        }
+        
+        return NextResponse.json({
+          posts: data || [],
+          total: data?.length || 0,
+          limit: 50,
+          offset: 0
+        })
+      }
+    }
     const filters: BlogFilters = {
       search: searchParams.get('search') || undefined,
       status: searchParams.get('status') as any || undefined,

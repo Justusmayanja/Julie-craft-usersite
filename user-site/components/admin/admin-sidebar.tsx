@@ -14,24 +14,20 @@ import {
   Users, 
   Settings, 
   Warehouse,
-  Palette,
   TrendingUp,
   Activity,
   Zap,
   Store,
-  Truck,
   CreditCard,
   Bell,
   Shield,
-  Globe,
   ChevronDown,
   X,
   FileText,
   Image as ImageIcon,
   Layout,
   Newspaper,
-  UserCircle,
-  Cog
+  UserCircle
 } from "lucide-react"
 
 // Type definitions
@@ -154,11 +150,6 @@ const navigationSections: NavigationSection[] = [
             icon: Store,
           },
           {
-            name: "Shipping",
-            href: "/admin/settings/shipping",
-            icon: Truck,
-          },
-          {
             name: "Payments",
             href: "/admin/settings/payments",
             icon: CreditCard,
@@ -177,16 +168,6 @@ const navigationSections: NavigationSection[] = [
             name: "Users & Permissions",
             href: "/admin/settings/settings/users",
             icon: Users,
-          },
-          {
-            name: "Appearance",
-            href: "/admin/settings/appearance",
-            icon: Palette,
-          },
-          {
-            name: "Integrations",
-            href: "/admin/settings/integrations",
-            icon: Globe,
           },
         ]
       },
