@@ -6,6 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useNotifications } from "@/contexts/notification-context"
+import { useChatUnreadCount } from "@/hooks/admin/use-chat-unread-count"
 import { 
   LayoutDashboard, 
   Package, 
@@ -27,7 +28,8 @@ import {
   Image as ImageIcon,
   Layout,
   Newspaper,
-  UserCircle
+  UserCircle,
+  MessageCircle
 } from "lucide-react"
 
 // Type definitions
@@ -41,7 +43,7 @@ interface NavigationItem {
   name: string
   href: string
   icon: React.ComponentType<{ className?: string }>
-  badge?: string
+  badge?: string | null
   badgeColor?: string
   hasSubmenu?: boolean
   submenu?: SubMenuItem[]
@@ -129,6 +131,13 @@ const navigationSections: NavigationSection[] = [
     title: "Management",
     items: [
       {
+        name: "Chat Support",
+        href: "/admin/chat",
+        icon: MessageCircle,
+        badge: null, // Will be set dynamically
+        badgeColor: "bg-amber-500",
+      },
+      {
         name: "Customers",
         href: "/admin/customers",
         icon: Users,
@@ -182,6 +191,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ onClose }: AdminSidebarProps) {
   const pathname = usePathname()
   const { unreadCount, notifications } = useNotifications()
+  const { unreadCount: chatUnreadCount } = useChatUnreadCount()
   const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
 
   // Load logo from site settings
@@ -369,9 +379,33 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                           </div>
                           <span className="tracking-tight truncate text-xs sm:text-sm">{item.name}</span>
                         </div>
+                        {/* Badge for Chat Support */}
+                        {item.name === 'Chat Support' && chatUnreadCount > 0 && (
+                          <span className={cn(
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
+                            isActive
+                              ? "bg-amber-500 text-white ring-amber-200"
+                              : "bg-amber-500 text-white ring-amber-200 group-hover:bg-amber-600"
+                          )}>
+                            {chatUnreadCount}
+                          </span>
+                        )}
+                        {/* Badge for other items */}
+                        {item.name !== 'Chat Support' && item.name !== 'Orders' && item.badge && (
+                          <span className={cn(
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
+                            item.badgeColor === "bg-red-500" 
+                              ? "bg-red-500 text-white ring-red-200" 
+                              : isActive
+                              ? "bg-amber-500 text-white ring-amber-200" 
+                              : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
+                          )}>
+                            {item.badge}
+                          </span>
+                        )}
                         
-                        {/* Enhanced Badge - Dynamic for Orders */}
-                        {(item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
+                        {/* Enhanced Badge - Dynamic for Orders (only if not Chat Support) */}
+                        {item.name !== 'Chat Support' && (item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
                           <span className={cn(
                             "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0 animate-pulse",
                             item.badgeColor === "bg-red-500" 

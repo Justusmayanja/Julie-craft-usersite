@@ -1,14 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, User, Settings, LogOut, Menu, ChevronDown, Home, X } from "lucide-react"
+import { Search, User, Settings, LogOut, Menu, ChevronDown, Home, X, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter, usePathname } from "next/navigation"
 import { NotificationBell } from "@/components/notifications/notification-bell"
+import { useChatUnreadCount } from "@/hooks/admin/use-chat-unread-count"
 import Image from "next/image"
+import Link from "next/link"
 
 interface AdminHeaderProps {
   onMenuClick?: () => void
@@ -21,6 +24,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const { user, logout } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const { unreadCount: chatUnreadCount } = useChatUnreadCount()
 
   // Get current page name from pathname
   const getPageName = () => {
@@ -44,7 +48,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
       'settings': 'Settings',
       'content': 'Content',
       'media': 'Media Library',
-      'homepage': 'Homepage'
+      'homepage': 'Homepage',
+      'chat': 'Chat Support'
     }
     
     return pageNames[pageSegment] || pageSegment.charAt(0).toUpperCase() + pageSegment.slice(1).replace(/-/g, ' ')
@@ -145,6 +150,22 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
               />
             </div>
           </form>
+
+          {/* Chat Support */}
+          <Link href="/admin/chat">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative hover:bg-gray-100 rounded-lg flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
+            >
+              <MessageCircle className="h-5 w-5 text-gray-600" />
+              {chatUnreadCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-amber-500 text-white text-[10px] font-bold border-2 border-white">
+                  {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                </Badge>
+              )}
+            </Button>
+          </Link>
 
           {/* Notifications */}
           <NotificationBell className="h-9 w-9 sm:h-10 sm:w-10" />

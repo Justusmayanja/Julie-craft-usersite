@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { Badge } from "@/components/ui/badge"
-import { Menu, ShoppingCart, Search, MessageCircle, User, LogOut, ShoppingBag } from "lucide-react"
+import { Menu, ShoppingCart, Search, User, LogOut, ShoppingBag, MessageCircle } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useClientOnly } from "@/hooks/use-client-only"
 import { NotificationBell } from "@/components/notifications/notification-bell"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useChatUnreadCount } from "@/hooks/use-chat-unread-count"
+import { ChatWidget } from "@/components/chat/chat-widget"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,11 +26,11 @@ import { Logo } from "@/components/logo"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
-  const [isChatOpen, setIsChatOpen] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const isClient = useClientOnly()
   const { state } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
+  const { unreadCount: chatUnreadCount } = useChatUnreadCount()
 
   // Load profile image from user data or localStorage
   useEffect(() => {
@@ -58,9 +60,6 @@ export function Navigation() {
     { name: "Contact", href: "/contact" },
   ]
 
-  const handleChatToggle = () => {
-    setIsChatOpen(!isChatOpen)
-  }
 
   return (
     <>
@@ -106,14 +105,28 @@ export function Navigation() {
                 <Search className="h-4 w-4" />
               </Button>
 
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleChatToggle} 
-                className="hidden md:flex h-9 w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
-              >
-                <MessageCircle className="h-4 w-4" />
-              </Button>
+              {/* Chat Support - only show for authenticated users */}
+              {isAuthenticated && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-8 w-8 sm:h-9 sm:w-9 hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors"
+                  onClick={() => {
+                    // Dispatch custom event to open chat widget
+                    window.dispatchEvent(new CustomEvent('openChatWidget'))
+                  }}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {isClient && chatUnreadCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[10px] text-white bg-amber-500 border-0"
+                    >
+                      {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
+                    </Badge>
+                  )}
+                </Button>
+              )}
 
               {/* Notifications - only show for authenticated users */}
               {isAuthenticated && (
@@ -142,23 +155,25 @@ export function Navigation() {
               {/* Auth Buttons - Mobile & Desktop */}
               {!isAuthenticated ? (
                 <div className="flex items-center space-x-1.5 sm:space-x-2">
-                  <Link href="/login">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 px-2 sm:h-9 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm font-medium hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors whitespace-nowrap"
-                    >
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 px-2 sm:h-9 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm font-medium hover:bg-slate-700/50 text-slate-200 hover:text-white transition-colors whitespace-nowrap"
+                    asChild
+                  >
+                    <Link href="/login">
                       Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button 
-                      size="sm" 
-                      className="h-8 px-2 sm:h-9 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm whitespace-nowrap"
-                    >
+                    </Link>
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    className="h-8 px-2 sm:h-9 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm whitespace-nowrap"
+                    asChild
+                  >
+                    <Link href="/register">
                       Sign Up
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               ) : (
                 <DropdownMenu>
@@ -284,14 +299,24 @@ export function Navigation() {
                             <Search className="mr-3 h-4 w-4" />
                             <span className="font-medium">Search Products</span>
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            className="w-full justify-start px-3 py-2.5 h-auto text-slate-200 hover:text-amber-400 hover:bg-slate-700/50"
-                            onClick={handleChatToggle}
-                          >
-                            <MessageCircle className="mr-3 h-4 w-4" />
-                            <span className="font-medium">Chat Support</span>
-                          </Button>
+                          {isAuthenticated && (
+                            <Button 
+                              variant="ghost" 
+                              className="w-full justify-start px-3 py-2.5 h-auto text-slate-200 hover:text-amber-400 hover:bg-slate-700/50 relative"
+                              onClick={() => {
+                                setIsOpen(false)
+                                window.dispatchEvent(new CustomEvent('openChatWidget'))
+                              }}
+                            >
+                              <MessageCircle className="mr-3 h-4 w-4" />
+                              <span className="font-medium">Chat Support</span>
+                              {isClient && chatUnreadCount > 0 && (
+                                <Badge className="ml-auto bg-amber-500 text-white text-xs">
+                                  {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
+                                </Badge>
+                              )}
+                            </Button>
+                          )}
                         </div>
                         
                         {/* Authentication Section */}
@@ -350,21 +375,23 @@ export function Navigation() {
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <Link href="/login" onClick={() => setIsOpen(false)}>
-                                <Button 
-                                  variant="outline" 
-                                  className="w-full h-11 border-slate-600 hover:bg-slate-700/50 text-slate-200 hover:text-white font-medium"
-                                >
+                              <Button 
+                                variant="outline" 
+                                className="w-full h-11 border-slate-600 hover:bg-slate-700/50 text-slate-200 hover:text-white font-medium"
+                                asChild
+                              >
+                                <Link href="/login" onClick={() => setIsOpen(false)}>
                                   Sign In
-                                </Button>
-                              </Link>
-                              <Link href="/register" onClick={() => setIsOpen(false)}>
-                                <Button 
-                                  className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-medium shadow-sm"
-                                >
+                                </Link>
+                              </Button>
+                              <Button 
+                                className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-medium shadow-sm"
+                                asChild
+                              >
+                                <Link href="/register" onClick={() => setIsOpen(false)}>
                                   Create Account
-                                </Button>
-                              </Link>
+                                </Link>
+                              </Button>
                             </div>
                           )}
                         </div>
@@ -385,41 +412,8 @@ export function Navigation() {
         </div>
       </header>
 
-      {isChatOpen && (
-        <div className="fixed bottom-4 right-4 z-50 w-80 h-96 bg-card border rounded-lg shadow-lg">
-          <div className="flex items-center justify-between p-4 border-b">
-            <h3 className="font-semibold">Chat with us</h3>
-            <Button variant="ghost" size="sm" onClick={handleChatToggle}>
-              ×
-            </Button>
-          </div>
-          <div className="p-4 h-64 overflow-y-auto">
-            <div className="space-y-4">
-              <div className="bg-muted p-3 rounded-lg">
-                <p className="text-sm">Hello! How can we help you today?</p>
-              </div>
-              <div className="bg-primary text-primary-foreground p-3 rounded-lg ml-8">
-                <p className="text-sm">Hi, I'm interested in your products!</p>
-              </div>
-              <div className="bg-muted p-3 rounded-lg">
-                <p className="text-sm">
-                  Great! You can browse our products or contact us at 0753445091 for immediate assistance.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 border-t">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Type your message..."
-                className="flex-1 px-3 py-2 border rounded-md text-sm"
-              />
-              <Button size="sm">Send</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Chat Widget */}
+      <ChatWidget />
     </>
   )
 }
