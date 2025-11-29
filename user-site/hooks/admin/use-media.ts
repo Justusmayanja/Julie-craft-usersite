@@ -44,6 +44,10 @@ export function useMedia() {
   const [totalCount, setTotalCount] = useState(0)
   const { user } = useAuth()
 
+  const getToken = () => {
+    return user?.token || (typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null)
+  }
+
   const fetchFiles = useCallback(async (filters: MediaFilters = {}) => {
     setLoading(true)
     setError(null)
@@ -60,12 +64,13 @@ export function useMedia() {
       if (filters.limit) params.append('limit', filters.limit.toString())
       if (filters.offset) params.append('offset', filters.offset.toString())
 
+      const token = getToken()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       }
 
-      if (user?.token) {
-        headers['Authorization'] = `Bearer ${user.token}`
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
       }
 
       const response = await fetch(`/api/media?${params.toString()}`, {
@@ -88,7 +93,7 @@ export function useMedia() {
     } finally {
       setLoading(false)
     }
-  }, [user?.token])
+  }, [])
 
   const uploadFile = useCallback(async (file: File, metadata?: { alt_text?: string; caption?: string; category?: string }): Promise<MediaFile | null> => {
     try {
@@ -99,10 +104,11 @@ export function useMedia() {
       if (metadata?.caption) formData.append('caption', metadata.caption)
       if (metadata?.category) formData.append('category', metadata.category)
 
+      const token = getToken()
       const headers: HeadersInit = {}
 
-      if (user?.token) {
-        headers['Authorization'] = `Bearer ${user.token}`
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
       }
 
       const response = await fetch('/api/media/upload', {
@@ -122,16 +128,52 @@ export function useMedia() {
       console.error('Error uploading file:', err)
       throw err
     }
-  }, [user?.token])
+  }, [])
 
-  const deleteFile = useCallback(async (id: string): Promise<boolean> => {
+  const updateFile = useCallback(async (id: string, metadata: { alt_text?: string; caption?: string; original_name?: string }): Promise<MediaFile | null> => {
     try {
+      const token = getToken()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       }
 
-      if (user?.token) {
-        headers['Authorization'] = `Bearer ${user.token}`
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const response = await fetch('/api/media', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          id,
+          ...metadata
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to update file: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      return data.file || null
+
+    } catch (err) {
+      console.error('Error updating file:', err)
+      throw err
+    }
+  }, [])
+
+  const deleteFile = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      const token = getToken()
+      if (!token) {
+        throw new Error('Authentication required. Please log in again.')
+      }
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       }
 
       const response = await fetch(`/api/media?id=${id}`, {
@@ -140,7 +182,8 @@ export function useMedia() {
       })
 
       if (!response.ok) {
-        throw new Error(`Failed to delete file: ${response.statusText}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to delete file: ${response.statusText}`)
       }
 
       return true
@@ -149,7 +192,7 @@ export function useMedia() {
       console.error('Error deleting file:', err)
       throw err
     }
-  }, [user?.token])
+  }, [])
 
   const refreshFiles = useCallback(() => {
     fetchFiles()
@@ -163,6 +206,7 @@ export function useMedia() {
     totalCount,
     fetchFiles,
     uploadFile,
+    updateFile,
     deleteFile,
     refreshFiles,
   }

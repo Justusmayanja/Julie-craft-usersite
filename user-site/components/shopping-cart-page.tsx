@@ -12,11 +12,12 @@ import Link from "next/link"
 import { CheckoutModal } from "@/components/checkout-modal"
 
 export function ShoppingCartPage() {
-  const { state, removeItem, updateQuantity, clearCart, hasOutOfStockItems, removeOutOfStockItems } = useCart()
+  const { state, removeItem, updateQuantity, clearCart, hasOutOfStockItems, removeOutOfStockItems, checkStockAvailability } = useCart()
   const [promoCode, setPromoCode] = useState("")
   const [showCheckout, setShowCheckout] = useState(false)
   // Track input values separately to allow free typing
   const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>({})
+  const [isCheckingStock, setIsCheckingStock] = useState(false)
 
   const formatPrice = (price: number) => {
     return `UGX ${price.toLocaleString()}`
@@ -36,6 +37,34 @@ export function ShoppingCartPage() {
       setQuantityInputs(prev => ({ ...prev, ...newInputs }))
     }
   }, [state.items.map(i => i.id).join(',')])
+
+  // Check stock availability when cart page loads
+  useEffect(() => {
+    if (state.items.length > 0 && checkStockAvailability) {
+      setIsCheckingStock(true)
+      checkStockAvailability()
+        .catch(error => {
+          console.error('Error checking stock availability:', error)
+        })
+        .finally(() => {
+          setIsCheckingStock(false)
+        })
+    }
+  }, []) // Only run on mount
+
+  // Also check stock when items change (debounced)
+  useEffect(() => {
+    if (state.items.length > 0 && checkStockAvailability) {
+      const timeoutId = setTimeout(() => {
+        checkStockAvailability()
+          .catch(error => {
+            console.error('Error checking stock availability:', error)
+          })
+      }, 1000) // Debounce to avoid too many calls
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [state.items.length]) // Only check when item count changes, not on every quantity change
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
     // Validate quantity range - only enforce minimum of 1, no maximum limit

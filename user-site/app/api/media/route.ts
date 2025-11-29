@@ -28,186 +28,58 @@ export interface MediaFilters {
   offset?: number
 }
 
-// Mock media files
-const mockMediaFiles: MediaFile[] = [
-  {
-    id: 'MEDIA-001',
-    filename: 'homepage-hero.jpg',
-    original_name: 'homepage-hero.jpg',
-    file_path: '/uploads/images/homepage-hero.jpg',
-    file_size: 245760,
-    mime_type: 'image/jpeg',
-    alt_text: 'Beautiful handmade ceramics on display',
-    caption: 'Our featured ceramic collection',
-    category: 'images',
-    uploaded_by: 'admin-001',
-    uploaded_by_name: 'Julie Anderson',
-    created_at: '2023-09-01T10:00:00Z',
-    updated_at: '2023-09-01T10:00:00Z'
-  },
-  {
-    id: 'MEDIA-002',
-    filename: 'about-hero.jpg',
-    original_name: 'about-hero.jpg',
-    file_path: '/uploads/images/about-hero.jpg',
-    file_size: 189440,
-    mime_type: 'image/jpeg',
-    alt_text: 'Artisan working on pottery',
-    caption: 'Our skilled artisans at work',
-    category: 'images',
-    uploaded_by: 'admin-001',
-    uploaded_by_name: 'Julie Anderson',
-    created_at: '2023-09-02T10:00:00Z',
-    updated_at: '2023-09-02T10:00:00Z'
-  },
-  {
-    id: 'MEDIA-003',
-    filename: 'product-catalog.pdf',
-    original_name: 'product-catalog.pdf',
-    file_path: '/uploads/documents/product-catalog.pdf',
-    file_size: 1024000,
-    mime_type: 'application/pdf',
-    alt_text: 'Product catalog document',
-    caption: 'Complete product catalog for 2023',
-    category: 'documents',
-    uploaded_by: 'admin-001',
-    uploaded_by_name: 'Julie Anderson',
-    created_at: '2023-09-03T10:00:00Z',
-    updated_at: '2023-09-03T10:00:00Z'
-  },
-  {
-    id: 'MEDIA-004',
-    filename: 'crafting-process.mp4',
-    original_name: 'crafting-process.mp4',
-    file_path: '/uploads/videos/crafting-process.mp4',
-    file_size: 15728640,
-    mime_type: 'video/mp4',
-    alt_text: 'Video showing the crafting process',
-    caption: 'Behind the scenes: Our crafting process',
-    category: 'videos',
-    uploaded_by: 'admin-001',
-    uploaded_by_name: 'Julie Anderson',
-    created_at: '2023-09-04T10:00:00Z',
-    updated_at: '2023-09-04T10:00:00Z'
-  },
-  {
-    id: 'MEDIA-005',
-    filename: 'jewelry-collection.jpg',
-    original_name: 'jewelry-collection.jpg',
-    file_path: '/uploads/images/jewelry-collection.jpg',
-    file_size: 312320,
-    mime_type: 'image/jpeg',
-    alt_text: 'Traditional Ugandan jewelry collection',
-    caption: 'Our traditional jewelry collection',
-    category: 'images',
-    uploaded_by: 'admin-001',
-    uploaded_by_name: 'Julie Anderson',
-    created_at: '2023-09-05T10:00:00Z',
-    updated_at: '2023-09-05T10:00:00Z'
-  }
-]
-
 export async function GET(request: NextRequest) {
   try {
     // Check if Supabase is configured
     if (!isSupabaseConfigured || !supabaseAdmin) {
-      console.log('Supabase not configured, returning mock media files')
-      
-      const { searchParams } = new URL(request.url)
-      const filters: MediaFilters = {
-        search: searchParams.get('search') || undefined,
-        category: searchParams.get('category') as any || undefined,
-        mime_type: searchParams.get('mime_type') || undefined,
-        uploaded_by: searchParams.get('uploaded_by') || undefined,
-        sort_by: (searchParams.get('sort_by') as any) || 'created_at',
-        sort_order: (searchParams.get('sort_order') as any) || 'desc',
-        limit: searchParams.get('limit') ? Number(searchParams.get('limit')) : 50,
-        offset: searchParams.get('offset') ? Number(searchParams.get('offset')) : 0,
-      }
-      
-      let filtered = [...mockMediaFiles]
-      
-      // Apply filters
-      if (filters.search) {
-        const search = filters.search.toLowerCase()
-        filtered = filtered.filter(file => 
-          file.filename.toLowerCase().includes(search) ||
-          file.original_name.toLowerCase().includes(search) ||
-          file.alt_text?.toLowerCase().includes(search) ||
-          file.caption?.toLowerCase().includes(search)
-        )
-      }
-      
-      if (filters.category) {
-        filtered = filtered.filter(file => file.category === filters.category)
-      }
-      
-      if (filters.mime_type) {
-        filtered = filtered.filter(file => file.mime_type.includes(filters.mime_type!))
-      }
-      
-      if (filters.uploaded_by) {
-        filtered = filtered.filter(file => file.uploaded_by === filters.uploaded_by)
-      }
-      
-      // Apply sorting
-      filtered.sort((a, b) => {
-        const aVal = a[filters.sort_by!] || ''
-        const bVal = b[filters.sort_by!] || ''
-        if (filters.sort_order === 'asc') {
-          return aVal > bVal ? 1 : -1
-        } else {
-          return aVal < bVal ? 1 : -1
-        }
-      })
-      
-      // Apply pagination
-      const paginated = filtered.slice(filters.offset, filters.offset! + filters.limit!)
+      console.log('Supabase not configured, returning empty media files')
       
       return NextResponse.json({
-        files: paginated,
-        total: filtered.length,
-        limit: filters.limit,
-        offset: filters.offset,
-        message: 'Mock data - database not configured'
-      })
+        files: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        error: 'Database not configured',
+        message: 'Supabase is not configured. Please configure database connection.'
+      }, { status: 503 })
     }
 
     // Verify admin authentication
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No authorization header found for media, returning mock data')
       return NextResponse.json({
-        files: mockMediaFiles.slice(0, 5),
-        total: mockMediaFiles.length,
-        limit: 5,
+        files: [],
+        total: 0,
+        limit: 50,
         offset: 0,
-        message: 'Mock data - no authentication'
-      })
+        error: 'Unauthorized',
+        message: 'Authentication required'
+      }, { status: 401 })
     }
 
     const token = authHeader.substring(7)
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       if (error || !user) {
-        console.log('Token verification failed for media, returning mock data')
         return NextResponse.json({
-          files: mockMediaFiles.slice(0, 3),
-          total: mockMediaFiles.length,
-          limit: 3,
+          files: [],
+          total: 0,
+          limit: 50,
           offset: 0,
-          message: 'Mock data - authentication failed'
-        })
+          error: 'Invalid token',
+          message: 'Authentication token is invalid'
+        }, { status: 401 })
       }
     } catch (error) {
-      console.log('Token verification error for media, returning mock data')
+      console.error('Token verification error for media:', error)
       return NextResponse.json({
-        files: mockMediaFiles.slice(0, 3),
-        total: mockMediaFiles.length,
-        limit: 3,
+        files: [],
+        total: 0,
+        limit: 50,
         offset: 0,
-        message: 'Mock data - token verification error'
-      })
+        error: 'Authentication error',
+        message: 'Failed to verify authentication token'
+      }, { status: 401 })
     }
 
     // Get query parameters
@@ -237,8 +109,7 @@ export async function GET(request: NextRequest) {
         caption,
         file_type,
         uploaded_by,
-        created_at,
-        updated_at
+        created_at
       `, { count: 'exact' })
 
     // Apply filters
@@ -267,9 +138,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply sorting - map sort_by to actual column names
+    // Note: media table doesn't have updated_at, so use created_at instead
     const sortColumnMap: Record<string, string> = {
       'created_at': 'created_at',
-      'updated_at': 'updated_at',
+      'updated_at': 'created_at', // Fallback to created_at since updated_at doesn't exist
       'filename': 'filename',
       'file_size': 'file_size'
     }
@@ -283,13 +155,15 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Database error:', error)
+      // Return empty array instead of mock data
       return NextResponse.json({
-        files: mockMediaFiles.slice(0, 5),
-        total: mockMediaFiles.length,
-        limit: 5,
-        offset: 0,
-        message: 'Mock data - database error fallback'
-      })
+        files: [],
+        total: 0,
+        limit: filters.limit,
+        offset: filters.offset,
+        error: 'Failed to fetch media files',
+        message: error.message || 'Database error'
+      }, { status: 500 })
     }
 
     // Get all uploaded_by user IDs
@@ -340,7 +214,7 @@ export async function GET(request: NextRequest) {
         uploaded_by: item.uploaded_by || '',
         uploaded_by_name: uploadedByName,
         created_at: item.created_at || new Date().toISOString(),
-        updated_at: item.updated_at || item.created_at || new Date().toISOString()
+        updated_at: item.created_at || new Date().toISOString() // Use created_at since updated_at doesn't exist in DB
       }
     })
 
@@ -353,13 +227,122 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Media API error:', error)
+    // Return empty array instead of mock data
     return NextResponse.json({
-      files: mockMediaFiles.slice(0, 5),
-      total: mockMediaFiles.length,
-      limit: 5,
+      files: [],
+      total: 0,
+      limit: 50,
       offset: 0,
-      message: 'Mock data - API error'
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Failed to fetch media files'
+    }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+    }
+
+    // Verify admin authentication
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.substring(7)
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.is_admin) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { id, alt_text, caption, original_name } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'File ID is required' }, { status: 400 })
+    }
+
+    // Build update object
+    // Note: media table doesn't have updated_at column, so we don't update it
+    const updateData: any = {}
+
+    if (alt_text !== undefined) updateData.alt_text = alt_text || null
+    if (caption !== undefined) updateData.caption = caption || null
+    if (original_name !== undefined) updateData.original_name = original_name || null
+
+    // Update media file
+    const { data: updatedFile, error: updateError } = await supabaseAdmin
+      .from('media')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('Error updating media file:', updateError)
+      return NextResponse.json({ 
+        error: 'Failed to update media file',
+        details: updateError.message 
+      }, { status: 500 })
+    }
+
+    // Get profile for uploaded_by_name
+    const { data: uploaderProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', updatedFile.uploaded_by)
+      .single()
+
+    const uploadedByName = uploaderProfile 
+      ? `${uploaderProfile.first_name || ''} ${uploaderProfile.last_name || ''}`.trim() || 'Unknown'
+      : 'Unknown'
+
+    // Determine category from file_type
+    let category: 'images' | 'documents' | 'videos' | 'other' = 'other'
+    if (updatedFile.file_type === 'image') category = 'images'
+    else if (updatedFile.file_type === 'video') category = 'videos'
+    else if (updatedFile.file_type === 'document') category = 'documents'
+
+    return NextResponse.json({
+      success: true,
+      message: 'Media file updated successfully',
+      file: {
+        id: updatedFile.id,
+        filename: updatedFile.filename,
+        original_name: updatedFile.original_name,
+        file_path: updatedFile.file_path,
+        file_size: updatedFile.file_size,
+        mime_type: updatedFile.mime_type,
+        alt_text: updatedFile.alt_text,
+        caption: updatedFile.caption,
+        category,
+        uploaded_by: updatedFile.uploaded_by,
+        uploaded_by_name: uploadedByName,
+        created_at: updatedFile.created_at,
+        updated_at: updatedFile.created_at // Use created_at since updated_at doesn't exist in DB
+      }
     })
+
+  } catch (error) {
+    console.error('Media update API error:', error)
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
@@ -371,6 +354,8 @@ export async function DELETE(request: NextRequest) {
     if (!fileId) {
       return NextResponse.json({ error: 'File ID is required' }, { status: 400 })
     }
+
+    console.log('DELETE request for media file ID:', fileId)
 
     // Check if Supabase is configured
     if (!isSupabaseConfigured || !supabaseAdmin) {
@@ -390,44 +375,127 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
+    // Check if user is admin
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.is_admin) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+    }
+
     // First, get the file to delete from storage
+    // Try to find the file - use maybeSingle() to avoid error if not found
     const { data: mediaFile, error: fetchError } = await supabaseAdmin
       .from('media')
-      .select('file_path')
+      .select('id, file_path, filename, folder')
       .eq('id', fileId)
-      .single()
+      .maybeSingle()
 
     if (fetchError) {
       console.error('Error fetching media file:', fetchError)
-      return NextResponse.json({ error: 'Media file not found' }, { status: 404 })
+      console.error('File ID searched:', fileId)
+      return NextResponse.json({ 
+        error: 'Failed to fetch media file',
+        details: fetchError.message 
+      }, { status: 500 })
     }
 
-    // Delete from storage if file_path exists
-    if (mediaFile?.file_path) {
-      // Extract bucket and path from file_path
-      // Assuming file_path is a full URL or path
-      const pathParts = mediaFile.file_path.split('/')
-      const bucket = pathParts[pathParts.length - 2] || 'media'
-      const fileName = pathParts[pathParts.length - 1]
+    if (!mediaFile) {
+      console.warn(`Media file not found with ID: ${fileId}`)
+      // Check if file exists with different query to help debug
+      const { data: allFiles } = await supabaseAdmin
+        .from('media')
+        .select('id, filename, original_name')
+        .limit(10)
+      console.log('Sample media files in database:', allFiles?.map(f => ({ id: f.id, name: f.original_name || f.filename })))
       
-      // Try to delete from storage (ignore errors if file doesn't exist)
-      await supabaseAdmin.storage
-        .from(bucket)
-        .remove([fileName])
+      return NextResponse.json({ 
+        error: 'Media file not found',
+        details: `No file found with ID: ${fileId}. The file may have already been deleted.`
+      }, { status: 404 })
+    }
+
+    console.log('Found media file to delete:', { id: mediaFile.id, filename: mediaFile.filename, file_path: mediaFile.file_path })
+
+    // Delete from storage if file_path exists
+    if (mediaFile.file_path) {
+      try {
+        // Extract path from file_path (could be a full URL or relative path)
+        let storagePath = mediaFile.file_path
+        
+        // If it's a full Supabase storage URL, extract the path after the bucket name
+        // Format: https://[project].supabase.co/storage/v1/object/public/[bucket]/[path]
+        if (storagePath.includes('/storage/v1/object/public/')) {
+          const urlParts = storagePath.split('/storage/v1/object/public/')
+          if (urlParts.length > 1) {
+            // Remove the bucket name (first part) and get the rest as the path
+            const pathAfterBucket = urlParts[1]
+            const pathSegments = pathAfterBucket.split('/')
+            if (pathSegments.length > 1) {
+              // Remove bucket name (first segment) and join the rest
+              storagePath = pathSegments.slice(1).join('/')
+            } else {
+              // Only bucket name, use filename from database
+              storagePath = mediaFile.filename
+            }
+          }
+        } else if (storagePath.startsWith('http')) {
+          // Other URL format, try to extract path
+          const url = new URL(storagePath)
+          storagePath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname
+        } else {
+          // Relative path - remove leading slash if present
+          storagePath = storagePath.startsWith('/') ? storagePath.slice(1) : storagePath
+        }
+        
+        // Fallback: if we couldn't extract a valid path, use folder and filename
+        if (!storagePath || storagePath === mediaFile.file_path) {
+          storagePath = `${mediaFile.folder || 'uploads'}/${mediaFile.filename}`
+        }
+        
+        // Use 'media' bucket (as per upload route)
+        const storageBucket = 'media'
+        
+        console.log(`Attempting to delete from storage: bucket=${storageBucket}, path=${storagePath}`)
+        
+        // Try to delete from storage (ignore errors if file doesn't exist)
+        const { error: storageError } = await supabaseAdmin.storage
+          .from(storageBucket)
+          .remove([storagePath])
+        
+        if (storageError) {
+          console.warn('Storage deletion warning (file may not exist):', storageError)
+          // Continue with database deletion even if storage deletion fails
+        } else {
+          console.log(`Successfully deleted from storage: ${storagePath}`)
+        }
+      } catch (storageErr) {
+        console.warn('Storage deletion error (continuing with database deletion):', storageErr)
+        // Continue with database deletion even if storage deletion fails
+      }
     }
 
     // Delete media file record
-    const { error } = await supabaseAdmin
+    const { error: deleteError } = await supabaseAdmin
       .from('media')
       .delete()
       .eq('id', fileId)
 
-    if (error) {
-      console.error('Error deleting media file:', error)
-      return NextResponse.json({ error: 'Failed to delete media file' }, { status: 500 })
+    if (deleteError) {
+      console.error('Error deleting media file record:', deleteError)
+      return NextResponse.json({ 
+        error: 'Failed to delete media file record',
+        details: deleteError.message 
+      }, { status: 500 })
     }
 
-    return NextResponse.json({ message: 'Media file deleted successfully' })
+    return NextResponse.json({ 
+      success: true,
+      message: 'Media file deleted successfully' 
+    })
 
   } catch (error) {
     console.error('Media deletion error:', error)

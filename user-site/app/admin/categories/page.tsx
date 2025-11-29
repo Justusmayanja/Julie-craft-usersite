@@ -33,6 +33,17 @@ import Image from "next/image"
 import { useCategories } from "@/hooks/admin/use-products"
 import { useCategoryStats } from "@/hooks/admin/use-category-stats"
 import { useToast } from "@/components/ui/use-toast"
+import { normalizeImageUrl } from "@/lib/utils/image-url"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Category {
   id: string
@@ -54,6 +65,9 @@ export default function CategoriesPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const { categories, loading, error, refetch } = useCategories()
   const { stats: categoryStats, loading: statsLoading, error: statsError, refresh: refreshStats } = useCategoryStats()
@@ -132,13 +146,17 @@ export default function CategoriesPage() {
     setImagePreview(category.image_url || null)
   }
 
-  const handleDeleteCategory = async (category: Category) => {
-    if (!confirm(`Are you sure you want to delete the category "${category.name}"? This action cannot be undone.`)) {
-      return
-    }
+  const handleDeleteClick = (category: Category) => {
+    setCategoryToDelete(category)
+    setIsDeleteDialogOpen(true)
+  }
 
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return
+
+    setIsDeleting(true)
     try {
-      const response = await fetch(`/api/categories/${category.id}`, {
+      const response = await fetch(`/api/categories/${categoryToDelete.id}`, {
         method: 'DELETE',
       })
 
@@ -148,20 +166,24 @@ export default function CategoriesPage() {
       }
 
       toast({
-        title: 'Success',
-        description: `The category "${category.name}" has been deleted successfully.`,
+        title: '✅ Category Deleted Successfully',
+        description: `The category "${categoryToDelete.name}" has been permanently deleted.`,
         variant: 'default'
       })
       
+      setIsDeleteDialogOpen(false)
+      setCategoryToDelete(null)
       await refetch()
       await refreshStats()
     } catch (error) {
       console.error('Error deleting category:', error)
       toast({
-        title: 'Error',
+        title: '❌ Delete Failed',
         description: error instanceof Error ? error.message : 'Failed to delete category. Please try again.',
         variant: 'destructive'
       })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -182,8 +204,8 @@ export default function CategoriesPage() {
       }
 
       toast({
-        title: 'Success',
-        description: `The category "${category.name}" status has been updated to ${!category.is_active ? 'active' : 'inactive'}.`,
+        title: '✅ Status Updated Successfully',
+        description: `The category "${category.name}" has been ${!category.is_active ? 'activated' : 'deactivated'}.`,
         variant: 'default'
       })
       
@@ -192,7 +214,7 @@ export default function CategoriesPage() {
     } catch (error) {
       console.error('Error updating category status:', error)
       toast({
-        title: 'Error',
+        title: '❌ Status Update Failed',
         description: 'Failed to update category status. Please try again.',
         variant: 'destructive'
       })
@@ -202,37 +224,60 @@ export default function CategoriesPage() {
 
   const handleSaveCategory = async (categoryData: Partial<Category>) => {
     try {
-      // Upload image first if a new image was selected
-      let imageUrl = editingCategory?.image_url || null
-      if (selectedImage) {
-        // For editing, use existing category ID; for creating, we'll need to handle this differently
-        if (editingCategory?.id) {
-          imageUrl = await uploadCategoryImage(editingCategory.id)
-        }
-      }
-
-      const dataWithImage = { ...categoryData, image_url: imageUrl }
-
       if (isCreating) {
+        // Create category first (without image)
         const response = await fetch('/api/categories', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(dataWithImage),
+          body: JSON.stringify(categoryData),
         })
 
         if (!response.ok) {
           const errorData = await response.json()
-          throw new Error(errorData.error || 'Failed to create category')
+          // Use the detailed message if available, otherwise use the error
+          const errorMessage = errorData.message || errorData.error || 'Failed to create category'
+          throw new Error(errorMessage)
+        }
+
+        const createdCategory = await response.json()
+        const categoryId = createdCategory.category?.id || createdCategory.id
+
+        // Upload image after category is created
+        let imageUrl = null
+        if (selectedImage && categoryId) {
+          imageUrl = await uploadCategoryImage(categoryId)
+          
+          // Update category with image URL if image was uploaded
+          if (imageUrl) {
+            const updateResponse = await fetch(`/api/categories/${categoryId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ image_url: imageUrl }),
+            })
+
+            if (!updateResponse.ok) {
+              console.warn('Failed to update category with image URL, but category was created')
+            }
+          }
         }
 
         toast({
-          title: 'Success',
-          description: `The category "${categoryData.name}" has been created successfully.`,
+          title: '✅ Category Created Successfully',
+          description: `The category "${categoryData.name}" has been created and added to your categories.`,
           variant: 'default'
         })
       } else if (editingCategory) {
+        // Upload image first if a new image was selected
+        let imageUrl = editingCategory.image_url || null
+        if (selectedImage && editingCategory.id) {
+          imageUrl = await uploadCategoryImage(editingCategory.id)
+        }
+
+        const dataWithImage = { ...categoryData, image_url: imageUrl }
         const response = await fetch(`/api/categories/${editingCategory.id}`, {
           method: 'PUT',
           headers: {
@@ -254,8 +299,8 @@ export default function CategoriesPage() {
         }
 
         toast({
-          title: 'Success',
-          description: `The category "${categoryData.name}" has been updated successfully.`,
+          title: '✅ Category Updated Successfully',
+          description: `The category "${categoryData.name}" has been updated with the new information.`,
           variant: 'default'
         })
       }
@@ -270,7 +315,7 @@ export default function CategoriesPage() {
     } catch (error) {
       console.error('Error saving category:', error)
       toast({
-        title: 'Error',
+        title: '❌ Operation Failed',
         description: error instanceof Error ? error.message : 'Failed to save category. Please try again.',
         variant: 'destructive'
       })
@@ -455,7 +500,7 @@ export default function CategoriesPage() {
                               <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg sm:rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-200 shadow-sm group-hover:shadow-md transition-shadow">
                                 {category.image_url ? (
                                   <Image
-                                    src={category.image_url}
+                                    src={normalizeImageUrl(category.image_url) || '/placeholder.svg'}
                                     alt={category.name}
                                     fill
                                     sizes="(max-width: 640px) 64px, (max-width: 768px) 80px, 96px"
@@ -604,7 +649,7 @@ export default function CategoriesPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  onClick={() => handleDeleteCategory(category)}
+                                  onClick={() => handleDeleteClick(category)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
                                   title="Delete category"
                                 >
@@ -669,7 +714,7 @@ export default function CategoriesPage() {
                     {(imagePreview || editingCategory?.image_url) && (
                       <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
                         <Image
-                          src={imagePreview || editingCategory?.image_url || ''}
+                          src={imagePreview || normalizeImageUrl(editingCategory?.image_url || '') || '/placeholder.svg'}
                           alt="Category preview"
                           fill
                           sizes="96px"
@@ -749,6 +794,49 @@ export default function CategoriesPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Category</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>"{categoryToDelete?.name}"</strong>? 
+              <br />
+              <br />
+              This action cannot be undone. The category will be permanently removed, and any products associated with this category may be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setIsDeleteDialogOpen(false)
+                setCategoryToDelete(null)
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCategory}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Permanently
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

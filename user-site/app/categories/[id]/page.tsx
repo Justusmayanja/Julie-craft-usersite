@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Package, Loader2 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/contexts/toast-context"
+import { normalizeImageUrl } from "@/lib/utils/image-url"
 
 interface Category {
   id: string
@@ -98,7 +99,7 @@ export default function CategoryPage() {
             <div className="relative aspect-square max-w-md mx-auto lg:mx-0 rounded-2xl overflow-hidden bg-gray-100 shadow-lg">
               {category.image_url ? (
                 <Image
-                  src={category.image_url}
+                  src={normalizeImageUrl(category.image_url) || '/placeholder.svg'}
                   alt={category.name}
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"

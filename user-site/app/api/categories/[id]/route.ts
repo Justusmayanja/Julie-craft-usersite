@@ -78,14 +78,22 @@ export async function GET(
         return url
       }
       
-      // If it's a relative path starting with /uploads/, it's a local file
-      if (url.startsWith('/uploads/')) {
-        return url
-      }
-      
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       if (!supabaseUrl) {
         return url
+      }
+      
+      // Convert /uploads/categories/... to Supabase storage URL
+      if (url.startsWith('/uploads/categories/')) {
+        // Remove leading /uploads/ to get the storage path
+        const storagePath = url.replace('/uploads/', '')
+        return `${supabaseUrl}/storage/v1/object/public/media/${storagePath}`
+      }
+      
+      // If it's a relative path starting with /uploads/ (other than categories), try media bucket
+      if (url.startsWith('/uploads/')) {
+        const storagePath = url.replace('/uploads/', '')
+        return `${supabaseUrl}/storage/v1/object/public/media/${storagePath}`
       }
       
       // If it starts with /storage/, prepend base URL
@@ -96,21 +104,35 @@ export async function GET(
       // If it looks like a storage path without leading slash
       if (url.includes('categories/') && !url.startsWith('http') && !url.startsWith('/')) {
         if (url.startsWith('categories/')) {
-          return `${supabaseUrl}/storage/v1/object/public/${url}`
+          return `${supabaseUrl}/storage/v1/object/public/media/${url}`
         }
+      }
+      
+      // If it's just a path like "categories/..." without leading slash
+      if (url.includes('categories/') && !url.startsWith('http') && !url.startsWith('/')) {
+        return `${supabaseUrl}/storage/v1/object/public/media/${url}`
       }
       
       // Return as is if we can't normalize (might be a valid relative path)
       return url
     }
 
-    // Fetch category from database
-    const { data, error } = await supabaseAdmin
+    // Fetch category from database - support both ID and slug lookup
+    let query = supabaseAdmin
       .from('categories')
       .select('*')
-      .eq('id', categoryId)
       .eq('is_active', true) // Only show active categories to public
-      .single()
+    
+    // Check if categoryId is a UUID (36 chars with hyphens) or a slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)
+    
+    if (isUUID) {
+      query = query.eq('id', categoryId)
+    } else {
+      query = query.eq('slug', categoryId)
+    }
+    
+    const { data, error } = await query.single()
 
     if (error) {
       if (error.code === 'PGRST116') {

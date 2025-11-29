@@ -19,11 +19,27 @@ import {
   List,
   RefreshCw,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Edit,
+  Save,
+  X
 } from "lucide-react"
-import { useMedia } from "@/hooks/admin/use-media"
+import { useMedia, type MediaFile } from "@/hooks/admin/use-media"
 import { useToast } from "@/components/ui/use-toast"
 import { format } from "date-fns"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const mediaTypes = ["All", "images", "videos", "documents", "other"]
 
@@ -52,7 +68,7 @@ const formatFileSize = (bytes: number): string => {
 }
 
 export default function MediaLibraryPage() {
-  const { files, loading, error, fetchFiles, deleteFile, uploadFile } = useMedia()
+  const { files, loading, error, fetchFiles, deleteFile, uploadFile, updateFile } = useMedia()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedType, setSelectedType] = useState("All")
@@ -60,6 +76,17 @@ export default function MediaLibraryPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingFile, setEditingFile] = useState<MediaFile | null>(null)
+  const [editForm, setEditForm] = useState({
+    alt_text: '',
+    caption: '',
+    original_name: ''
+  })
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Fetch media files on component mount
   useEffect(() => {
@@ -97,24 +124,30 @@ export default function MediaLibraryPage() {
         category = 'documents'
       }
 
-      await uploadFile(file, {
+      const uploadedFile = await uploadFile(file, {
         category,
         alt_text: file.name,
         caption: ''
       })
       
-      toast({
-        title: "File Uploaded",
-        description: `${file.name} has been uploaded successfully.`,
-      })
-      
-      // Reset input
-      event.target.value = ''
-      fetchFiles({ limit: 100 })
+      if (uploadedFile) {
+        toast({
+          title: "✅ File Uploaded Successfully",
+          description: `${file.name} (${formatFileSize(file.size)}) has been uploaded to the media library.`,
+        })
+        
+        // Reset input
+        event.target.value = ''
+        fetchFiles({ limit: 100 })
+        
+        // Dispatch custom event to update sidebar count
+        window.dispatchEvent(new CustomEvent('mediaLibraryChanged'))
+      }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload file. Please try again."
       toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "Failed to upload file. Please try again.",
+        title: "❌ Upload Failed",
+        description: errorMessage,
         variant: "destructive"
       })
     } finally {
@@ -122,24 +155,81 @@ export default function MediaLibraryPage() {
     }
   }
 
-  const handleDeleteFile = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
-      return
-    }
+  const handleEditFile = (file: MediaFile) => {
+    setEditingFile(file)
+    setEditForm({
+      alt_text: file.alt_text || '',
+      caption: file.caption || '',
+      original_name: file.original_name || ''
+    })
+    setIsEditModalOpen(true)
+  }
 
+  const handleUpdateFile = async () => {
+    if (!editingFile) return
+
+    setIsUpdating(true)
     try {
-      await deleteFile(id)
-      toast({
-        title: "File Deleted",
-        description: "The file has been deleted successfully.",
+      const updatedFile = await updateFile(editingFile.id, {
+        alt_text: editForm.alt_text,
+        caption: editForm.caption,
+        original_name: editForm.original_name
       })
+
+      if (updatedFile) {
+        toast({
+          title: "✅ File Updated Successfully",
+          description: `${editForm.original_name || editingFile.original_name} has been updated.`,
+        })
+      setIsEditModalOpen(false)
+      setEditingFile(null)
       fetchFiles({ limit: 100 })
+      
+      // Dispatch custom event to update sidebar count (in case of rename affecting count)
+      window.dispatchEvent(new CustomEvent('mediaLibraryChanged'))
+    }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update file. Please try again."
       toast({
-        title: "Delete Failed",
-        description: error instanceof Error ? error.message : "Failed to delete file. Please try again.",
+        title: "❌ Update Failed",
+        description: errorMessage,
         variant: "destructive"
       })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleDeleteClick = (id: string, fileName: string) => {
+    setFileToDelete({ id, name: fileName })
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDeleteFile = async () => {
+    if (!fileToDelete) return
+
+    setIsDeleting(true)
+    try {
+      await deleteFile(fileToDelete.id)
+      toast({
+        title: "✅ File Deleted Successfully",
+        description: `${fileToDelete.name} has been permanently deleted from the media library.`,
+      })
+      setIsDeleteDialogOpen(false)
+      setFileToDelete(null)
+      fetchFiles({ limit: 100 })
+      
+      // Dispatch custom event to update sidebar count
+      window.dispatchEvent(new CustomEvent('mediaLibraryChanged'))
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete file. Please try again."
+      toast({
+        title: "❌ Delete Failed",
+        description: errorMessage,
+        variant: "destructive"
+      })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -147,8 +237,8 @@ export default function MediaLibraryPage() {
     navigator.clipboard.writeText(url)
     setCopiedUrl(url)
     toast({
-      title: "URL Copied",
-      description: "File URL has been copied to clipboard.",
+      title: "✅ URL Copied",
+      description: "File URL has been copied to your clipboard.",
     })
     setTimeout(() => setCopiedUrl(null), 2000)
   }
@@ -413,6 +503,15 @@ export default function MediaLibraryPage() {
                                 variant="ghost" 
                                 size="sm" 
                                 className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+                                onClick={() => handleEditFile(file)}
+                                title="Edit"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
                                 onClick={() => handleCopyUrl(file.file_path)}
                                 title="Copy URL"
                               >
@@ -426,7 +525,7 @@ export default function MediaLibraryPage() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              onClick={() => handleDeleteFile(file.id)}
+                              onClick={() => handleDeleteClick(file.id, file.original_name)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               title="Delete"
                             >
@@ -504,6 +603,15 @@ export default function MediaLibraryPage() {
                                   variant="ghost" 
                                   size="sm" 
                                   className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+                                  onClick={() => handleEditFile(file)}
+                                  title="Edit"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-gray-600 hover:bg-blue-50 hover:text-blue-700"
                                   onClick={() => handleCopyUrl(file.file_path)}
                                   title="Copy URL"
                                 >
@@ -516,7 +624,7 @@ export default function MediaLibraryPage() {
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  onClick={() => handleDeleteFile(file.id)}
+                                  onClick={() => handleDeleteClick(file.id, file.original_name)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                   title="Delete"
                                 >
@@ -550,6 +658,136 @@ export default function MediaLibraryPage() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Media Dialog */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Media File</DialogTitle>
+            <DialogDescription>
+              Update the metadata for this media file
+            </DialogDescription>
+          </DialogHeader>
+          {editingFile && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="original_name">File Name</Label>
+                <Input
+                  id="original_name"
+                  value={editForm.original_name}
+                  onChange={(e) => setEditForm({ ...editForm, original_name: e.target.value })}
+                  placeholder="Enter file name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="alt_text">Alt Text</Label>
+                <Input
+                  id="alt_text"
+                  value={editForm.alt_text}
+                  onChange={(e) => setEditForm({ ...editForm, alt_text: e.target.value })}
+                  placeholder="Enter alt text for accessibility"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="caption">Caption</Label>
+                <Textarea
+                  id="caption"
+                  value={editForm.caption}
+                  onChange={(e) => setEditForm({ ...editForm, caption: e.target.value })}
+                  placeholder="Enter caption or description"
+                  rows={3}
+                />
+              </div>
+              {editingFile.category === 'images' && editingFile.file_path && (
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
+                    <Image
+                      src={editingFile.file_path}
+                      alt={editForm.alt_text || editingFile.original_name}
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditModalOpen(false)
+                setEditingFile(null)
+              }}
+              disabled={isUpdating}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateFile}
+              disabled={isUpdating}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isUpdating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Media File</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>"{fileToDelete?.name}"</strong>? 
+              <br />
+              <br />
+              This action cannot be undone. The file will be permanently removed from the media library and storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setIsDeleteDialogOpen(false)
+                setFileToDelete(null)
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFile}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Permanently
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

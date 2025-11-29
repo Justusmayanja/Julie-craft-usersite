@@ -7,6 +7,7 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useNotifications } from "@/contexts/notification-context"
 import { useChatUnreadCount } from "@/hooks/admin/use-chat-unread-count"
+import { useMediaCount } from "@/hooks/admin/use-media-count"
 import { 
   LayoutDashboard, 
   Package, 
@@ -111,7 +112,7 @@ const navigationSections: NavigationSection[] = [
         name: "Media Library",
         href: "/admin/content/media",
         icon: ImageIcon,
-        badge: "24",
+        badge: null, // Will be set dynamically
       },
       {
         name: "Blog & News",
@@ -186,6 +187,7 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
   const pathname = usePathname()
   const { unreadCount, notifications } = useNotifications()
   const { unreadCount: chatUnreadCount } = useChatUnreadCount()
+  const { count: mediaCount } = useMediaCount()
   const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
 
   // Load logo from site settings
@@ -321,8 +323,18 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                         </div>
                         
                         <div className="flex items-center space-x-2">
-                          {/* Enhanced Badge - Dynamic for Orders */}
-                          {(item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
+                          {/* Enhanced Badge - Dynamic for Orders and Media Library */}
+                          {item.name === 'Media Library' && mediaCount !== null && mediaCount > 0 && (
+                            <span className={cn(
+                              "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 animate-pulse",
+                              isActive || hasActiveSubmenu
+                                ? "bg-amber-500 text-white ring-amber-200" 
+                                : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
+                            )}>
+                              {mediaCount}
+                            </span>
+                          )}
+                          {item.name !== 'Media Library' && (item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
                             <span className={cn(
                               "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 animate-pulse",
                               item.badgeColor === "bg-red-500" 
@@ -385,7 +397,17 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                             {chatUnreadCount}
                           </span>
                         )}
-                        {item.name !== 'Chat Support' && (item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
+                        {item.name === 'Media Library' && mediaCount !== null && mediaCount > 0 && (
+                          <span className={cn(
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
+                            isActive 
+                              ? "bg-amber-500 text-white ring-amber-200" 
+                              : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
+                          )}>
+                            {mediaCount}
+                          </span>
+                        )}
+                        {item.name !== 'Chat Support' && item.name !== 'Media Library' && (item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
                           <span className={cn(
                             "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
                             item.badgeColor === "bg-red-500" 

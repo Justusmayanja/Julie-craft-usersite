@@ -20,6 +20,7 @@ interface AdminHeaderProps {
 export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showMobileSearch, setShowMobileSearch] = useState(false)
+  const [showDesktopSearch, setShowDesktopSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const { user, logout } = useAuth()
   const router = useRouter()
@@ -57,19 +58,20 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
 
   const currentPageName = getPageName()
 
-  // Close mobile search when clicking outside
+  // Close search when clicking outside
   useEffect(() => {
-    if (showMobileSearch) {
+    if (showMobileSearch || showDesktopSearch) {
       const handleClickOutside = (e: MouseEvent) => {
         const target = e.target as HTMLElement
-        if (!target.closest('.mobile-search-container')) {
+        if (!target.closest('.search-container')) {
           setShowMobileSearch(false)
+          setShowDesktopSearch(false)
         }
       }
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [showMobileSearch])
+  }, [showMobileSearch, showDesktopSearch])
 
   const handleSignOut = async () => {
     setShowUserMenu(false)
@@ -86,6 +88,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     router.push(`/admin/products?search=${encodeURIComponent(searchQuery)}`)
     setSearchQuery("")
     setShowMobileSearch(false)
+    setShowDesktopSearch(false)
   }
 
   return (
@@ -127,29 +130,54 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
 
         {/* Right side - Search, notifications, and user menu */}
         <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 lg:space-x-4 min-w-0 flex-shrink-0">
-          {/* Mobile Search Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden hover:bg-gray-100 rounded-lg flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
-            onClick={() => setShowMobileSearch(!showMobileSearch)}
-          >
-            <Search className="h-5 w-5 text-gray-600" />
-          </Button>
+          {/* Search Icon Button - All Screen Sizes */}
+          <div className="search-container relative flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:bg-gray-100 rounded-lg flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
+              onClick={() => {
+                if (window.innerWidth < 1024) {
+                  setShowMobileSearch(!showMobileSearch)
+                } else {
+                  setShowDesktopSearch(!showDesktopSearch)
+                }
+              }}
+            >
+              <Search className="h-5 w-5 text-gray-600" />
+            </Button>
 
-          {/* Desktop Search Bar */}
-          <form onSubmit={handleSearch} className="hidden lg:flex relative flex-shrink-0">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10 group-focus-within:text-blue-500 transition-colors" />
-              <Input
-                type="text"
-                placeholder="Search products, orders, customers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2.5 text-sm bg-gray-50/80 border border-gray-200/80 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 focus:bg-white focus:shadow-lg transition-all duration-300 w-56 xl:w-72 2xl:w-80 max-w-full"
-              />
-            </div>
-          </form>
+            {/* Desktop Search Bar - Expandable */}
+            {showDesktopSearch && (
+              <div className="absolute right-0 top-full mt-2 z-50">
+                <form onSubmit={handleSearch} className="relative">
+                  <div className="relative group bg-white rounded-xl shadow-lg border border-gray-200/80 p-2">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10 group-focus-within:text-blue-500 transition-colors" />
+                    <Input
+                      type="text"
+                      placeholder="Search products, orders, customers..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      autoFocus
+                      className="pl-10 pr-10 py-2.5 text-sm bg-gray-50/80 border border-gray-200/80 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 focus:bg-white focus:shadow-lg transition-all duration-300 w-64 xl:w-72 2xl:w-80"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 hover:bg-gray-100"
+                      onClick={() => {
+                        setShowDesktopSearch(false)
+                        setSearchQuery("")
+                      }}
+                    >
+                      <X className="h-4 w-4 text-gray-400" />
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
 
           {/* Chat Support */}
           <Link href="/admin/chat" className="flex-shrink-0">
@@ -274,7 +302,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
 
       {/* Mobile Search Bar - Expandable */}
       {showMobileSearch && (
-        <div className="mobile-search-container border-t border-gray-200/60 bg-white px-3 sm:px-4 py-3 md:hidden">
+        <div className="search-container border-t border-gray-200/60 bg-white px-3 sm:px-4 py-3 lg:hidden">
           <form onSubmit={handleSearch} className="relative">
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10 group-focus-within:text-blue-500 transition-colors" />

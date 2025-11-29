@@ -46,14 +46,22 @@ export async function GET(request: NextRequest) {
         return url
       }
       
-      // If it's a relative path starting with /uploads/, it's a local file
-      if (url.startsWith('/uploads/')) {
-        return url
-      }
-      
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       if (!supabaseUrl) {
         return url
+      }
+      
+      // Convert /uploads/categories/... to Supabase storage URL
+      if (url.startsWith('/uploads/categories/')) {
+        // Remove leading /uploads/ to get the storage path
+        const storagePath = url.replace('/uploads/', '')
+        return `${supabaseUrl}/storage/v1/object/public/media/${storagePath}`
+      }
+      
+      // If it's a relative path starting with /uploads/ (other than categories), try media bucket
+      if (url.startsWith('/uploads/')) {
+        const storagePath = url.replace('/uploads/', '')
+        return `${supabaseUrl}/storage/v1/object/public/media/${storagePath}`
       }
       
       // If it starts with /storage/, prepend base URL
@@ -64,8 +72,13 @@ export async function GET(request: NextRequest) {
       // If it looks like a storage path without leading slash
       if (url.includes('categories/') && !url.startsWith('http') && !url.startsWith('/')) {
         if (url.startsWith('categories/')) {
-          return `${supabaseUrl}/storage/v1/object/public/${url}`
+          return `${supabaseUrl}/storage/v1/object/public/media/${url}`
         }
+      }
+      
+      // If it's just a path like "categories/..." without leading slash
+      if (url.includes('categories/') && !url.startsWith('http') && !url.startsWith('/')) {
+        return `${supabaseUrl}/storage/v1/object/public/media/${url}`
       }
       
       // Return as is if we can't normalize (might be a valid relative path)
@@ -87,6 +100,82 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('API error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured || !supabaseAdmin) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+    }
+
+    // Verify admin authentication
+    const authHeader = request.headers.get('authorization')
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : cookieToken
+
+    if (token && isSupabaseConfigured && supabaseAdmin) {
+      try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+        if (error || !user) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+      } catch (error) {
+        return NextResponse.json({ error: 'Token verification failed' }, { status: 401 })
+      }
+    } else {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+
+    // Validate required fields
+    if (!body.name) {
+      return NextResponse.json({ error: 'Category name is required' }, { status: 400 })
+    }
+
+    // Build insert object
+    const insertData: any = {
+      name: body.name,
+      description: body.description || null,
+      is_active: body.is_active !== undefined ? body.is_active : true,
+      sort_order: body.sort_order || 0,
+      image_url: body.image_url || null,
+      tags: body.tags || null
+    }
+
+    // Insert category
+    const { data: category, error } = await supabaseAdmin
+      .from('categories')
+      .insert(insertData)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Category creation error:', error)
+      
+      // Handle duplicate name error
+      if (error.code === '23505' && error.message?.includes('name')) {
+        return NextResponse.json({ 
+          error: 'Category name already exists',
+          message: `A category with the name "${body.name}" already exists. Please choose a different name.`,
+          details: error.details || error.message
+        }, { status: 409 })
+      }
+      
+      return NextResponse.json({ 
+        error: 'Failed to create category',
+        message: error.message || 'Failed to create category',
+        details: error.details || error.message
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({ category }, { status: 201 })
+
+  } catch (error) {
+    console.error('Admin category creation error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

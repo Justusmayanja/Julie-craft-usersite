@@ -1,11 +1,42 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Logo } from "@/components/logo"
 import { Facebook, Instagram, Phone, Mail, MapPin } from "lucide-react"
 
+interface Category {
+  id: string
+  name: string
+  slug?: string | null
+  is_active: boolean
+}
+
 export function Footer() {
   const currentYear = new Date().getFullYear()
+  const [categories, setCategories] = useState<Category[]>([])
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories?limit=4')
+        if (response.ok) {
+          const data = await response.json()
+          // Get first 4 active categories
+          const activeCategories = (data.categories || [])
+            .filter((cat: Category) => cat.is_active)
+            .slice(0, 4)
+          setCategories(activeCategories)
+        }
+      } catch (err) {
+        console.error('Error fetching categories for footer:', err)
+        // Fallback to empty array
+        setCategories([])
+      }
+    }
+
+    fetchCategories()
+  }, [])
 
   return (
     <footer className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 border-t-2 border-slate-700 shadow-2xl">
@@ -53,30 +84,27 @@ export function Footer() {
           <div className="space-y-3 sm:space-y-4 lg:space-y-5">
             <h3 className="font-bold text-base sm:text-lg lg:text-xl text-white mb-3 sm:mb-4">Categories</h3>
             <nav className="flex flex-col space-y-2 sm:space-y-3">
-              <Link
-                href="/products?category=pottery"
-                className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium w-fit"
-              >
-                Pottery
-              </Link>
-              <Link
-                href="/products?category=jewelry"
-                className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium w-fit"
-              >
-                Jewelry
-              </Link>
-              <Link
-                href="/products?category=textiles"
-                className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium w-fit"
-              >
-                Textiles
-              </Link>
-              <Link
-                href="/products?category=wood"
-                className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium w-fit"
-              >
-                Wood Crafts
-              </Link>
+              {categories.length > 0 ? (
+                categories.map((category) => {
+                  const categoryPath = category.slug 
+                    ? `/categories/${category.slug}` 
+                    : `/categories/${category.id}`
+                  return (
+                    <Link
+                      key={category.id}
+                      href={categoryPath}
+                      className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium w-fit"
+                    >
+                      {category.name}
+                    </Link>
+                  )
+                })
+              ) : (
+                // Fallback loading state or empty state
+                <>
+                  <div className="text-xs sm:text-sm lg:text-base text-slate-400">Loading...</div>
+                </>
+              )}
             </nav>
           </div>
 

@@ -68,7 +68,11 @@ export function CategoriesSection() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const index = parseInt(entry.target.getAttribute('data-index') || '0', 10)
-            setVisibleCards((prev) => new Set([...prev, index]))
+            setVisibleCards((prev) => {
+              const newSet = new Set(prev)
+              newSet.add(index)
+              return newSet
+            })
           }
         })
       },
@@ -90,12 +94,12 @@ export function CategoriesSection() {
   if (loading) {
     return (
       <section 
-        className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-br from-gray-50 via-white to-gray-50"
+        className="py-8 sm:py-12 md:py-16 lg:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-50"
         aria-label="Categories section loading"
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           {/* Header Skeleton */}
-          <div className="text-center mb-10 sm:mb-12 md:mb-16">
+          <div className="text-center mb-6 sm:mb-8 md:mb-10">
             <div className="h-8 sm:h-10 md:h-12 bg-gray-200 rounded-lg w-48 sm:w-64 md:w-80 mx-auto mb-4 animate-pulse" />
             <div className="h-5 sm:h-6 bg-gray-200 rounded w-72 sm:w-80 md:w-96 mx-auto animate-pulse" />
           </div>
@@ -126,7 +130,7 @@ export function CategoriesSection() {
   if (error && categories.length === 0) {
     return (
       <section 
-        className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-br from-gray-50 via-white to-gray-50"
+        className="py-8 sm:py-12 md:py-16 lg:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-50"
         aria-label="Categories section"
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -153,7 +157,7 @@ export function CategoriesSection() {
   if (categories.length === 0) {
     return (
       <section 
-        className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-br from-gray-50 via-white to-gray-50"
+        className="py-8 sm:py-12 md:py-16 lg:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-50"
         aria-label="Categories section"
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -180,13 +184,13 @@ export function CategoriesSection() {
   return (
     <section 
       ref={sectionRef}
-      className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-br from-gray-50 via-white to-gray-50"
+      className="py-8 sm:py-12 md:py-16 lg:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-50"
       aria-label="Shop by category"
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         {/* Section Header */}
-        <header className="text-center mb-10 sm:mb-12 md:mb-16">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-5">
+        <header className="text-center mb-6 sm:mb-8 md:mb-10">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2 sm:mb-3 md:mb-4">
             Shop by Category
           </h2>
           <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed px-4">
