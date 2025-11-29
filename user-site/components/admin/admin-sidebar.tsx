@@ -26,7 +26,6 @@ import {
   X,
   FileText,
   Image as ImageIcon,
-  Layout,
   Newspaper,
   UserCircle,
   MessageCircle
@@ -119,11 +118,6 @@ const navigationSections: NavigationSection[] = [
         href: "/admin/content/blog",
         icon: Newspaper,
         badge: "3",
-      },
-      {
-        name: "Homepage",
-        href: "/admin/content/homepage",
-        icon: Layout,
       },
     ]
   },
@@ -248,7 +242,7 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
       <div className="flex-shrink-0 p-3 sm:p-4 bg-slate-800/95 backdrop-blur-sm border-b border-slate-600">
         <div className="flex items-center justify-between min-w-0">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-            <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-400/30">
+            <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-slate-300">
               {logoUrl && (
                 <Image 
                   src={logoUrl} 
@@ -379,7 +373,8 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                           </div>
                           <span className="tracking-tight truncate text-xs sm:text-sm">{item.name}</span>
                         </div>
-                        {/* Badge for Chat Support */}
+                        
+                        {/* Badge rendering - consolidated */}
                         {item.name === 'Chat Support' && chatUnreadCount > 0 && (
                           <span className={cn(
                             "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
@@ -390,24 +385,9 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                             {chatUnreadCount}
                           </span>
                         )}
-                        {/* Badge for other items */}
-                        {item.name !== 'Chat Support' && item.name !== 'Orders' && item.badge && (
-                          <span className={cn(
-                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
-                            item.badgeColor === "bg-red-500" 
-                              ? "bg-red-500 text-white ring-red-200" 
-                              : isActive
-                              ? "bg-amber-500 text-white ring-amber-200" 
-                              : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
-                          )}>
-                            {item.badge}
-                          </span>
-                        )}
-                        
-                        {/* Enhanced Badge - Dynamic for Orders (only if not Chat Support) */}
                         {item.name !== 'Chat Support' && (item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
                           <span className={cn(
-                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0 animate-pulse",
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
                             item.badgeColor === "bg-red-500" 
                               ? "bg-red-500 text-white ring-red-200" 
                               : item.name === 'Orders' && orderNotificationsCount > 0

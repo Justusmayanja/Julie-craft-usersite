@@ -18,9 +18,12 @@ import { useToast } from "@/contexts/toast-context"
 interface UserProfile {
   id: string
   email: string
-  name: string
+  name?: string
+  first_name?: string
+  last_name?: string
   phone?: string
   address?: string
+  avatar_url?: string
   created_at: string
   last_login?: string
   role: string
@@ -70,7 +73,12 @@ export default function ProfilePage() {
 
       if (response.ok) {
         const data = await response.json()
-        setProfile(data.profile || data)
+        const profileData = data.profile || data
+        // Map first_name and last_name to name for display
+        if (profileData.first_name || profileData.last_name) {
+          profileData.name = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim()
+        }
+        setProfile(profileData)
       }
     } catch (error) {
       console.error('Error loading profile:', error)
@@ -81,8 +89,10 @@ export default function ProfilePage() {
 
   const handleEditProfile = () => {
     if (profile) {
+      // Combine first_name and last_name into name for the form
+      const fullName = profile.name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
       setEditForm({
-        name: profile.name || '',
+        name: fullName,
         phone: profile.phone || '',
         address: profile.address || ''
       })
@@ -116,10 +126,13 @@ export default function ProfilePage() {
   const uploadImage = async (file: File): Promise<string> => {
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('type', 'profile')
     
     const token = localStorage.getItem('julie-crafts-token')
-    const response = await fetch('/api/media/upload', {
+    if (!token) {
+      throw new Error('Please log in to upload a profile image')
+    }
+    
+    const response = await fetch('/api/users/profile/upload', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -133,7 +146,8 @@ export default function ProfilePage() {
     }
     
     const data = await response.json()
-    return data.url
+    // The new endpoint returns { success: true, avatar_url: string }
+    return data.avatar_url || data.url
   }
 
   const handleSaveProfile = async () => {
@@ -185,13 +199,24 @@ export default function ProfilePage() {
         })
       })
 
+      const responseData = await response.json()
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update profile')
+        throw new Error(responseData.error || 'Failed to update profile')
       }
 
-      // Reload profile to get updated data from server
-      await loadProfile()
+      // Update profile state with the response data
+      if (responseData.profile) {
+        const updatedProfile = responseData.profile
+        // Map first_name and last_name to name for display
+        if (updatedProfile.first_name || updatedProfile.last_name) {
+          updatedProfile.name = `${updatedProfile.first_name || ''} ${updatedProfile.last_name || ''}`.trim()
+        }
+        setProfile(updatedProfile)
+      } else {
+        // Fallback: reload profile from server
+        await loadProfile()
+      }
 
       setIsEditModalOpen(false)
       toast.showSuccess('Profile Updated', 'Your profile has been updated successfully!')

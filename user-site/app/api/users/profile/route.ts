@@ -80,6 +80,7 @@ export async function PUT(request: NextRequest) {
       last_name, 
       firstName, 
       lastName, 
+      email,
       phone, 
       address,
       bio, 
@@ -92,12 +93,60 @@ export async function PUT(request: NextRequest) {
     // Handle both camelCase and snake_case formats
     const finalFirstName = first_name || firstName
     const finalLastName = last_name || lastName
+    const finalEmail = email ? email.toLowerCase().trim() : undefined
+    
+    // Get user profile to check admin status
+    const { data: userProfile, error: profileCheckError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, email, is_admin')
+      .eq('id', decoded.userId)
+      .single()
+
+    // Check if user is admin if trying to update email
+    if (finalEmail !== undefined) {
+      if (!userProfile?.is_admin) {
+        return NextResponse.json({
+          error: 'Only admin users can update their email address'
+        }, { status: 403 })
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(finalEmail)) {
+        return NextResponse.json({
+          error: 'Invalid email format'
+        }, { status: 400 })
+      }
+
+      // Check if email is already in use by another user
+      const { data: existingUser, error: emailCheckError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, email')
+        .eq('email', finalEmail)
+        .neq('id', decoded.userId)
+        .single()
+
+      if (emailCheckError && emailCheckError.code !== 'PGRST116') {
+        // PGRST116 is "not found" which is what we want
+        console.error('Email check error:', emailCheckError)
+        return NextResponse.json({
+          error: 'Failed to check email availability'
+        }, { status: 500 })
+      }
+
+      if (existingUser) {
+        return NextResponse.json({
+          error: 'Email address is already in use'
+        }, { status: 400 })
+      }
+    }
     
     console.log('Profile update request:', {
       userId: decoded.userId,
       body,
       finalFirstName,
       finalLastName,
+      finalEmail,
       phone,
       address,
       avatar_url
@@ -107,11 +156,7 @@ export async function PUT(request: NextRequest) {
     const userEmail = decoded.user?.email || ''
     
     // Check if profile exists, create it if it doesn't
-    const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email')
-      .eq('id', decoded.userId)
-      .single()
+    const existingProfile = userProfile
 
     let updatedProfile
 
@@ -168,6 +213,10 @@ export async function PUT(request: NextRequest) {
       // Only include fields that are provided (not undefined)
       if (finalFirstName !== undefined) updateData.first_name = finalFirstName
       if (finalLastName !== undefined) updateData.last_name = finalLastName
+      // Only allow email update for admins (checked above)
+      if (finalEmail !== undefined && userProfile?.is_admin) {
+        updateData.email = finalEmail
+      }
       if (phone !== undefined) updateData.phone = phone
       if (address !== undefined) updateData.address = address
       if (bio !== undefined) updateData.bio = bio
@@ -197,14 +246,27 @@ export async function PUT(request: NextRequest) {
 
     console.log('Profile update successful:', updatedProfile)
 
-    // Also update the auth.users metadata if name changed
+    // Update auth.users if name or email changed (for admins)
+    const authUpdate: any = {
+      user_metadata: {}
+    }
+
     if (finalFirstName && finalLastName) {
-      await supabaseAdmin.auth.admin.updateUserById(decoded.userId, {
-        user_metadata: {
-          full_name: `${finalFirstName} ${finalLastName}`,
-          phone: phone || null
-        }
-      })
+      authUpdate.user_metadata.full_name = `${finalFirstName} ${finalLastName}`
+      authUpdate.user_metadata.phone = phone || null
+    }
+
+    // Update email in auth.users if it was changed (admin only)
+    if (finalEmail !== undefined && userProfile?.is_admin) {
+      authUpdate.email = finalEmail
+    }
+
+    if (Object.keys(authUpdate.user_metadata).length > 0 || authUpdate.email) {
+      await supabaseAdmin.auth.admin.updateUserById(decoded.userId, authUpdate)
+        .catch(err => {
+          // Log but don't fail the request
+          console.warn('Failed to update auth metadata:', err)
+        })
     }
 
     return NextResponse.json({

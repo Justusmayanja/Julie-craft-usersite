@@ -14,11 +14,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Loader2, User, ShoppingBag, Settings, LogOut, ArrowLeft, Camera, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { getUserOrders, updateUserProfile, uploadProfileImage, removeProfileImage } from '@/lib/api-user'
-import type { UserOrder } from '@/lib/types/order'
+import type { UserOrderHistory } from '@/lib/types/user'
 
 export default function ProfilePage() {
   const { user, logout, isAuthenticated, isLoading, refreshUser } = useAuth()
-  const [orders, setOrders] = useState<UserOrder[]>([])
+  const [orders, setOrders] = useState<UserOrderHistory[]>([])
   const [ordersLoading, setOrdersLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('profile')
   const [profileImage, setProfileImage] = useState<string | null>(null)
@@ -30,6 +30,7 @@ export default function ProfilePage() {
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
+    email: '',
     phone: ''
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -165,7 +166,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       // Split full name into first and last name
-      const fullName = user.full_name || user.name || ''
+      const userAny = user as any
+      const fullName = userAny.full_name || user.name || ''
       const nameParts = fullName.split(' ')
       const firstName = nameParts[0] || ''
       const lastName = nameParts.slice(1).join(' ') || ''
@@ -173,6 +175,7 @@ export default function ProfilePage() {
       setEditForm({
         firstName,
         lastName,
+        email: user.email || '',
         phone: user.phone || ''
       })
     }
@@ -181,7 +184,8 @@ export default function ProfilePage() {
   const handleEditToggle = () => {
     if (isEditing) {
       // Reset form to original values when canceling
-      const fullName = user?.full_name || user?.name || ''
+      const userAny = user as any
+      const fullName = userAny?.full_name || user?.name || ''
       const nameParts = fullName.split(' ')
       const firstName = nameParts[0] || ''
       const lastName = nameParts.slice(1).join(' ') || ''
@@ -189,6 +193,7 @@ export default function ProfilePage() {
       setEditForm({
         firstName,
         lastName,
+        email: user?.email || '',
         phone: user?.phone || ''
       })
       
@@ -256,6 +261,15 @@ export default function ProfilePage() {
       return
     }
 
+    // Validate email if provided
+    if (editForm.email && editForm.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(editForm.email.trim())) {
+        setSaveMessage({ type: 'error', text: 'Please enter a valid email address' })
+        return
+      }
+    }
+
     setIsSaving(true)
     try {
         // Upload image first if one was selected
@@ -284,10 +298,15 @@ export default function ProfilePage() {
         }
 
       // Call the API to update user profile
-      const profileData = {
+      const profileData: any = {
         firstName: editForm.firstName.trim(),
         lastName: editForm.lastName.trim(),
         phone: editForm.phone.trim() || undefined
+      }
+
+      // Only include email if it's different from current email (admin only)
+      if (editForm.email && editForm.email.trim() !== user?.email) {
+        profileData.email = editForm.email.trim()
       }
       
       console.log('Sending profile update:', profileData)
@@ -437,7 +456,7 @@ export default function ProfilePage() {
                       <Input 
                         id="firstName" 
                         name="firstName"
-                        value={isEditing ? editForm.firstName : (user.first_name || '')} 
+                        value={isEditing ? editForm.firstName : ((user as any).first_name || '')} 
                         onChange={handleInputChange}
                         disabled={!isEditing} 
                         className={`h-10 text-sm ${isEditing ? "bg-white border-gray-300" : "bg-gray-50"}`}
@@ -448,7 +467,7 @@ export default function ProfilePage() {
                       <Input 
                         id="lastName" 
                         name="lastName"
-                        value={isEditing ? editForm.lastName : (user.last_name || '')} 
+                        value={isEditing ? editForm.lastName : ((user as any).last_name || '')} 
                         onChange={handleInputChange}
                         disabled={!isEditing} 
                         className={`h-10 text-sm ${isEditing ? "bg-white border-gray-300" : "bg-gray-50"}`}
@@ -458,11 +477,16 @@ export default function ProfilePage() {
                       <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
                       <Input 
                         id="email" 
-                        value={user.email} 
-                        disabled 
-                        className="h-10 text-sm bg-gray-50" 
+                        name="email"
+                        type="email"
+                        value={isEditing ? editForm.email : (user.email || '')} 
+                        onChange={handleInputChange}
+                        disabled={!isEditing} 
+                        className={`h-10 text-sm ${isEditing ? "bg-white border-gray-300" : "bg-gray-50"}`}
                       />
-                      <p className="text-xs text-gray-500">Email cannot be changed</p>
+                      {!isEditing && (
+                        <p className="text-xs text-gray-500">Email can be updated (admin only)</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>

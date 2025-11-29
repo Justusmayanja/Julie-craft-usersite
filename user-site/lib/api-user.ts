@@ -86,7 +86,7 @@ export async function getUserOrders(
 }
 
 // Update user profile
-export async function updateUserProfile(userId: string, profileData: { firstName: string; lastName: string; phone?: string; bio?: string; location?: string; website?: string; preferences?: any }): Promise<any> {
+export async function updateUserProfile(userId: string, profileData: { firstName: string; lastName: string; email?: string; phone?: string; bio?: string; location?: string; website?: string; preferences?: any }): Promise<any> {
   const url = `${getApiBaseUrl()}/users/profile`
   
   // Get JWT token from localStorage for authentication
@@ -116,7 +116,7 @@ export async function updateUserProfile(userId: string, profileData: { firstName
 
 // Upload profile image
 export async function uploadProfileImage(file: File): Promise<{ success: boolean; avatar_url?: string; message: string; error?: string }> {
-  const url = `${getApiBaseUrl()}/media/upload`
+  const url = `${getApiBaseUrl()}/users/profile/upload`
   
   // Get JWT token from localStorage for authentication
   const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
@@ -158,7 +158,7 @@ export async function uploadProfileImage(file: File): Promise<{ success: boolean
 
 // Remove profile image
 export async function removeProfileImage(): Promise<{ success: boolean; message: string; error?: string }> {
-  const url = `${getApiBaseUrl()}/media/upload`
+  const url = `${getApiBaseUrl()}/users/profile/upload`
   
   // Get JWT token from localStorage for authentication
   const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null

@@ -88,14 +88,14 @@ export function Logo({
             alt="Julie Crafts Logo"
             fill
             sizes="(max-width: 640px) 32px, 40px"
-            className={cn("object-contain", config.image, dark ? "bg-black" : "bg-white/10")}
+            className={cn("object-contain", config.image, dark ? "bg-white/80" : "bg-white/10")}
             onError={() => setImageError(true)}
             priority
           />
         ) : (
           <div className={cn(
             "w-full h-full flex items-center justify-center font-bold",
-            dark ? "bg-black text-orange-500" : "bg-primary/20 text-primary"
+            dark ? "bg-white/80 text-orange-500" : "bg-primary/20 text-primary"
           )}>
             JC
           </div>
@@ -139,14 +139,14 @@ export function Logo({
               alt="Julie Crafts Logo"
               fill
               sizes="(max-width: 640px) 48px, 64px"
-              className={cn("object-contain", config.image, dark ? "bg-black" : "bg-white/10")}
+              className={cn("object-contain", config.image, dark ? "bg-white/80" : "bg-white/10")}
               onError={() => setImageError(true)}
               priority
             />
           ) : (
             <div className={cn(
               "w-full h-full flex items-center justify-center font-bold",
-              dark ? "bg-black text-orange-500" : "bg-primary/20 text-primary"
+              dark ? "bg-white/80 text-orange-500" : "bg-primary/20 text-primary"
             )}>
               JC
             </div>
@@ -186,8 +186,8 @@ export function Logo({
           className={cn(
             "object-contain",
             config.image,
-            // Support for black background logos
-            dark ? "bg-black" : "bg-transparent"
+            // Support for semi-transparent white background logos
+            dark ? "bg-white/80" : "bg-transparent"
           )}
           style={{
             // Ensure script fonts and taglines are visible
@@ -200,7 +200,7 @@ export function Logo({
       ) : (
         <div className={cn(
           "w-full h-full flex flex-col items-center justify-center font-bold",
-          dark ? "bg-black text-orange-500" : "bg-primary/20 text-primary"
+          dark ? "bg-white/80 text-orange-500" : "bg-primary/20 text-primary"
         )}>
           <span className={cn(config.text)}>JC</span>
         </div>

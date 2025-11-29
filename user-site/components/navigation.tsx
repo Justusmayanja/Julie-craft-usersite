@@ -120,9 +120,9 @@ export function Navigation() {
                   {isClient && chatUnreadCount > 0 && (
                     <Badge
                       variant="destructive"
-                      className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[10px] text-white bg-amber-500 border-0"
+                      className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[10px] text-white bg-amber-500 border-0"
                     >
-                      {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
+                      {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
                     </Badge>
                   )}
                 </Button>
@@ -206,7 +206,7 @@ export function Navigation() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile?tab=orders">
+                      <Link href="/orders">
                         <ShoppingCart className="mr-2 h-4 w-4" />
                         My Orders
                       </Link>
@@ -292,13 +292,15 @@ export function Navigation() {
                           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
                             Quick Actions
                           </h3>
-                          <Button 
-                            variant="ghost" 
-                            className="w-full justify-start px-3 py-2.5 h-auto text-slate-200 hover:text-amber-400 hover:bg-slate-700/50"
-                          >
-                            <Search className="mr-3 h-4 w-4" />
-                            <span className="font-medium">Search Products</span>
-                          </Button>
+                          <Link href="/products" onClick={() => setIsOpen(false)}>
+                            <Button 
+                              variant="ghost" 
+                              className="w-full justify-start px-3 py-2.5 h-auto text-slate-200 hover:text-amber-400 hover:bg-slate-700/50"
+                            >
+                              <Search className="mr-3 h-4 w-4" />
+                              <span className="font-medium">Search Products</span>
+                            </Button>
+                          </Link>
                           {isAuthenticated && (
                             <Button 
                               variant="ghost" 
@@ -312,7 +314,7 @@ export function Navigation() {
                               <span className="font-medium">Chat Support</span>
                               {isClient && chatUnreadCount > 0 && (
                                 <Badge className="ml-auto bg-amber-500 text-white text-xs">
-                                  {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
+                                  {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
                                 </Badge>
                               )}
                             </Button>
@@ -352,7 +354,7 @@ export function Navigation() {
                                   <span className="font-medium">My Profile</span>
                                 </Button>
                               </Link>
-                              <Link href="/profile?tab=orders" onClick={() => setIsOpen(false)}>
+                              <Link href="/orders" onClick={() => setIsOpen(false)}>
                                 <Button 
                                   variant="ghost" 
                                   className="w-full justify-start px-3 py-2.5 h-auto text-slate-200 hover:text-amber-400 hover:bg-slate-700/50"

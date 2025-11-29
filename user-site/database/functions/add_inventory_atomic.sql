@@ -106,10 +106,11 @@ BEGIN
   
   -- Update product stock atomically
   -- Update both physical_stock and stock_quantity for compatibility
+  -- Use v_new_stock which was calculated from the locked row values
   UPDATE products
   SET 
-    physical_stock = COALESCE(physical_stock, stock_quantity, 0) + p_quantity,
-    stock_quantity = COALESCE(physical_stock, stock_quantity, 0) + p_quantity,
+    physical_stock = v_new_stock,
+    stock_quantity = v_new_stock,
     updated_at = NOW(),
     last_restocked_at = CASE 
       WHEN p_movement_type IN ('in', 'received') THEN NOW()

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,6 +41,15 @@ import { useOrders } from "@/hooks/admin/use-orders"
 import { OrderDetailModal } from "@/components/admin/order-detail-modal"
 import { useToast } from "@/contexts/toast-context"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
 
 const statusOptions = ["All", "pending", "processing", "shipped", "delivered", "cancelled"]
 
@@ -76,6 +85,8 @@ export default function OrdersPage() {
   const [bulkAction, setBulkAction] = useState<'status' | 'payment_status' | null>(null)
   const [bulkStatusValue, setBulkStatusValue] = useState<string>('')
   const [bulkPaymentStatusValue, setBulkPaymentStatusValue] = useState<string>('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(20)
   const toast = useToast()
 
   const { data: ordersData, loading, error, refresh, updateOrder } = useOrders({
@@ -264,6 +275,17 @@ export default function OrdersPage() {
     pendingOrders: 0,
     completedOrders: 0
   }
+
+  // Pagination calculations
+  const totalPages = Math.ceil(orders.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedOrders = orders.slice(startIndex, endIndex)
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedStatus])
 
 
   return (
@@ -492,7 +514,7 @@ export default function OrdersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {orders.map((order) => (
+                    {paginatedOrders.map((order) => (
                       <TableRow key={order.id} className={`hover:bg-gray-50 ${selectedOrderIds.has(order.id) ? 'bg-blue-50' : ''}`}>
                         <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
                           <Checkbox
@@ -589,6 +611,69 @@ export default function OrdersPage() {
                   <Package className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
                   <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">No orders found</h3>
                   <p className="text-sm sm:text-base text-gray-600">Try adjusting your search or filter criteria</p>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {orders.length > 0 && totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-4 sm:px-6 pb-4 sm:pb-6">
+                  <div className="text-sm text-gray-600">
+                    Showing {startIndex + 1} to {Math.min(endIndex, orders.length)} of {orders.length} orders
+                  </div>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          href="#" 
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (currentPage > 1) setCurrentPage(currentPage - 1)
+                          }}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        if (
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  setCurrentPage(page)
+                                }}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          )
+                        } else if (page === currentPage - 2 || page === currentPage + 2) {
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          )
+                        }
+                        return null
+                      })}
+                      <PaginationItem>
+                        <PaginationNext 
+                          href="#" 
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                          }}
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 </div>
               )}
             </CardContent>

@@ -241,9 +241,16 @@ export async function GET(request: NextRequest) {
         // Return only published posts for unauthenticated requests
         const { data, error: queryError } = await supabaseAdmin
           .from('blog_posts')
-          .select('*', { count: 'exact' })
+          .select(`
+            *,
+            author:profiles!blog_posts_author_id_fkey(
+              id,
+              first_name,
+              last_name
+            )
+          `, { count: 'exact' })
           .eq('status', 'published')
-          .order('publish_date', { ascending: false })
+          .order('published_at', { ascending: false })
           .limit(50)
         
         if (queryError || !data) {
@@ -256,8 +263,40 @@ export async function GET(request: NextRequest) {
           })
         }
         
+        // Transform database fields to match frontend format
+        const transformedPosts = (data || []).map((post: any) => {
+          const author = post.author || {}
+          const authorName = author.first_name && author.last_name 
+            ? `${author.first_name} ${author.last_name}`
+            : author.first_name || author.last_name || 'Admin'
+
+          return {
+            id: post.id,
+            title: post.title,
+            slug: post.slug,
+            content: post.content || '',
+            excerpt: post.excerpt || '',
+            status: post.status === 'published' ? 'published' : post.status === 'archived' ? 'archived' : 'draft',
+            category: post.category || '',
+            author_id: post.author_id,
+            author_name: authorName,
+            publish_date: post.published_at,
+            scheduled_date: null,
+            featured_image: post.featured_image,
+            featured: false,
+            views: post.view_count || 0,
+            likes: 0,
+            comments_count: 0,
+            meta_title: post.meta_title || post.seo_title,
+            meta_description: post.meta_description || post.seo_description,
+            tags: post.tags || post.seo_keywords || [],
+            created_at: post.created_at,
+            updated_at: post.updated_at
+          }
+        })
+        
         return NextResponse.json({
-          posts: data || [],
+          posts: transformedPosts,
           total: data?.length || 0,
           limit: 50,
           offset: 0
@@ -272,9 +311,16 @@ export async function GET(request: NextRequest) {
           // Return only published posts for failed auth
           const { data, error: queryError } = await supabaseAdmin
             .from('blog_posts')
-            .select('*', { count: 'exact' })
+            .select(`
+              *,
+              author:profiles!blog_posts_author_id_fkey(
+                id,
+                first_name,
+                last_name
+              )
+            `, { count: 'exact' })
             .eq('status', 'published')
-            .order('publish_date', { ascending: false })
+            .order('published_at', { ascending: false })
             .limit(50)
           
           if (queryError || !data) {
@@ -287,8 +333,40 @@ export async function GET(request: NextRequest) {
             })
           }
           
+          // Transform database fields to match frontend format
+          const transformedPosts = (data || []).map((post: any) => {
+            const author = post.author || {}
+            const authorName = author.first_name && author.last_name 
+              ? `${author.first_name} ${author.last_name}`
+              : author.first_name || author.last_name || 'Admin'
+
+            return {
+              id: post.id,
+              title: post.title,
+              slug: post.slug,
+              content: post.content || '',
+              excerpt: post.excerpt || '',
+              status: post.status === 'published' ? 'published' : post.status === 'archived' ? 'archived' : 'draft',
+              category: post.category || '',
+              author_id: post.author_id,
+              author_name: authorName,
+              publish_date: post.published_at,
+              scheduled_date: null,
+              featured_image: post.featured_image,
+              featured: false,
+              views: post.view_count || 0,
+              likes: 0,
+              comments_count: 0,
+              meta_title: post.meta_title || post.seo_title,
+              meta_description: post.meta_description || post.seo_description,
+              tags: post.tags || post.seo_keywords || [],
+              created_at: post.created_at,
+              updated_at: post.updated_at
+            }
+          })
+          
           return NextResponse.json({
-            posts: data || [],
+            posts: transformedPosts,
             total: data?.length || 0,
             limit: 50,
             offset: 0
@@ -300,9 +378,16 @@ export async function GET(request: NextRequest) {
         // Try to return published posts even on auth error
         const { data, error: queryError } = await supabaseAdmin
           .from('blog_posts')
-          .select('*', { count: 'exact' })
+          .select(`
+            *,
+            author:profiles!blog_posts_author_id_fkey(
+              id,
+              first_name,
+              last_name
+            )
+          `, { count: 'exact' })
           .eq('status', 'published')
-          .order('publish_date', { ascending: false })
+          .order('published_at', { ascending: false })
           .limit(50)
         
         if (queryError || !data) {
@@ -315,8 +400,40 @@ export async function GET(request: NextRequest) {
           })
         }
         
+        // Transform database fields to match frontend format
+        const transformedPosts = (data || []).map((post: any) => {
+          const author = post.author || {}
+          const authorName = author.first_name && author.last_name 
+            ? `${author.first_name} ${author.last_name}`
+            : author.first_name || author.last_name || 'Admin'
+
+          return {
+            id: post.id,
+            title: post.title,
+            slug: post.slug,
+            content: post.content || '',
+            excerpt: post.excerpt || '',
+            status: post.status === 'published' ? 'published' : post.status === 'archived' ? 'archived' : 'draft',
+            category: post.category || '',
+            author_id: post.author_id,
+            author_name: authorName,
+            publish_date: post.published_at,
+            scheduled_date: null,
+            featured_image: post.featured_image,
+            featured: false,
+            views: post.view_count || 0,
+            likes: 0,
+            comments_count: 0,
+            meta_title: post.meta_title || post.seo_title,
+            meta_description: post.meta_description || post.seo_description,
+            tags: post.tags || post.seo_keywords || [],
+            created_at: post.created_at,
+            updated_at: post.updated_at
+          }
+        })
+        
         return NextResponse.json({
-          posts: data || [],
+          posts: transformedPosts,
           total: data?.length || 0,
           limit: 50,
           offset: 0
@@ -335,10 +452,17 @@ export async function GET(request: NextRequest) {
       offset: searchParams.get('offset') ? Number(searchParams.get('offset')) : 0,
     }
 
-    // Build query
+    // Build query - join with profiles to get author_name
     let query = supabaseAdmin
       .from('blog_posts')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        author:profiles!blog_posts_author_id_fkey(
+          id,
+          first_name,
+          last_name
+        )
+      `, { count: 'exact' })
 
     // Apply filters
     if (filters.search) {
@@ -357,12 +481,22 @@ export async function GET(request: NextRequest) {
       query = query.eq('author_id', filters.author_id)
     }
 
-    if (filters.featured !== undefined) {
-      query = query.eq('featured', filters.featured)
+    // Note: featured field doesn't exist in database, so we skip this filter
+    // If you need featured posts, you can add a featured column to blog_posts table
+    // if (filters.featured !== undefined) {
+    //   query = query.eq('featured', filters.featured)
+    // }
+
+    // Map sort_by from frontend field names to database field names
+    let sortField = filters.sort_by
+    if (sortField === 'publish_date') {
+      sortField = 'published_at'
+    } else if (sortField === 'views') {
+      sortField = 'view_count'
     }
 
     // Apply sorting
-    query = query.order(filters.sort_by, { ascending: filters.sort_order === 'asc' })
+    query = query.order(sortField || 'created_at', { ascending: filters.sort_order === 'asc' })
 
     // Apply pagination
     query = query.range(filters.offset, filters.offset + filters.limit - 1)
@@ -380,8 +514,45 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Transform database fields to match frontend format
+    const transformedPosts = (data || []).map((post: any) => {
+      const author = post.author || {}
+      const authorName = author.first_name && author.last_name 
+        ? `${author.first_name} ${author.last_name}`
+        : author.first_name || author.last_name || 'Admin'
+
+      return {
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        content: post.content || '',
+        excerpt: post.excerpt || '',
+        status: post.status === 'published' ? 'published' : post.status === 'archived' ? 'archived' : 'draft',
+        category: post.category || '',
+        author_id: post.author_id,
+        author_name: authorName,
+        publish_date: post.published_at, // Map published_at to publish_date
+        scheduled_date: null, // Not supported in database
+        featured_image: post.featured_image,
+        featured: false, // Not supported in database - set to false for all posts
+        views: post.view_count || 0, // Map view_count to views
+        likes: 0, // Not in database
+        comments_count: 0, // Not in database
+        meta_title: post.meta_title || post.seo_title,
+        meta_description: post.meta_description || post.seo_description,
+        tags: post.tags || post.seo_keywords || [],
+        created_at: post.created_at,
+        updated_at: post.updated_at
+      }
+    })
+
+    // If featured filter was requested, we'll ignore it since database doesn't have featured field
+    // You can add a featured column to blog_posts table to enable this filter
+    // For now, we'll return all posts that match other filters
+    const finalPosts = transformedPosts
+
     return NextResponse.json({
-      posts: data || [],
+      posts: finalPosts,
       total: count || 0,
       limit: filters.limit,
       offset: filters.offset

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/contexts/cart-context"
+import { useAuth } from "@/contexts/auth-context"
 import type { CartOrder } from "@/lib/types/order"
 import { Loader2, ShoppingCart, MapPin, User, Mail, Phone } from "lucide-react"
 
@@ -18,6 +19,7 @@ interface OrderFormProps {
 
 export function OrderForm({ onSuccess, onError }: OrderFormProps) {
   const { state, placeOrder } = useCart()
+  const { user, isAuthenticated } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [useDifferentBilling, setUseDifferentBilling] = useState(false)
 
@@ -49,6 +51,75 @@ export function OrderForm({ onSuccess, onError }: OrderFormProps) {
     },
     notes: ""
   })
+
+  // Load user profile data when authenticated user opens form
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!isAuthenticated || !user) return
+
+      try {
+        const token = localStorage.getItem('julie-crafts-token')
+        if (!token) return
+
+        const response = await fetch('/api/users/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const profile = data.profile || data
+          
+          if (profile) {
+            // Get first and last name from profile (API returns first_name and last_name)
+            const firstName = profile.first_name || ''
+            const lastName = profile.last_name || ''
+            const fullName = firstName && lastName 
+              ? `${firstName} ${lastName}` 
+              : (profile.name || user.email?.split('@')[0] || '')
+
+            setFormData(prev => ({
+              ...prev,
+              customer_name: fullName,
+              customer_email: profile.email || user.email || prev.customer_email,
+              customer_phone: profile.phone || prev.customer_phone,
+              shipping_address: {
+                ...prev.shipping_address,
+                name: fullName,
+                email: profile.email || user.email || prev.shipping_address.email,
+                phone: profile.phone || prev.shipping_address.phone,
+                address_line1: profile.address || prev.shipping_address.address_line1,
+                city: profile.city || prev.shipping_address.city,
+                state: profile.state || prev.shipping_address.state,
+                zip_code: profile.zip_code || prev.shipping_address.zip_code,
+                country: profile.country || prev.shipping_address.country || "Uganda"
+              },
+              billing_address: {
+                ...prev.billing_address,
+                name: fullName,
+                email: profile.email || user.email || prev.billing_address.email,
+                phone: profile.phone || prev.billing_address.phone,
+              }
+            }))
+          } else {
+            // Fallback to user email
+            setFormData(prev => ({
+              ...prev,
+              customer_email: user.email || prev.customer_email,
+              customer_name: prev.customer_name || user.email?.split('@')[0] || '',
+            }))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error)
+        // Don't show error, just use empty form
+      }
+    }
+
+    loadUserProfile()
+  }, [isAuthenticated, user])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({

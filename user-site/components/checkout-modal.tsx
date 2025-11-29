@@ -71,15 +71,21 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
           
           // Pre-fill form with user data
           if (profile) {
-            // Split name into first and last name
-            const nameParts = (profile.name || user.email?.split('@')[0] || '').trim().split(' ')
-            const firstName = nameParts[0] || ''
-            const lastName = nameParts.slice(1).join(' ') || ''
+            // Get first and last name from profile (API returns first_name and last_name)
+            const firstName = profile.first_name || ''
+            const lastName = profile.last_name || ''
+            // Fallback: if no first_name/last_name, try to split name field
+            const fullName = firstName && lastName 
+              ? `${firstName} ${lastName}` 
+              : (profile.name || user.email?.split('@')[0] || '')
+            const nameParts = fullName.trim().split(' ')
+            const finalFirstName = firstName || nameParts[0] || ''
+            const finalLastName = lastName || nameParts.slice(1).join(' ') || ''
 
             setFormData(prev => ({
               ...prev,
-              firstName: firstName,
-              lastName: lastName,
+              firstName: finalFirstName,
+              lastName: finalLastName,
               email: profile.email || user.email || prev.email,
               phone: profile.phone || prev.phone,
               address: profile.address || prev.address,
@@ -87,7 +93,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
               district: profile.district || profile.state || prev.district,
             }))
           } else {
-            // Fallback to user email if profile doesn't have name
+            // Fallback to user email if profile doesn't exist
             const emailPart = user.email?.split('@')[0] || ''
             setFormData(prev => ({
               ...prev,

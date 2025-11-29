@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -36,6 +36,15 @@ import {
 import { useCustomers, useCustomerStats, useCustomer, type Customer } from "@/hooks/admin/use-customers"
 import { useToast } from "@/contexts/toast-context"
 import { useAuth } from "@/contexts/auth-context"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
 
 export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -45,6 +54,8 @@ export default function CustomersPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(20)
   
   // Form states for edit
   const [editForm, setEditForm] = useState({
@@ -68,6 +79,25 @@ export default function CustomersPage() {
   const { customers, loading, error, total, fetchCustomers, refresh } = useCustomers()
 
   const { stats, loading: statsLoading } = useCustomerStats()
+
+  // Pagination calculations
+  const filteredCustomers = customers.filter(customer => {
+    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (customer.phone && customer.phone.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesStatus = statusFilter === "all" || customer.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex)
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter])
 
   const handleViewCustomer = (customer: Customer) => {
     setSelectedCustomer(customer)
@@ -427,14 +457,14 @@ export default function CustomersPage() {
                         </TableCell>
                       </TableRow>
                     ))
-                  ) : customers.length === 0 ? (
+                  ) : filteredCustomers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                         No customers found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    customers.map((customer) => (
+                    paginatedCustomers.map((customer) => (
                       <TableRow key={customer.id}>
                         <TableCell>
                           <div className="flex items-center space-x-3">
@@ -540,6 +570,69 @@ export default function CustomersPage() {
                 </TableBody>
               </Table>
             </div>
+
+            {/* Pagination */}
+            {filteredCustomers.length > 0 && totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="text-sm text-gray-600">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length} customers
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        href="#" 
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (currentPage > 1) setCurrentPage(currentPage - 1)
+                        }}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                setCurrentPage(page)
+                              }}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                      } else if (page === currentPage - 2 || page === currentPage + 2) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )
+                      }
+                      return null
+                    })}
+                    <PaginationItem>
+                      <PaginationNext 
+                        href="#" 
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                        }}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
         </CardContent>
       </Card>
 

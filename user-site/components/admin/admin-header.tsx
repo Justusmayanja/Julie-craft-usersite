@@ -91,9 +91,9 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-white/95 border-b border-gray-200/60 backdrop-blur-md shadow-sm min-w-0">
       {/* Main Header Row */}
-      <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 h-14 sm:h-16 min-w-0">
+      <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 h-14 sm:h-16 min-w-0 gap-2 sm:gap-3">
         {/* Left side - Mobile menu button, page name, and breadcrumb */}
-        <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 min-w-0 flex-1">
+        <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 min-w-0 flex-shrink">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -111,22 +111,22 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           </div>
           
           {/* Desktop Breadcrumb Navigation */}
-          <nav className="hidden md:flex items-center space-x-3 text-sm min-w-0" aria-label="Breadcrumb">
-            <div className="flex items-center space-x-2 text-gray-500">
+          <nav className="hidden md:flex items-center space-x-3 text-sm min-w-0 flex-shrink-0" aria-label="Breadcrumb">
+            <div className="flex items-center space-x-2 text-gray-500 flex-shrink-0">
               <div className="p-1 bg-gray-100 rounded-md">
                 <Home className="w-3 h-3" />
               </div>
               <span className="font-medium">Admin</span>
             </div>
-            <div className="text-gray-300 font-light">/</div>
-            <span className="text-gray-900 font-semibold bg-blue-50 px-2 py-1 rounded-md">
+            <div className="text-gray-300 font-light flex-shrink-0">/</div>
+            <span className="text-gray-900 font-semibold bg-blue-50 px-2 py-1 rounded-md flex-shrink-0">
               {currentPageName}
             </span>
           </nav>
         </div>
 
         {/* Right side - Search, notifications, and user menu */}
-        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 min-w-0 flex-shrink-0">
+        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 lg:space-x-4 min-w-0 flex-shrink-0">
           {/* Mobile Search Button */}
           <Button
             variant="ghost"
@@ -138,7 +138,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           </Button>
 
           {/* Desktop Search Bar */}
-          <form onSubmit={handleSearch} className="hidden lg:flex relative">
+          <form onSubmit={handleSearch} className="hidden lg:flex relative flex-shrink-0">
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10 group-focus-within:text-blue-500 transition-colors" />
               <Input
@@ -146,13 +146,13 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                 placeholder="Search products, orders, customers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2.5 text-sm bg-gray-50/80 border border-gray-200/80 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 focus:bg-white focus:shadow-lg transition-all duration-300 w-64 xl:w-80"
+                className="pl-10 pr-4 py-2.5 text-sm bg-gray-50/80 border border-gray-200/80 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 focus:bg-white focus:shadow-lg transition-all duration-300 w-56 xl:w-72 2xl:w-80 max-w-full"
               />
             </div>
           </form>
 
           {/* Chat Support */}
-          <Link href="/admin/chat">
+          <Link href="/admin/chat" className="flex-shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -168,7 +168,9 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           </Link>
 
           {/* Notifications */}
-          <NotificationBell className="h-9 w-9 sm:h-10 sm:w-10" />
+          <div className="flex-shrink-0">
+            <NotificationBell className="h-9 w-9 sm:h-10 sm:w-10" />
+          </div>
 
           {/* Premium User Menu */}
           <div className="relative flex-shrink-0">
