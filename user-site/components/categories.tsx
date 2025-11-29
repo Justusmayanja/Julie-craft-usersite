@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Package, Palette, Gem, TreePine, Home, Sparkles, Image as ImageIcon } from "lucide-react"
+import { normalizeImageUrl } from "@/lib/utils/image-url"
 
 interface Category {
   id: string
@@ -36,6 +37,10 @@ const getCategoryColor = (categoryName: string) => {
   return 'bg-gray-100 text-gray-600' // Default color
 }
 
+/**
+ * @deprecated Use CategoriesSection instead for a modern, responsive design
+ * This component is kept for backward compatibility
+ */
 export function Categories() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -151,25 +156,27 @@ export function Categories() {
                           
                           {/* Image Container with rounded top corners */}
                           <div className="relative w-full h-full overflow-hidden rounded-2xl">
-                            <Image
-                              src={category.image_url}
-                              alt={category.name}
-                              fill
-                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                              className="object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.style.display = 'none'
-                                // Show icon fallback
-                                const container = target.closest('.relative')
-                                if (container) {
-                                  const iconContainer = container.querySelector('.icon-fallback')
-                                  if (iconContainer) {
-                                    (iconContainer as HTMLElement).style.display = 'flex'
+                            {category.image_url && (
+                              <Image
+                                src={normalizeImageUrl(category.image_url) || '/placeholder.svg'}
+                                alt={category.name}
+                                fill
+                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                                className="object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.style.display = 'none'
+                                  // Show icon fallback
+                                  const container = target.closest('.relative')
+                                  if (container) {
+                                    const iconContainer = container.querySelector('.icon-fallback')
+                                    if (iconContainer) {
+                                      (iconContainer as HTMLElement).style.display = 'flex'
+                                    }
                                   }
-                                }
-                              }}
-                            />
+                                }}
+                              />
+                            )}
                             
                             {/* Overlay Gradient */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
