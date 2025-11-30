@@ -8,6 +8,7 @@ import { ToastProvider } from "@/contexts/toast-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { LayoutContent } from "@/components/layout-content"
+import { NavigationProgress } from "@/components/navigation-progress"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -73,6 +74,7 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
+          <NavigationProgress />
           <AuthProvider>
             <RoleProvider>
               <CartProvider>

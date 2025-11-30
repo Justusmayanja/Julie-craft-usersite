@@ -13,7 +13,7 @@ const Hero = dynamic(() => import("@/components/hero").then(mod => ({ default: m
   ssr: true
 })
 
-const FeaturedProducts = dynamic(() => import("@/components/featured-products").then(mod => ({ default: mod.FeaturedProducts })), {
+const FeaturedProductsSection = dynamic(() => import("@/components/featured-products-section").then(mod => ({ default: mod.FeaturedProductsSection })), {
   loading: () => <PageLoading />,
   ssr: true
 })
@@ -75,7 +75,7 @@ export default function HomePage() {
         <ErrorMessage />
       </Suspense>
       <Hero />
-      <FeaturedProducts />
+      <FeaturedProductsSection />
       <CategoriesSection />
       <BlogCarousel />
     </>

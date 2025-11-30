@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { ToastProvider } from "@/components/admin/ui/toast"
 import { SessionGuard } from "@/components/admin/session-guard"
 import { NotificationProvider } from "@/contexts/notification-context"
+import { NavigationProgress } from "@/components/navigation-progress"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -95,6 +96,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <NotificationProvider isAdmin={true}>
+      <NavigationProgress />
       <ToastProvider>
         <SessionGuard />
         <LoadingOverlay />
