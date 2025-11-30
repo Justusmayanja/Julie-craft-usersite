@@ -22,7 +22,7 @@ export interface ProductCardProps {
   images?: string[] | null
   featured_image?: string | null
   category?: string | null
-  stock_quantity: number
+  stock_quantity: number | null
   featured?: boolean
   slug?: string | null
   rating?: number | null
@@ -59,8 +59,10 @@ export function ProductCard({
   const hasMultipleImages = images && images.length > 1
 
   // Stock status
-  const isInStock = stock_quantity > 0
-  const isLowStock = stock_quantity > 0 && stock_quantity <= 5
+  // Treat null/undefined as in stock (stock tracking might not be set up)
+  // Only mark as out of stock if stock_quantity is explicitly 0
+  const isInStock = stock_quantity === null || stock_quantity === undefined || stock_quantity > 0
+  const isLowStock = stock_quantity !== null && stock_quantity !== undefined && stock_quantity > 0 && stock_quantity <= 5
   const isBestSeller = total_sold && total_sold > 50
 
   // Price calculations
@@ -151,13 +153,14 @@ export function ProductCard({
           </div>
 
           {/* Stock Badge */}
-          {isLowStock && (
+          {isLowStock && stock_quantity !== null && stock_quantity !== undefined && (
             <Badge className="absolute top-3 right-3 bg-orange-500 text-white font-semibold px-2 py-1 z-10">
               Only {stock_quantity} left
             </Badge>
           )}
 
-          {!isInStock && (
+          {/* Only show "Out of Stock" badge if stock_quantity is explicitly 0 */}
+          {stock_quantity === 0 && (
             <Badge className="absolute top-3 right-3 bg-gray-500 text-white font-semibold px-2 py-1 z-10">
               Out of Stock
             </Badge>

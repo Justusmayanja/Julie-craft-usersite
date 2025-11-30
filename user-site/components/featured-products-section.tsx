@@ -18,7 +18,7 @@ interface FeaturedProduct {
   featured_image?: string | null
   category?: string | null
   category_name?: string | null
-  stock_quantity: number
+  stock_quantity: number | null
   featured: boolean
   slug?: string | null
   rating?: number | null
@@ -57,11 +57,12 @@ export function FeaturedProductsSection({
         const data = await response.json()
         
         if (data.products && data.products.length > 0) {
-          // Filter out out-of-stock products and ensure they're active
-          const inStockProducts = data.products
+          // Filter to only show active products (don't filter by stock - show all active products)
+          // Treat null/undefined stock_quantity as available
+          const activeProducts = data.products
             .filter((p: any) => 
-              (p.stock_quantity > 0 || p.inStock === true) && 
-              (p.status === 'active' || !p.status)
+              (p.status === 'active' || !p.status) &&
+              (p.stock_quantity === null || p.stock_quantity === undefined || p.stock_quantity >= 0)
             )
             .map((p: any) => ({
               id: p.id,
@@ -74,15 +75,16 @@ export function FeaturedProductsSection({
               featured_image: p.featured_image || p.image || p.image_url || null,
               category: p.category?.name || p.category_name || p.category || null,
               category_name: p.category?.name || p.category_name || null,
-              stock_quantity: p.stock_quantity || 0,
+              // Preserve null/undefined, only default to 0 if explicitly needed
+              stock_quantity: p.stock_quantity !== null && p.stock_quantity !== undefined ? p.stock_quantity : null,
               featured: p.featured || p.is_featured || false,
               slug: p.slug || null,
               rating: p.rating || null,
               total_sold: p.total_sold || null,
-              inStock: p.stock_quantity > 0 || p.inStock === true,
+              inStock: p.stock_quantity === null || p.stock_quantity === undefined || p.stock_quantity > 0 || p.inStock === true,
               status: p.status || 'active',
             }))
-          setProducts(inStockProducts.slice(0, limit))
+          setProducts(activeProducts.slice(0, limit))
         } else {
           setProducts([])
         }

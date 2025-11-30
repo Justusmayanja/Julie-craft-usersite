@@ -3,6 +3,7 @@ import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import type { Order, OrderFilters, CreateOrderData } from '@/lib/types/order'
 import { createOrderNotifications } from '@/lib/notifications'
 import { sendNewOrderNotificationEmail } from '@/lib/email-service'
+import { getAdminEmails } from '@/lib/admin-email-helpers'
 
 export async function GET(request: NextRequest) {
   try {
@@ -325,52 +326,38 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if notification creation fails
     })
 
-    // Send email notification to admin (async, don't wait)
+    // Send email notifications to all admin users (async, don't wait)
     if (isSupabaseConfigured && supabaseAdmin) {
-      // Get admin email from site settings
-      const { data: emailSetting } = await supabaseAdmin
-        .from('site_settings')
-        .select('setting_value')
-        .eq('setting_key', 'contact_email')
-        .maybeSingle()
+      // Get all admin user emails
+      getAdminEmails().then(async (adminEmails) => {
+        // Prepare order items for email
+        const orderItems = (completeOrder.order_items || []).map((item: any) => ({
+          product_name: item.product_name || 'Unknown Product',
+          quantity: item.quantity || 1,
+          price: parseFloat(item.price || item.unit_price || 0)
+        }))
 
-      let adminEmail: string | null = null
-      if (emailSetting) {
-        let emailValue = emailSetting.setting_value
-        // Parse JSON if it's a string
-        if (typeof emailValue === 'string' && (emailValue.startsWith('"') || emailValue.startsWith('{'))) {
-          try {
-            emailValue = JSON.parse(emailValue)
-          } catch {
-            // If parsing fails, use the string as-is
-          }
-        }
-        adminEmail = typeof emailValue === 'string' ? emailValue : emailValue?.value || null
-      }
+        // Send email notification to each admin user
+        const emailPromises = adminEmails.map(adminEmail =>
+          sendNewOrderNotificationEmail(
+            adminEmail,
+            completeOrder.order_number,
+            completeOrder.customer_name,
+            completeOrder.customer_email,
+            parseFloat(completeOrder.total_amount || 0),
+            completeOrder.currency || 'UGX',
+            orderItems
+          ).catch(err => {
+            console.error(`[Orders API] Error sending email to ${adminEmail}:`, err)
+            // Continue sending to other admins even if one fails
+          })
+        )
 
-      // Fallback to default admin email if not found in settings
-      if (!adminEmail) {
-        adminEmail = process.env.ADMIN_EMAIL || 'kingsjuliet90@gmail.com'
-      }
-
-      // Prepare order items for email
-      const orderItems = (completeOrder.order_items || []).map((item: any) => ({
-        product_name: item.product_name || 'Unknown Product',
-        quantity: item.quantity || 1,
-        price: parseFloat(item.price || item.unit_price || 0)
-      }))
-
-      // Send email notification (async, don't block response)
-      sendNewOrderNotificationEmail(
-        adminEmail,
-        completeOrder.order_number,
-        completeOrder.customer_name,
-        completeOrder.customer_email,
-        parseFloat(completeOrder.total_amount || 0),
-        completeOrder.currency || 'UGX',
-        orderItems
-      ).catch(err => {
-        console.error('[Orders API] Error sending admin email notification:', err)
+        // Wait for all emails to be sent (but don't block the response)
+        await Promise.allSettled(emailPromises)
+        console.log(`[Orders API] Sent new order notifications to ${adminEmails.length} admin user(s)`)
+      }).catch(err => {
+        console.error('[Orders API] Error getting admin emails:', err)
         // Don't fail the request if email sending fails
       })
     }

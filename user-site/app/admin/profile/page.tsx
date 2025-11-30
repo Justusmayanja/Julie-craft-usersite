@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,10 +16,11 @@ import Link from 'next/link'
 import { getUserOrders, updateUserProfile, uploadProfileImage, removeProfileImage } from '@/lib/api-user'
 import type { UserOrderHistory } from '@/lib/types/user'
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user, logout, isAuthenticated, isLoading, refreshUser } = useAuth()
   const [orders, setOrders] = useState<UserOrderHistory[]>([])
   const [ordersLoading, setOrdersLoading] = useState(true)
+  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState('profile')
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -35,6 +36,14 @@ export default function ProfilePage() {
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  // Read tab from URL query parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam && ['profile', 'orders', 'settings'].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [searchParams])
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -685,5 +694,17 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <ProfilePageContent />
+    </Suspense>
   )
 }

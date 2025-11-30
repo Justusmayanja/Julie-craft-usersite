@@ -257,30 +257,26 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                 </div>
                 
                 <div className="py-2">
-                  <button 
-                    onClick={() => {
-                      router.push('/profile')
-                      setShowUserMenu(false)
-                    }}
+                  <Link 
+                    href="/admin/profile?tab=profile"
+                    onClick={() => setShowUserMenu(false)}
                     className="flex items-center space-x-3 w-full px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
                   >
                     <div className="p-1 bg-blue-100 rounded-md">
                       <User className="w-3 h-3 text-blue-600" />
                     </div>
                     <span>Profile Settings</span>
-                  </button>
-                  <button 
-                    onClick={() => {
-                      router.push('/account')
-                      setShowUserMenu(false)
-                    }}
+                  </Link>
+                  <Link 
+                    href="/admin/profile?tab=settings"
+                    onClick={() => setShowUserMenu(false)}
                     className="flex items-center space-x-3 w-full px-5 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
                   >
                     <div className="p-1 bg-blue-100 rounded-md">
                       <Settings className="w-3 h-3 text-blue-600" />
                     </div>
                     <span>Account Settings</span>
-                  </button>
+                  </Link>
                 </div>
                 
                 <div className="border-t border-gray-100/80 pt-2">
