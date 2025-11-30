@@ -32,40 +32,85 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Token verification failed' }, { status: 401 })
     }
 
-    // Fetch business settings from site_settings table
-    const { data: settings, error } = await supabaseAdmin
-      .from('site_settings')
+    // Fetch business settings from business_settings table
+    // Use .maybeSingle() to handle case where no record exists yet
+    const { data: businessSettings, error } = await supabaseAdmin
+      .from('business_settings')
       .select('*')
-      .eq('setting_type', 'business')
-      .order('setting_key', { ascending: true })
+      .maybeSingle()
 
     if (error) {
       console.error('Error fetching business settings:', error)
       return NextResponse.json({ error: 'Failed to fetch business settings' }, { status: 500 })
     }
 
-    // Convert array to object for easier access
-    const businessSettings: Record<string, any> = {}
-    if (settings) {
-      settings.forEach(setting => {
-        businessSettings[setting.setting_key] = setting.setting_value
+    // Return with defaults if no settings exist
+    // If no record exists, create a default one
+    if (!businessSettings) {
+      // Create default record
+      const { data: newSettings, error: createError } = await supabaseAdmin
+        .from('business_settings')
+        .insert({
+          business_name: 'Julie Crafts',
+          country: 'Uganda',
+          currency: 'UGX',
+          timezone: 'Africa/Kampala'
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        console.error('Error creating default business settings:', createError)
+        // Return defaults even if creation fails
+        return NextResponse.json({
+          businessName: 'Julie Crafts',
+          email: '',
+          phone: '',
+          address: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: 'Uganda',
+          website: '',
+          description: '',
+          logo: '/julie-logo.jpeg',
+          timezone: 'Africa/Kampala',
+          currency: 'UGX'
+        })
+      }
+
+      // Return the newly created settings
+      return NextResponse.json({
+        businessName: newSettings.business_name || 'Julie Crafts',
+        email: newSettings.email || '',
+        phone: newSettings.phone || '',
+        address: newSettings.address_line1 || '',
+        city: newSettings.city || '',
+        state: newSettings.state || '',
+        zipCode: newSettings.zip_code || '',
+        country: newSettings.country || 'Uganda',
+        website: newSettings.website || '',
+        description: newSettings.description || '',
+        logo: newSettings.logo_url || '/julie-logo.jpeg',
+        timezone: newSettings.timezone || 'Africa/Kampala',
+        currency: newSettings.currency || 'UGX'
       })
     }
 
-    // Return with defaults if no settings exist
+    // Return settings from business_settings table
     return NextResponse.json({
-      businessName: businessSettings.business_name || 'JulieCraft',
-      email: businessSettings.business_email || 'julie@juliecraft.com',
-      phone: businessSettings.business_phone || '',
-      address: businessSettings.business_address || '',
-      city: businessSettings.business_city || '',
-      state: businessSettings.business_state || '',
-      zipCode: businessSettings.business_zip_code || '',
-      country: businessSettings.business_country || 'United States',
-      website: businessSettings.business_website || 'https://juliecraft.com',
-      description: businessSettings.business_description || '',
+      businessName: businessSettings.business_name || 'Julie Crafts',
+      email: businessSettings.email || '',
+      phone: businessSettings.phone || '',
+      address: businessSettings.address_line1 || '',
+      city: businessSettings.city || '',
+      state: businessSettings.state || '',
+      zipCode: businessSettings.zip_code || '',
+      country: businessSettings.country || 'Uganda',
+      website: businessSettings.website || '',
+      description: businessSettings.description || '',
       logo: businessSettings.logo_url || '/julie-logo.jpeg',
-      timezone: businessSettings.timezone || 'America/Los_Angeles',
+      timezone: businessSettings.timezone || 'Africa/Kampala',
       currency: businessSettings.currency || 'UGX'
     })
   } catch (error) {
@@ -108,92 +153,56 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    // Prepare settings to upsert
-    const settingsToUpsert = [
-      {
-        setting_key: 'business_name',
-        setting_value: body.businessName || '',
-        setting_type: 'business',
-        description: 'Business name'
-      },
-      {
-        setting_key: 'business_email',
-        setting_value: body.email || '',
-        setting_type: 'business',
-        description: 'Business email address'
-      },
-      {
-        setting_key: 'business_phone',
-        setting_value: body.phone || '',
-        setting_type: 'business',
-        description: 'Business phone number'
-      },
-      {
-        setting_key: 'business_address',
-        setting_value: body.address || '',
-        setting_type: 'business',
-        description: 'Business street address'
-      },
-      {
-        setting_key: 'business_city',
-        setting_value: body.city || '',
-        setting_type: 'business',
-        description: 'Business city'
-      },
-      {
-        setting_key: 'business_state',
-        setting_value: body.state || '',
-        setting_type: 'business',
-        description: 'Business state/province'
-      },
-      {
-        setting_key: 'business_zip_code',
-        setting_value: body.zipCode || '',
-        setting_type: 'business',
-        description: 'Business ZIP/postal code'
-      },
-      {
-        setting_key: 'business_country',
-        setting_value: body.country || '',
-        setting_type: 'business',
-        description: 'Business country'
-      },
-      {
-        setting_key: 'business_website',
-        setting_value: body.website || '',
-        setting_type: 'business',
-        description: 'Business website URL'
-      },
-      {
-        setting_key: 'business_description',
-        setting_value: body.description || '',
-        setting_type: 'business',
-        description: 'Business description'
-      },
-      {
-        setting_key: 'timezone',
-        setting_value: body.timezone || 'America/Los_Angeles',
-        setting_type: 'business',
-        description: 'Business timezone'
-      },
-      {
-        setting_key: 'currency',
-        setting_value: body.currency || 'UGX',
-        setting_type: 'business',
-        description: 'Default currency'
+    // Prepare update data for business_settings table
+    const updateData: any = {
+      business_name: body.businessName || 'Julie Crafts',
+      email: body.email || null,
+      phone: body.phone || null,
+      website: body.website || null,
+      description: body.description || null,
+      address_line1: body.address || null,
+      city: body.city || null,
+      state: body.state || null,
+      zip_code: body.zipCode || null,
+      country: body.country || 'Uganda',
+      currency: body.currency || 'UGX',
+      timezone: body.timezone || 'Africa/Kampala',
+      updated_at: new Date().toISOString()
+    }
+
+    // Check if business_settings record exists
+    const { data: existing, error: checkError } = await supabaseAdmin
+      .from('business_settings')
+      .select('id')
+      .maybeSingle()
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking business settings:', checkError)
+      return NextResponse.json({ error: 'Failed to check business settings' }, { status: 500 })
+    }
+
+    let result
+    if (existing) {
+      // Update existing record
+      const { error: updateError } = await supabaseAdmin
+        .from('business_settings')
+        .update(updateData)
+        .eq('id', existing.id)
+
+      if (updateError) {
+        console.error('Error updating business settings:', updateError)
+        return NextResponse.json({ error: 'Failed to update business settings' }, { status: 500 })
       }
-    ]
+    } else {
+      // Insert new record
+      const { error: insertError } = await supabaseAdmin
+        .from('business_settings')
+        .insert(updateData)
 
-    // Upsert all settings
-    const { error: upsertError } = await supabaseAdmin
-      .from('site_settings')
-      .upsert(settingsToUpsert, {
-        onConflict: 'setting_key'
-      })
-
-    if (upsertError) {
-      console.error('Error updating business settings:', upsertError)
-      return NextResponse.json({ error: 'Failed to update business settings' }, { status: 500 })
+      if (insertError) {
+        console.error('Error creating business settings:', insertError)
+        return NextResponse.json({ error: 'Failed to create business settings' }, { status: 500 })
+      }
     }
 
     return NextResponse.json({ 

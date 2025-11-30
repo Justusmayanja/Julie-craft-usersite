@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Logo } from "@/components/logo"
-import { Facebook, Instagram, Phone, Mail, MapPin } from "lucide-react"
+import { Facebook, Instagram, Phone, Mail, MapPin, Twitter, Youtube } from "lucide-react"
 
 interface Category {
   id: string
@@ -12,9 +12,82 @@ interface Category {
   is_active: boolean
 }
 
+interface SiteSettings {
+  site_name?: string
+  site_tagline?: string
+  contact_email?: string
+  contact_phone?: string
+  contact_address?: string
+  facebook_url?: string
+  instagram_url?: string
+  twitter_url?: string
+  youtube_url?: string
+}
+
+// Default fallback values
+const DEFAULT_SETTINGS: SiteSettings = {
+  site_name: 'Julie Crafts',
+  site_tagline: 'Authentic handmade crafts from the heart of Uganda, celebrating traditional artistry and contemporary design.',
+  contact_address: 'Ntinda View Apartments, Kampala',
+  contact_phone: '+256 777796529/+256 57020034',
+  contact_email: 'kingsjuliet90@gmail.com',
+  facebook_url: '',
+  instagram_url: '',
+  twitter_url: '',
+  youtube_url: ''
+}
+
 export function Footer() {
   const currentYear = new Date().getFullYear()
   const [categories, setCategories] = useState<Category[]>([])
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS)
+  const [settingsLoading, setSettingsLoading] = useState(true)
+
+  // Fetch site settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/site-content/settings')
+        if (response.ok) {
+          const data = await response.json()
+          const fetchedSettings: SiteSettings = {}
+          
+          // Extract values from settings object, handling JSONB parsing
+          Object.entries(data.settings || {}).forEach(([key, setting]: [string, any]) => {
+            let value = setting.value
+            
+            // If value is a string that looks like JSON, try to parse it
+            if (typeof value === 'string' && (value.startsWith('"') || value.startsWith('{') || value.startsWith('['))) {
+              try {
+                value = JSON.parse(value)
+              } catch {
+                // If parsing fails, use the string as-is
+              }
+            }
+            
+            // Only set if value exists and is not empty
+            if (value && typeof value === 'string' && value.trim() !== '') {
+              fetchedSettings[key as keyof SiteSettings] = value.trim()
+            }
+          })
+          
+          // Merge with defaults, only using fetched values if they exist
+          setSettings({
+            ...DEFAULT_SETTINGS,
+            ...fetchedSettings
+          })
+        }
+      } catch (err) {
+        console.error('Error fetching site settings for footer:', err)
+        // Use defaults on error
+        setSettings(DEFAULT_SETTINGS)
+      } finally {
+        setSettingsLoading(false)
+      }
+    }
+
+    fetchSettings()
+  }, [])
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -51,7 +124,7 @@ export function Footer() {
               showTagline={true}
             />
             <p className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed max-w-sm">
-              Authentic handmade crafts from the heart of Uganda, celebrating traditional artistry and contemporary design.
+              {settings.site_tagline || DEFAULT_SETTINGS.site_tagline}
             </p>
           </div>
 
@@ -120,7 +193,7 @@ export function Footer() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed block">
-                    Ntinda View Apartments, Kampala
+                    {settings.contact_address || DEFAULT_SETTINGS.contact_address}
                   </span>
                 </div>
               </div>
@@ -131,10 +204,10 @@ export function Footer() {
                   </div>
                 </div>
                 <a 
-                  href="tel:+256700123456" 
+                  href={`tel:${(settings.contact_phone || DEFAULT_SETTINGS.contact_phone)?.replace(/[^0-9+]/g, '')}`}
                   className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium break-words"
                 >
-                  +256 777796529/+256 57020034
+                  {settings.contact_phone || DEFAULT_SETTINGS.contact_phone}
                 </a>
               </div>
               <div className="flex items-center space-x-2 sm:space-x-3">
@@ -144,27 +217,57 @@ export function Footer() {
                   </div>
                 </div>
                 <a 
-                  href="mailto:hello@juliecrafts.ug" 
+                  href={`mailto:${settings.contact_email || DEFAULT_SETTINGS.contact_email}`}
                   className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium break-all"
                 >
-                  kingsjuliet90@gmail.com
+                  {settings.contact_email || DEFAULT_SETTINGS.contact_email}
                 </a>
               </div>
               <div className="flex space-x-2 sm:space-x-3 pt-1 sm:pt-2">
-                <Link 
-                  href="#" 
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-700/50 hover:bg-amber-500/20 border border-slate-600 hover:border-amber-500/30 flex items-center justify-center transition-all duration-200 hover:scale-110 group"
-                  aria-label="Facebook"
-                >
-                  <Facebook className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-amber-400 transition-colors duration-200" />
-                </Link>
-                <Link 
-                  href="#" 
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-700/50 hover:bg-amber-500/20 border border-slate-600 hover:border-amber-500/30 flex items-center justify-center transition-all duration-200 hover:scale-110 group"
-                  aria-label="Instagram"
-                >
-                  <Instagram className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-amber-400 transition-colors duration-200" />
-                </Link>
+                {settings.facebook_url && (
+                  <Link 
+                    href={settings.facebook_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-700/50 hover:bg-amber-500/20 border border-slate-600 hover:border-amber-500/30 flex items-center justify-center transition-all duration-200 hover:scale-110 group"
+                    aria-label="Facebook"
+                  >
+                    <Facebook className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-amber-400 transition-colors duration-200" />
+                  </Link>
+                )}
+                {settings.instagram_url && (
+                  <Link 
+                    href={settings.instagram_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-700/50 hover:bg-amber-500/20 border border-slate-600 hover:border-amber-500/30 flex items-center justify-center transition-all duration-200 hover:scale-110 group"
+                    aria-label="Instagram"
+                  >
+                    <Instagram className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-amber-400 transition-colors duration-200" />
+                  </Link>
+                )}
+                {settings.twitter_url && (
+                  <Link 
+                    href={settings.twitter_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-700/50 hover:bg-amber-500/20 border border-slate-600 hover:border-amber-500/30 flex items-center justify-center transition-all duration-200 hover:scale-110 group"
+                    aria-label="Twitter"
+                  >
+                    <Twitter className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-amber-400 transition-colors duration-200" />
+                  </Link>
+                )}
+                {settings.youtube_url && (
+                  <Link 
+                    href={settings.youtube_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-700/50 hover:bg-amber-500/20 border border-slate-600 hover:border-amber-500/30 flex items-center justify-center transition-all duration-200 hover:scale-110 group"
+                    aria-label="YouTube"
+                  >
+                    <Youtube className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-amber-400 transition-colors duration-200" />
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -174,7 +277,7 @@ export function Footer() {
         <div className="border-t border-slate-700/50 pt-8 mt-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-center sm:text-left text-sm sm:text-base text-slate-400 font-medium">
-              &copy; {currentYear} Julie Crafts. All rights reserved.
+              &copy; {currentYear} {settings.site_name || DEFAULT_SETTINGS.site_name}. All rights reserved.
             </p>
             <p className="text-center sm:text-right text-sm sm:text-base text-slate-400">
               Made with{' '}

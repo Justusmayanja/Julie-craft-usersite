@@ -96,6 +96,11 @@ export default function OrdersPage() {
     refreshInterval: 300000 // 5 minutes
   })
 
+  // Reset to page 1 when filters change - MUST be before any early returns
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedStatus])
+
   const handleViewOrder = async (order: any) => {
     try {
       // Fetch full order details
@@ -281,12 +286,6 @@ export default function OrdersPage() {
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   const paginatedOrders = orders.slice(startIndex, endIndex)
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm, selectedStatus])
-
 
   return (
     <div className="h-full">

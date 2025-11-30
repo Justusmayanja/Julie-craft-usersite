@@ -106,9 +106,13 @@ export default function BusinessSettingsPage() {
 
       const data = await response.json()
       setSettings(data)
+      // Clear any previous errors silently on successful fetch
+      setError(null)
     } catch (err) {
       console.error('Error fetching business settings:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch settings')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch settings'
+      setError(errorMessage)
+      toast.showError('Load Failed', errorMessage)
     } finally {
       setLoading(false)
     }

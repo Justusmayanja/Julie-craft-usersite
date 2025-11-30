@@ -28,11 +28,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Convert array to object for easier access
+    // Handle JSONB values - they may be stored as JSON strings or already parsed
     const settings: Record<string, any> = {}
     if (data) {
       data.forEach(setting => {
+        let value = setting.setting_value
+        
+        // If value is a string that looks like JSON, try to parse it
+        if (typeof value === 'string' && (value.startsWith('"') || value.startsWith('{') || value.startsWith('['))) {
+          try {
+            value = JSON.parse(value)
+          } catch {
+            // If parsing fails, use the string as-is
+          }
+        }
+        
         settings[setting.setting_key] = {
-          value: setting.setting_value,
+          value: value,
           type: setting.setting_type,
           description: setting.description
         }
@@ -53,16 +65,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    // Verify admin authentication
+    // Verify admin authentication - check both header and cookies
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = request.cookies.get('julie-crafts-token')?.value
+    
+    let token: string | null = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieToken) {
+      token = cookieToken
+    }
+    
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const token = authHeader.substring(7)
+    
     try {
-      const { data: { user } } = await supabaseAdmin.auth.getUser(token)
-      if (!user) {
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+      if (error || !user) {
         return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
       }
     } catch (error) {
@@ -77,20 +98,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Update each setting
-    const updates = Object.entries(settings).map(([key, value]: [string, any]) => {
-      return supabaseAdmin
+    // Handle JSONB values - ensure they're stored correctly
+    const updatePromises = Object.entries(settings).map(async ([key, value]: [string, any]) => {
+      let settingValue = value.value !== undefined ? value.value : value
+      
+      // If the value is a string, number, boolean, or null, store it as JSONB
+      // JSONB will handle the conversion automatically
+      const updateData: any = {
+        setting_key: key,
+        setting_value: settingValue,
+        setting_type: value.type || 'general',
+        description: value.description || null,
+        updated_at: new Date().toISOString()
+      }
+      
+      const { error } = await supabaseAdmin
         .from('site_settings')
-        .upsert({
-          setting_key: key,
-          setting_value: value.value || value,
-          setting_type: value.type || 'general',
-          description: value.description || null
-        }, {
+        .upsert(updateData, {
           onConflict: 'setting_key'
         })
+      
+      if (error) {
+        console.error(`Error updating setting ${key}:`, error)
+        throw error
+      }
     })
 
-    await Promise.all(updates)
+    await Promise.all(updatePromises)
 
     return NextResponse.json({ success: true })
   } catch (error) {

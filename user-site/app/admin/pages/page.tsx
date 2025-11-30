@@ -11,7 +11,6 @@ import {
   FileText, 
   Layout, 
   Settings, 
-  Menu,
   Globe,
   Plus,
   Edit,
@@ -33,10 +32,21 @@ import {
   List,
   Link as LinkIcon,
   Maximize2,
-  XCircle
+  XCircle,
+  Info
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/admin/ui/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface SitePage {
   id: string
@@ -73,7 +83,7 @@ interface SiteSetting {
 
 export default function AdminPagesPage() {
   const { user } = useAuth()
-  const { toast } = useToast()
+  const { addToast } = useToast()
   const [activeTab, setActiveTab] = useState("pages")
   const [loading, setLoading] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
@@ -86,6 +96,8 @@ export default function AdminPagesPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set())
   const [showPreview, setShowPreview] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [pageToDelete, setPageToDelete] = useState<string | null>(null)
   
   // Homepage sections state
   const [sections, setSections] = useState<HomepageSection[]>([])
@@ -133,10 +145,10 @@ export default function AdminPagesPage() {
       setPages(data.pages || [])
     } catch (error) {
       console.error('Error fetching pages:', error)
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "Failed to load pages",
-        variant: "destructive"
+        description: "Failed to load pages"
       })
     } finally {
       setLoading(false)
@@ -181,17 +193,29 @@ export default function AdminPagesPage() {
       setSettings(data.settings || {})
       
       // Initialize form with current settings
+      // Handle JSONB values - extract the actual value
       const formData: Record<string, any> = {}
       Object.entries(data.settings || {}).forEach(([key, setting]: [string, any]) => {
-        formData[key] = setting.value
+        let value = setting.value
+        
+        // If value is a string that looks like a JSON string, try to parse it
+        if (typeof value === 'string' && (value.startsWith('"') || value.startsWith('{') || value.startsWith('['))) {
+          try {
+            value = JSON.parse(value)
+          } catch {
+            // If parsing fails, use the string as-is
+          }
+        }
+        
+        formData[key] = value || ''
       })
       setSettingsForm(formData)
     } catch (error) {
       console.error('Error fetching settings:', error)
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "Failed to load settings",
-        variant: "destructive"
+        description: "Failed to load settings"
       })
     } finally {
       setLoading(false)
@@ -228,33 +252,38 @@ export default function AdminPagesPage() {
         throw new Error('Failed to save page')
       }
 
-      toast({
+      addToast({
+        type: "success",
         title: "Success",
-        description: `The page "${page.title}" has been ${page.id ? 'updated' : 'created'} successfully.`,
-        variant: "default"
+        description: `The page "${page.title}" has been ${page.id ? 'updated' : 'created'} successfully.`
       })
       
       setEditingPage(null)
       fetchPages()
     } catch (error) {
       console.error('Error saving page:', error)
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "Failed to save page",
-        variant: "destructive"
+        description: "Failed to save page"
       })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDeletePage = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this page?')) return
+  const handleDeletePage = (id: string) => {
+    setPageToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeletePage = async () => {
+    if (!pageToDelete) return
 
     try {
       setLoading(true)
       const token = localStorage.getItem('julie-crafts-token')
-      const response = await fetch(`/api/site-content/pages/${id}`, {
+      const response = await fetch(`/api/site-content/pages/${pageToDelete}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -266,19 +295,21 @@ export default function AdminPagesPage() {
         throw new Error('Failed to delete page')
       }
 
-      toast({
+      addToast({
+        type: "success",
         title: "Success",
-        description: "The page has been deleted successfully.",
-        variant: "default"
+        description: "The page has been deleted successfully."
       })
       
+      setDeleteDialogOpen(false)
+      setPageToDelete(null)
       fetchPages()
     } catch (error) {
       console.error('Error deleting page:', error)
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "Failed to delete page",
-        variant: "destructive"
+        description: "Failed to delete page"
       })
     } finally {
       setLoading(false)
@@ -293,10 +324,14 @@ export default function AdminPagesPage() {
       const settingsToSave: Record<string, any> = {}
       Object.entries(settingsForm).forEach(([key, value]) => {
         const setting = settings[key]
+        // Ensure value is properly formatted for JSONB storage
+        // Empty strings should be stored as empty strings, not null
+        const settingValue = value === null || value === undefined ? '' : value
+        
         settingsToSave[key] = {
-          value: value,
-          type: setting?.setting_type || 'general',
-          description: setting?.description
+          value: settingValue,
+          type: setting?.type || setting?.setting_type || 'general',
+          description: setting?.description || null
         }
       })
 
@@ -310,22 +345,24 @@ export default function AdminPagesPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to save settings')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to save settings')
       }
 
-      toast({
+      addToast({
+        type: "success",
         title: "Success",
-        description: "Site settings have been saved successfully.",
-        variant: "default"
+        description: "Site settings have been saved successfully."
       })
       
-      fetchSettings()
+      // Refresh settings to get updated values
+      await fetchSettings()
     } catch (error) {
       console.error('Error saving settings:', error)
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "Failed to save settings",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Failed to save settings"
       })
     } finally {
       setLoading(false)
@@ -384,7 +421,7 @@ export default function AdminPagesPage() {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="pages">
                 <FileText className="w-4 h-4 mr-2" />
                 Pages
@@ -392,10 +429,6 @@ export default function AdminPagesPage() {
               <TabsTrigger value="homepage">
                 <Layout className="w-4 h-4 mr-2" />
                 Homepage
-              </TabsTrigger>
-              <TabsTrigger value="footer">
-                <Menu className="w-4 h-4 mr-2" />
-                Footer
               </TabsTrigger>
               <TabsTrigger value="settings">
                 <Settings className="w-4 h-4 mr-2" />
@@ -452,10 +485,10 @@ export default function AdminPagesPage() {
                       }}
                       onBulkAction={async (action) => {
                         if (selectedPages.size === 0) {
-                          toast({
+                          addToast({
+                            type: "error",
                             title: "No Selection",
-                            description: "Please select at least one page.",
-                            variant: "destructive"
+                            description: "Please select at least one page."
                           })
                           return
                         }
@@ -482,10 +515,10 @@ export default function AdminPagesPage() {
                               )
                             )
                             
-                            toast({
+                            addToast({
+                              type: "success",
                               title: "Success",
-                              description: `${pageIds.length} page(s) deleted successfully.`,
-                              variant: "default"
+                              description: `${pageIds.length} page(s) deleted successfully.`
                             })
                           } else if (action === 'publish') {
                             await Promise.all(
@@ -501,10 +534,10 @@ export default function AdminPagesPage() {
                               )
                             )
                             
-                            toast({
+                            addToast({
+                              type: "success",
                               title: "Success",
-                              description: `${pageIds.length} page(s) published successfully.`,
-                              variant: "default"
+                              description: `${pageIds.length} page(s) published successfully.`
                             })
                           } else if (action === 'archive') {
                             await Promise.all(
@@ -520,10 +553,10 @@ export default function AdminPagesPage() {
                               )
                             )
                             
-                            toast({
+                            addToast({
+                              type: "success",
                               title: "Success",
-                              description: `${pageIds.length} page(s) archived successfully.`,
-                              variant: "default"
+                              description: `${pageIds.length} page(s) archived successfully.`
                             })
                           }
                           
@@ -561,26 +594,27 @@ export default function AdminPagesPage() {
               </Card>
             </TabsContent>
 
-            {/* Footer Tab */}
-            <TabsContent value="footer" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Footer Content</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FooterEditor 
-                    onUpdate={fetchSettings}
-                    loading={loading}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
             {/* Settings Tab */}
             <TabsContent value="settings" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Site Settings</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Site Settings</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Manage general site settings, contact information, and social media links
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={fetchSettings}
+                      disabled={loading}
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <SettingsEditor 
@@ -594,6 +628,32 @@ export default function AdminPagesPage() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Delete Page Confirmation Dialog */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Page</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this page? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => {
+                  setDeleteDialogOpen(false)
+                  setPageToDelete(null)
+                }}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeletePage}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>
@@ -667,7 +727,7 @@ function PageEditor({ page, onSave, onCancel, onPreview, showPreview }: {
   onPreview?: () => void
   showPreview?: boolean
 }) {
-  const { toast } = useToast()
+  const { addToast } = useToast()
   const [formData, setFormData] = useState(page)
   const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(page.featured_image || null)
   const [uploadingImage, setUploadingImage] = useState(false)
@@ -736,10 +796,10 @@ function PageEditor({ page, onSave, onCancel, onPreview, showPreview }: {
 
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "File size exceeds 5MB limit.",
-        variant: "destructive"
+        description: "File size exceeds 5MB limit."
       })
       return
     }
@@ -768,17 +828,17 @@ function PageEditor({ page, onSave, onCancel, onPreview, showPreview }: {
       setFeaturedImagePreview(data.url)
       setFormData({ ...formData, featured_image: data.url })
 
-      toast({
+      addToast({
+        type: "success",
         title: "Success",
-        description: "Featured image uploaded successfully.",
-        variant: "default"
+        description: "Featured image uploaded successfully."
       })
     } catch (error) {
       console.error('Error uploading image:', error)
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload image",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Failed to upload image"
       })
     } finally {
       setUploadingImage(false)
@@ -1066,6 +1126,12 @@ function PagesList({
   onBulkAction: (action: 'delete' | 'publish' | 'archive') => Promise<void>
 }) {
   const [showBulkActions, setShowBulkActions] = useState(false)
+  
+  // MUST be called before any early returns to follow Rules of Hooks
+  useEffect(() => {
+    setShowBulkActions(selectedPages.size > 0)
+  }, [selectedPages.size])
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -1111,10 +1177,6 @@ function PagesList({
     
     return matchesSearch && matchesStatus && matchesType
   })
-
-  useEffect(() => {
-    setShowBulkActions(selectedPages.size > 0)
-  }, [selectedPages.size])
 
   return (
     <div className="space-y-4">
@@ -1349,7 +1411,7 @@ function HomepageSectionsEditor({ sections, onUpdate, loading }: {
   onUpdate: () => void
   loading: boolean
 }) {
-  const { toast } = useToast()
+  const { addToast } = useToast()
   const [editingSection, setEditingSection] = useState<HomepageSection | null>(null)
 
   const handleToggleSection = async (section: HomepageSection) => {
@@ -1370,29 +1432,37 @@ function HomepageSectionsEditor({ sections, onUpdate, loading }: {
         throw new Error('Failed to update section')
       }
 
-      toast({
+      addToast({
+        type: "success",
         title: "Success",
-        description: `The section "${section.title}" has been ${!section.is_active ? 'activated' : 'deactivated'} successfully.`,
-        variant: "default"
+        description: `The section "${section.title}" has been ${!section.is_active ? 'activated' : 'deactivated'} successfully.`
       })
       
       onUpdate()
     } catch (error) {
       console.error('Error updating section:', error)
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "Failed to update section",
-        variant: "destructive"
+        description: "Failed to update section"
       })
     }
   }
 
-  const handleDeleteSection = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this section?')) return
+  const [deleteSectionDialogOpen, setDeleteSectionDialogOpen] = useState(false)
+  const [sectionToDelete, setSectionToDelete] = useState<string | null>(null)
+
+  const handleDeleteSection = (id: string) => {
+    setSectionToDelete(id)
+    setDeleteSectionDialogOpen(true)
+  }
+
+  const confirmDeleteSection = async () => {
+    if (!sectionToDelete) return
 
     try {
       const token = localStorage.getItem('julie-crafts-token')
-      const response = await fetch(`/api/site-content/homepage-sections/${id}`, {
+      const response = await fetch(`/api/site-content/homepage-sections/${sectionToDelete}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1404,12 +1474,14 @@ function HomepageSectionsEditor({ sections, onUpdate, loading }: {
         throw new Error('Failed to delete section')
       }
 
-      toast({
+      addToast({
+        type: "success",
         title: "Success",
-        description: "The section has been deleted successfully.",
-        variant: "default"
+        description: "The section has been deleted successfully."
       })
       
+      setDeleteSectionDialogOpen(false)
+      setSectionToDelete(null)
       onUpdate()
     } catch (error) {
       console.error('Error deleting section:', error)
@@ -1499,25 +1571,51 @@ function HomepageSectionsEditor({ sections, onUpdate, loading }: {
 
               if (!response.ok) throw new Error('Failed to update')
               
-              toast({
+              addToast({
+                type: "success",
                 title: "Success",
-                description: `The section "${updated.title}" has been updated successfully.`,
-                variant: "default"
+                description: `The section "${updated.title}" has been updated successfully.`
               })
               
               setEditingSection(null)
               onUpdate()
             } catch (error) {
-              toast({
+              addToast({
+                type: "error",
                 title: "Error",
-                description: "Failed to update section",
-                variant: "destructive"
+                description: "Failed to update section"
               })
             }
           }}
           onCancel={() => setEditingSection(null)}
         />
       )}
+
+      {/* Delete Section Confirmation Dialog */}
+      <AlertDialog open={deleteSectionDialogOpen} onOpenChange={setDeleteSectionDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Section</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this homepage section? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteSectionDialogOpen(false)
+              setSectionToDelete(null)
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteSection}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -1586,173 +1684,6 @@ function SectionEditor({ section, onSave, onCancel }: {
   )
 }
 
-// Footer Editor Component
-function FooterEditor({ onUpdate, loading }: {
-  onUpdate: () => void
-  loading: boolean
-}) {
-  const { toast } = useToast()
-  const [footerContent, setFooterContent] = useState<any[]>([])
-  const [isSaving, setIsSaving] = useState(false)
-
-  useEffect(() => {
-    fetchFooter()
-  }, [])
-
-  const fetchFooter = async () => {
-    try {
-      const token = localStorage.getItem('julie-crafts-token')
-      const response = await fetch('/api/site-content/footer', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      const data = await response.json()
-      setFooterContent(data.footer || [])
-    } catch (error) {
-      console.error('Error fetching footer:', error)
-    }
-  }
-
-  const handleSaveFooter = async () => {
-    try {
-      setIsSaving(true)
-      const token = localStorage.getItem('julie-crafts-token')
-      const response = await fetch('/api/site-content/footer', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ sections: footerContent })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save footer')
-      }
-
-      toast({
-        title: "Success",
-        description: "Footer content has been saved successfully.",
-        variant: "default"
-      })
-      
-      fetchFooter()
-    } catch (error) {
-      console.error('Error saving footer:', error)
-      toast({
-        title: "Error",
-        description: "Failed to save footer",
-        variant: "destructive"
-      })
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Manage footer content including links, contact info, and social media.
-        </p>
-        <Button onClick={fetchFooter} variant="outline" disabled={loading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Brand Section</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-              <Input placeholder="Julie Crafts" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tagline</label>
-              <Input placeholder="Authentic Handmade" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md min-h-[100px]"
-                placeholder="Company description..."
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-              <Input placeholder="Ntinda View Apartments, Kampala" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <Input placeholder="+256 700 123 456" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <Input placeholder="hello@juliecrafts.ug" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Social Media Links</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Facebook URL</label>
-              <Input placeholder="https://facebook.com/..." />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Instagram URL</label>
-              <Input placeholder="https://instagram.com/..." />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Twitter URL</label>
-              <Input placeholder="https://twitter.com/..." />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Quick Links</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Footer Links (one per line)</label>
-              <textarea 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md min-h-[150px]"
-                placeholder="About Us\nProducts\nContact"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSaveFooter} disabled={isSaving}>
-          <Save className="w-4 h-4 mr-2" />
-          {isSaving ? 'Saving...' : 'Save Footer Content'}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 // Settings Editor Component
 function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
   settings: Record<string, SiteSetting>
@@ -1761,13 +1692,19 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
   onSave: () => void
   loading: boolean
 }) {
-  const { toast } = useToast()
+  const { addToast } = useToast()
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoPreview, setLogoPreview] = useState<string | null>(formData.logo_url || null)
 
   const groupedSettings: Record<string, Array<[string, SiteSetting]>> = {}
   
+  // Filter out business settings - they're managed in /admin/settings/business
   Object.entries(settings).forEach(([key, setting]) => {
+    // Skip business settings - they're now in business_settings table
+    if (setting.setting_type === 'business') {
+      return
+    }
+    
     const type = setting.setting_type || 'general'
     if (!groupedSettings[type]) {
       groupedSettings[type] = []
@@ -1782,20 +1719,20 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml']
     if (!allowedTypes.includes(file.type)) {
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "Invalid file type. Only JPEG, PNG, WEBP, and SVG are allowed.",
-        variant: "destructive"
+        description: "Invalid file type. Only JPEG, PNG, WEBP, and SVG are allowed."
       })
       return
     }
 
     // Validate file size (2MB)
     if (file.size > 2 * 1024 * 1024) {
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "File size exceeds 2MB limit.",
-        variant: "destructive"
+        description: "File size exceeds 2MB limit."
       })
       return
     }
@@ -1824,17 +1761,17 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
       onFormChange({ ...formData, logo_url: data.logo_url })
       setLogoPreview(data.logo_url)
 
-      toast({
+      addToast({
+        type: "success",
         title: "Success",
-        description: "Logo has been uploaded successfully.",
-        variant: "default"
+        description: "Logo has been uploaded successfully."
       })
     } catch (error) {
       console.error('Error uploading logo:', error)
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload logo",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Failed to upload logo"
       })
     } finally {
       setLogoUploading(false)
@@ -1845,9 +1782,13 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
     }
   }
 
-  const handleDeleteLogo = async () => {
-    if (!confirm('Are you sure you want to delete the logo?')) return
+  const [deleteLogoDialogOpen, setDeleteLogoDialogOpen] = useState(false)
 
+  const handleDeleteLogo = () => {
+    setDeleteLogoDialogOpen(true)
+  }
+
+  const confirmDeleteLogo = async () => {
     try {
       setLogoUploading(true)
       const token = localStorage.getItem('julie-crafts-token')
@@ -1865,18 +1806,19 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
 
       onFormChange({ ...formData, logo_url: '' })
       setLogoPreview(null)
+      setDeleteLogoDialogOpen(false)
 
-      toast({
+      addToast({
+        type: "success",
         title: "Success",
-        description: "Logo has been deleted successfully.",
-        variant: "default"
+        description: "Logo has been deleted successfully."
       })
     } catch (error) {
       console.error('Error deleting logo:', error)
-      toast({
+      addToast({
+        type: "error",
         title: "Error",
-        description: "Failed to delete logo",
-        variant: "destructive"
+        description: "Failed to delete logo"
       })
     } finally {
       setLogoUploading(false)
@@ -1994,6 +1936,24 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
         </CardContent>
       </Card>
 
+      {/* Info Message about Business Settings */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="py-4">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-blue-900">Business Information</p>
+              <p className="text-xs text-blue-700 mt-1">
+                Business settings (name, email, phone, address, etc.) are now managed separately. 
+                <a href="/admin/settings/business" className="underline font-medium ml-1">
+                  Go to Business Info →
+                </a>
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Other Settings */}
       {Object.entries(groupedSettings).map(([type, items]) => (
         <Card key={type}>
@@ -2002,22 +1962,56 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {items.map(([key, setting]) => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </label>
-                  <Input
-                    value={formData[key] || ''}
-                    onChange={(e) => onFormChange({ ...formData, [key]: e.target.value })}
-                    placeholder={setting.description}
-                  />
-                </div>
-              ))}
+              {items.map(([key, setting]) => {
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                const isEmail = key.includes('email')
+                const isUrl = key.includes('url') || key.includes('link')
+                const isPhone = key.includes('phone') || key.includes('tel')
+                const isAddress = key.includes('address')
+                const isTextarea = key.includes('description') || key.includes('tagline') || key.includes('content')
+                
+                return (
+                  <div key={key} className={isTextarea ? 'md:col-span-2' : ''}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {label}
+                      {setting.description && (
+                        <span className="text-xs text-gray-500 font-normal ml-2">
+                          ({setting.description})
+                        </span>
+                      )}
+                    </label>
+                    {isTextarea ? (
+                      <Textarea
+                        value={formData[key] || ''}
+                        onChange={(e) => onFormChange({ ...formData, [key]: e.target.value })}
+                        placeholder={setting.description || `Enter ${label.toLowerCase()}`}
+                        rows={3}
+                        className="resize-none"
+                      />
+                    ) : (
+                      <Input
+                        type={isEmail ? 'email' : isPhone ? 'tel' : 'text'}
+                        value={formData[key] || ''}
+                        onChange={(e) => onFormChange({ ...formData, [key]: e.target.value })}
+                        placeholder={setting.description || `Enter ${label.toLowerCase()}`}
+                      />
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
       ))}
+      
+      {Object.keys(groupedSettings).length === 0 && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">No settings found. Default settings will be created when you save.</p>
+          </CardContent>
+        </Card>
+      )}
       
       <div className="flex justify-end">
         <Button onClick={onSave} disabled={loading || logoUploading}>
@@ -2025,6 +2019,29 @@ function SettingsEditor({ settings, formData, onFormChange, onSave, loading }: {
           Save Settings
         </Button>
       </div>
+
+      {/* Delete Logo Confirmation Dialog */}
+      <AlertDialog open={deleteLogoDialogOpen} onOpenChange={setDeleteLogoDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Logo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the site logo? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteLogoDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteLogo}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
