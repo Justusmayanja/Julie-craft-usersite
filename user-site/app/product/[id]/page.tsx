@@ -37,7 +37,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [quantityInput, setQuantityInput] = useState<string>('1')
   const { addItem } = useCart()
-  const { toast } = useToast()
+  const toast = useToast()
 
   // Sync quantityInput when quantity changes externally
   useEffect(() => {
@@ -66,7 +66,10 @@ export default function ProductDetailPage() {
     }
   }, [productId])
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
     if (!product) return
     
     if (!product.inStock) {
@@ -284,6 +287,7 @@ export default function ProductDetailPage() {
               onClick={handleAddToCart}
               disabled={!product.inStock}
               className="w-full h-12 text-lg"
+              type="button"
             >
               <ShoppingCart className="w-5 h-5 mr-2" />
               Add to Cart

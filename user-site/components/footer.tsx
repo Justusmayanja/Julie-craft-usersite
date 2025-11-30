@@ -112,24 +112,24 @@ export function Footer() {
   }, [])
 
   return (
-    <footer className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 border-t-2 border-slate-700 shadow-2xl">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12 mb-8">
+    <footer className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 border-t-2 border-slate-700 shadow-2xl overflow-x-hidden">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 max-w-7xl w-full">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12 mb-8 w-full">
           {/* Brand - spans full width on mobile, then 2 columns, then 1 column on lg */}
-          <div className="col-span-2 lg:col-span-1 space-y-4 sm:space-y-5">
+          <div className="col-span-2 lg:col-span-1 space-y-4 sm:space-y-5 min-w-0">
             <Logo 
               variant="full" 
               size="lg" 
               dark={true}
               showTagline={true}
             />
-            <p className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed max-w-sm">
+            <p className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed max-w-sm break-words">
               {settings.site_tagline || DEFAULT_SETTINGS.site_tagline}
             </p>
           </div>
 
           {/* Quick Links */}
-          <div className="space-y-3 sm:space-y-4 lg:space-y-5">
+          <div className="space-y-3 sm:space-y-4 lg:space-y-5 min-w-0">
             <h3 className="font-bold text-base sm:text-lg lg:text-xl text-white mb-3 sm:mb-4">Quick Links</h3>
             <nav className="flex flex-col space-y-2 sm:space-y-3">
               <Link 
@@ -154,7 +154,7 @@ export function Footer() {
           </div>
 
           {/* Categories */}
-          <div className="space-y-3 sm:space-y-4 lg:space-y-5">
+          <div className="space-y-3 sm:space-y-4 lg:space-y-5 min-w-0">
             <h3 className="font-bold text-base sm:text-lg lg:text-xl text-white mb-3 sm:mb-4">Categories</h3>
             <nav className="flex flex-col space-y-2 sm:space-y-3">
               {categories.length > 0 ? (
@@ -182,7 +182,7 @@ export function Footer() {
           </div>
 
           {/* Contact Info - spans full width on mobile, then 2 columns, then 1 column on lg */}
-          <div className="col-span-2 lg:col-span-1 space-y-3 sm:space-y-4 lg:space-y-5">
+          <div className="col-span-2 lg:col-span-1 space-y-3 sm:space-y-4 lg:space-y-5 min-w-0">
             <h3 className="font-bold text-base sm:text-lg lg:text-xl text-white mb-3 sm:mb-4">Contact</h3>
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-start space-x-2 sm:space-x-3">
@@ -192,36 +192,40 @@ export function Footer() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed block">
+                  <span className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed block break-words overflow-wrap-anywhere">
                     {settings.contact_address || DEFAULT_SETTINGS.contact_address}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <div className="flex-shrink-0">
+              <div className="flex items-start space-x-2 sm:space-x-3">
+                <div className="flex-shrink-0 mt-0.5 sm:mt-1">
                   <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
                     <Phone className="h-3 w-3 sm:h-4 sm:w-4 text-amber-400" />
                   </div>
                 </div>
-                <a 
-                  href={`tel:${(settings.contact_phone || DEFAULT_SETTINGS.contact_phone)?.replace(/[^0-9+]/g, '')}`}
-                  className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium break-words"
-                >
-                  {settings.contact_phone || DEFAULT_SETTINGS.contact_phone}
-                </a>
+                <div className="flex-1 min-w-0">
+                  <a 
+                    href={`tel:${(settings.contact_phone || DEFAULT_SETTINGS.contact_phone)?.replace(/[^0-9+]/g, '')}`}
+                    className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium break-words overflow-wrap-anywhere block"
+                  >
+                    {settings.contact_phone || DEFAULT_SETTINGS.contact_phone}
+                  </a>
+                </div>
               </div>
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <div className="flex-shrink-0">
+              <div className="flex items-start space-x-2 sm:space-x-3">
+                <div className="flex-shrink-0 mt-0.5 sm:mt-1">
                   <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
                     <Mail className="h-3 w-3 sm:h-4 sm:w-4 text-amber-400" />
                   </div>
                 </div>
-                <a 
-                  href={`mailto:${settings.contact_email || DEFAULT_SETTINGS.contact_email}`}
-                  className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium break-all"
-                >
-                  {settings.contact_email || DEFAULT_SETTINGS.contact_email}
-                </a>
+                <div className="flex-1 min-w-0">
+                  <a 
+                    href={`mailto:${settings.contact_email || DEFAULT_SETTINGS.contact_email}`}
+                    className="text-xs sm:text-sm lg:text-base text-slate-300 hover:text-amber-400 transition-colors duration-200 font-medium break-all overflow-wrap-anywhere block"
+                  >
+                    {settings.contact_email || DEFAULT_SETTINGS.contact_email}
+                  </a>
+                </div>
               </div>
               <div className="flex space-x-2 sm:space-x-3 pt-1 sm:pt-2">
                 {settings.facebook_url && (
@@ -274,12 +278,12 @@ export function Footer() {
         </div>
 
         {/* Copyright Section */}
-        <div className="border-t border-slate-700/50 pt-8 mt-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-center sm:text-left text-sm sm:text-base text-slate-400 font-medium">
+        <div className="border-t border-slate-700/50 pt-8 mt-8 w-full">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full min-w-0">
+            <p className="text-center sm:text-left text-sm sm:text-base text-slate-400 font-medium break-words min-w-0 flex-1">
               &copy; {currentYear} {settings.site_name || DEFAULT_SETTINGS.site_name}. All rights reserved.
             </p>
-            <p className="text-center sm:text-right text-sm sm:text-base text-slate-400">
+            <p className="text-center sm:text-right text-sm sm:text-base text-slate-400 break-words min-w-0 flex-shrink-0">
               Made with{' '}
               <span className="text-red-500 inline-block animate-pulse">❤️</span>{' '}
               in Uganda

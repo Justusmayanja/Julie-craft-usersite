@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import type { GuestCheckoutData } from '@/lib/types/user'
+import { sendNewOrderNotificationEmail } from '@/lib/email-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -179,6 +180,56 @@ export async function POST(request: NextRequest) {
         // Non-critical error, log but don't fail the order
         console.log('Failed to save guest info for future orders:', guestSaveError)
       }
+    }
+
+    // Send email notification to admin (async, don't wait)
+    if (isSupabaseConfigured && supabaseAdmin) {
+      // Get admin email from site settings
+      const { data: emailSetting } = await supabaseAdmin
+        .from('site_settings')
+        .select('setting_value')
+        .eq('setting_key', 'contact_email')
+        .maybeSingle()
+
+      let adminEmail: string | null = null
+      if (emailSetting) {
+        let emailValue = emailSetting.setting_value
+        // Parse JSON if it's a string
+        if (typeof emailValue === 'string' && (emailValue.startsWith('"') || emailValue.startsWith('{'))) {
+          try {
+            emailValue = JSON.parse(emailValue)
+          } catch {
+            // If parsing fails, use the string as-is
+          }
+        }
+        adminEmail = typeof emailValue === 'string' ? emailValue : emailValue?.value || null
+      }
+
+      // Fallback to default admin email if not found in settings
+      if (!adminEmail) {
+        adminEmail = process.env.ADMIN_EMAIL || 'kingsjuliet90@gmail.com'
+      }
+
+      // Prepare order items for email
+      const orderItems = (completeOrder.order_items || []).map((item: any) => ({
+        product_name: item.product_name || 'Unknown Product',
+        quantity: item.quantity || 1,
+        price: parseFloat(item.price || item.unit_price || 0)
+      }))
+
+      // Send email notification (async, don't block response)
+      sendNewOrderNotificationEmail(
+        adminEmail,
+        completeOrder.order_number,
+        completeOrder.customer_name,
+        completeOrder.customer_email,
+        parseFloat(completeOrder.total_amount || 0),
+        completeOrder.currency || 'UGX',
+        orderItems
+      ).catch(err => {
+        console.error('[Guest Orders API] Error sending admin email notification:', err)
+        // Don't fail the request if email sending fails
+      })
     }
 
     // Return complete order with success message

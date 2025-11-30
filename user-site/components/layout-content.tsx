@@ -45,9 +45,9 @@ export function LayoutContent({ children }: LayoutContentProps) {
   return (
     <NotificationProvider isAdmin={false}>
       <AdminRedirectGuard>
-        <div className="relative flex min-h-screen flex-col">
+        <div className="relative flex min-h-screen flex-col overflow-x-hidden w-full">
           <Navigation />
-          <main className="flex-1">
+          <main className="flex-1 w-full overflow-x-hidden">
             {children}
           </main>
           {!shouldHideFooter && <Footer />}

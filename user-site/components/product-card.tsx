@@ -112,9 +112,10 @@ export function ProductCard({
   }
 
   return (
-    <Link href={productUrl} className={cn("group block", className)}>
+    <div className={cn("group", className)}>
       <div className="relative bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 h-full flex flex-col hover:bg-gray-50/40">
-        {/* Image Container */}
+        <Link href={productUrl} className="flex-1 flex flex-col">
+          {/* Image Container */}
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <Image
             src={imageError ? '/placeholder.svg' : primaryImage}
@@ -166,7 +167,6 @@ export function ProductCard({
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
             <div className="flex gap-2">
               <Button
-                variant="secondary"
                 size="sm"
                 className="rounded-full bg-white/90 hover:bg-white shadow-lg"
                 onClick={(e) => {
@@ -179,7 +179,6 @@ export function ProductCard({
                 <Eye className="w-4 h-4" />
               </Button>
               <Button
-                variant="secondary"
                 size="sm"
                 className={cn(
                   "rounded-full bg-white/90 hover:bg-white shadow-lg",
@@ -257,20 +256,24 @@ export function ProductCard({
               </span>
             )}
           </div>
-
-          {/* Add to Cart Button */}
+        </div>
+        </Link>
+      
+        {/* Add to Cart Button - Outside Link to prevent navigation */}
+        <div className="px-4 sm:px-5 pb-4 sm:pb-5">
           <Button
-            className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 transition-all duration-200 hover:opacity-90"
+            className="w-full rounded-xl font-semibold py-3 transition-all duration-200 bg-primary hover:bg-primary/90 text-primary-foreground"
             onClick={handleAddToCart}
             disabled={!isInStock}
             aria-label={`Add ${name} to cart`}
+            type="button"
           >
             <ShoppingCart className="w-4 h-4 mr-2" />
-            {isInStock ? "Add to Cart" : "Out of Stock"}
+            Add to Cart
           </Button>
         </div>
       </div>
-    </Link>
+    </div>
   )
 }
 

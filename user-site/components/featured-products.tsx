@@ -18,6 +18,7 @@ interface Product {
   category: string
   stock_quantity: number
   featured: boolean
+  inStock?: boolean
 }
 
 export function FeaturedProducts() {
@@ -38,11 +39,17 @@ export function FeaturedProducts() {
         
         // Check if we got products from the API, otherwise use fallback data
         if (data.products && data.products.length > 0) {
-          // Filter out out-of-stock products
-          const inStockProducts = data.products.filter((p: Product) => 
-            (p.stock_quantity > 0) || (p.inStock === true)
-          )
-          setProducts(inStockProducts)
+          // Map products and ensure inStock is properly set
+          const mappedProducts = data.products.map((p: any) => {
+            const stockQty = p.stock_quantity ?? 0
+            const isInStock = stockQty > 0 || p.inStock === true
+            return {
+              ...p,
+              stock_quantity: stockQty,
+              inStock: isInStock
+            }
+          })
+          setProducts(mappedProducts)
         } else {
           // Use fallback data when API returns empty results (only in-stock products)
           console.log('API returned empty products, using fallback data')
@@ -198,8 +205,12 @@ export function FeaturedProducts() {
     fetchProducts()
   }, [])
 
-  const handleAddToCart = async (product: Product) => {
-    if (!product.inStock) {
+  const handleAddToCart = async (e: React.MouseEvent, product: Product) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const isInStock = (product.inStock === true) || (product.stock_quantity > 0)
+    if (!isInStock) {
       toast.showError("Out of Stock", "This product is currently unavailable.")
       return
     }
@@ -211,7 +222,7 @@ export function FeaturedProducts() {
         price: product.price,
         image: product.image,
         category: product.category,
-        inStock: product.stock_quantity > 0
+        inStock: isInStock
       })
 
       if (success) {
@@ -307,7 +318,7 @@ export function FeaturedProducts() {
                       )}
                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none group-hover:pointer-events-auto">
                         <Link href={`/product/${product.id}`}>
-                          <Button variant="secondary" size="sm" onClick={(e) => e.stopPropagation()}>
+                          <Button size="sm" onClick={(e) => e.stopPropagation()}>
                             <Eye className="w-4 h-4 mr-2" />
                             Quick View
                           </Button>
@@ -325,22 +336,36 @@ export function FeaturedProducts() {
                         <span className="text-2xl font-bold text-primary">
                           UGX {product.price.toLocaleString()}
                         </span>
-                        <Badge variant={(product.stock_quantity > 0 || product.inStock) ? "default" : "destructive"}>
-                          {(product.stock_quantity > 0 || product.inStock) ? "In Stock" : "Out of Stock"}
+                        <Badge variant={((product.inStock === true) || (product.stock_quantity > 0)) ? "default" : "destructive"}>
+                          {((product.inStock === true) || (product.stock_quantity > 0)) ? "In Stock" : "Out of Stock"}
                         </Badge>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                         <Button 
-                          className="flex-1" 
-                          onClick={() => handleAddToCart(product)}
-                          disabled={product.stock_quantity === 0 && !product.inStock}
+                          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground" 
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleAddToCart(e, product)
+                          }}
+                          disabled={!((product.inStock === true) || (product.stock_quantity > 0))}
+                          type="button"
                         >
                           <ShoppingCart className="w-4 h-4 mr-2" />
                           Add to Cart
                         </Button>
-                        <Link href={`/product/${product.id}`}>
-                          <Button variant="outline" size="icon">
-                            <Eye className="w-4 h-4" />
+                        <Link 
+                          href={`/product/${product.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1"
+                        >
+                          <Button 
+                            variant="outline" 
+                            className="w-full border-2 border-gray-300 hover:border-primary hover:bg-primary/5 text-gray-700 hover:text-primary"
+                            type="button"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
                           </Button>
                         </Link>
                       </div>
@@ -353,7 +378,7 @@ export function FeaturedProducts() {
         
         <div className="text-center mt-12">
           <Link href="/products">
-            <Button variant="outline" size="lg">
+            <Button size="lg">
               View All Products
             </Button>
           </Link>

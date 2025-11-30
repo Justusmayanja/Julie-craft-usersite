@@ -1,7 +1,8 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react"
 import { useAuth } from "./auth-context"
+import { playNotificationSound, isSoundEnabled } from "@/lib/sound-notification"
 
 export interface Notification {
   id: string
@@ -41,6 +42,9 @@ export function NotificationProvider({ children, isAdmin = false }: { children: 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user, isAuthenticated } = useAuth()
+  const previousUnreadCountRef = useRef(0)
+  const previousNotificationIdsRef = useRef<Set<string>>(new Set())
+  const isInitialLoadRef = useRef(true)
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -78,8 +82,40 @@ export function NotificationProvider({ children, isAdmin = false }: { children: 
       }
 
       const data = await response.json()
-      setNotifications(data.notifications || [])
-      setUnreadCount(data.unread_count || 0)
+      const newNotifications = data.notifications || []
+      const newUnreadCount = data.unread_count || 0
+      
+      // Check if there are new notifications (for sound playback)
+      const currentNotificationIds = new Set(newNotifications.map((n: Notification) => n.id))
+      const hasNewNotifications = newNotifications.some((n: Notification) => !previousNotificationIdsRef.current.has(n.id))
+      
+      // Play sound if:
+      // 1. Sound is enabled
+      // 2. Not the initial load (skip sound on first fetch)
+      // 3. Unread count increased (new notification arrived)
+      // 4. There are actually new notification IDs we haven't seen
+      if (!isInitialLoadRef.current && isSoundEnabled() && newUnreadCount > previousUnreadCountRef.current && hasNewNotifications) {
+        // Check if any new notification is an order notification
+        const hasOrderNotification = newNotifications.some((n: Notification) => 
+          !previousNotificationIdsRef.current.has(n.id) && 
+          (n.notification_type?.includes('order') || n.notification_type === 'order_placed')
+        )
+        
+        // Play appropriate sound
+        playNotificationSound(hasOrderNotification ? 'order' : 'notification')
+      }
+      
+      // Mark initial load as complete after first fetch
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false
+      }
+      
+      // Update refs for next comparison
+      previousUnreadCountRef.current = newUnreadCount
+      previousNotificationIdsRef.current = currentNotificationIds
+      
+      setNotifications(newNotifications)
+      setUnreadCount(newUnreadCount)
     } catch (err) {
       console.error('Error fetching notifications:', err)
       // Don't set error state if table doesn't exist - just show empty notifications

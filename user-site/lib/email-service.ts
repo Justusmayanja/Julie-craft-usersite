@@ -303,6 +303,187 @@ export async function sendPasswordResetEmail(
   }
 }
 
+// Generate HTML email template for new order notification
+const generateNewOrderEmailHTML = (
+  orderNumber: string,
+  customerName: string,
+  customerEmail: string,
+  totalAmount: number,
+  currency: string,
+  orderItems: Array<{ product_name: string; quantity: number; price: number }>,
+  siteName: string = 'Julie Crafts'
+): string => {
+  const itemsList = orderItems.map(item => `
+    <tr>
+      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.product_name}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${currency} ${item.price.toLocaleString()}</td>
+    </tr>
+  `).join('')
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Order Notification</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4f6; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px 20px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">New Order Received!</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px 20px;">
+              <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                Hello Admin,
+              </p>
+              <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                A new order has been placed on ${siteName}. Please review and process it as soon as possible.
+              </p>
+              
+              <!-- Order Details -->
+              <div style="background-color: #f9fafb; border-radius: 6px; padding: 20px; margin: 20px 0;">
+                <h2 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">Order Details</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 40%;">Order Number:</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600;">${orderNumber}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Customer Name:</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px;">${customerName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Customer Email:</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 14px;">${customerEmail}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total Amount:</td>
+                    <td style="padding: 8px 0; color: #111827; font-size: 16px; font-weight: 600; color: #f59e0b;">${currency} ${totalAmount.toLocaleString()}</td>
+                  </tr>
+                </table>
+              </div>
+              
+              <!-- Order Items -->
+              <div style="margin: 20px 0;">
+                <h3 style="margin: 0 0 15px 0; color: #111827; font-size: 16px; font-weight: 600;">Order Items</h3>
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+                  <thead>
+                    <tr style="background-color: #f9fafb;">
+                      <th style="padding: 12px; text-align: left; color: #374151; font-size: 14px; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Product</th>
+                      <th style="padding: 12px; text-align: center; color: #374151; font-size: 14px; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Quantity</th>
+                      <th style="padding: 12px; text-align: right; color: #374151; font-size: 14px; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${itemsList}
+                  </tbody>
+                </table>
+              </div>
+              
+              <!-- Action Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/orders/${orderNumber}" 
+                       style="display: inline-block; padding: 12px 24px; background-color: #f59e0b; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                      View Order in Admin Panel
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                This is an automated notification. Please log in to the admin panel to process this order.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">
+                © ${new Date().getFullYear()} ${siteName}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `
+}
+
+// Send new order notification email to admin
+export async function sendNewOrderNotificationEmail(
+  adminEmail: string,
+  orderNumber: string,
+  customerName: string,
+  customerEmail: string,
+  totalAmount: number,
+  currency: string,
+  orderItems: Array<{ product_name: string; quantity: number; price: number }>
+): Promise<boolean> {
+  try {
+    const transporter = createTransporter()
+    if (!transporter) {
+      console.error('Email transporter not configured')
+      return false
+    }
+
+    const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Julie Crafts'
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+      (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
+
+    // Generate text version
+    const textVersion = `New Order Notification - ${siteName}
+
+Hello Admin,
+
+A new order has been placed on ${siteName}. Please review and process it as soon as possible.
+
+Order Details:
+- Order Number: ${orderNumber}
+- Customer Name: ${customerName}
+- Customer Email: ${customerEmail}
+- Total Amount: ${currency} ${totalAmount.toLocaleString()}
+
+Order Items:
+${orderItems.map(item => `- ${item.product_name} (Qty: ${item.quantity}) - ${currency} ${item.price.toLocaleString()}`).join('\n')}
+
+View order in admin panel: ${baseUrl}/admin/orders/${orderNumber}
+
+This is an automated notification. Please log in to the admin panel to process this order.`
+
+    const mailOptions = {
+      from: `"${siteName}" <${emailConfig.auth.user}>`,
+      to: adminEmail,
+      subject: `New Order #${orderNumber} - ${siteName}`,
+      html: generateNewOrderEmailHTML(orderNumber, customerName, customerEmail, totalAmount, currency, orderItems, siteName),
+      text: textVersion,
+    }
+
+    const info = await transporter.sendMail(mailOptions)
+    console.log('New order notification email sent to admin:', info.messageId)
+    return true
+  } catch (error) {
+    console.error('Error sending new order notification email:', error)
+    return false
+  }
+}
+
 // Test email configuration
 export async function testEmailConfiguration(): Promise<boolean> {
   try {
