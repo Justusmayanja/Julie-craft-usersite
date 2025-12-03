@@ -305,9 +305,9 @@ export default function OrdersPage() {
   const paginatedOrders = orders
 
   return (
-    <div className="h-full">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div className="space-y-4 sm:space-y-6">
+    <div className="min-h-0 w-full">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-6">
+        <div className="space-y-3 sm:space-y-4 lg:space-y-6">
           {/* Page Header - Responsive */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div className="flex-1 min-w-0">
@@ -510,118 +510,197 @@ export default function OrdersPage() {
             </CardHeader>
         
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="w-12 px-3 sm:px-6">
-                        <Checkbox
-                          checked={ordersData && selectedOrderIds.size === ordersData.orders.length && ordersData.orders.length > 0}
-                          onCheckedChange={handleSelectAll}
-                          aria-label="Select all orders"
-                        />
-                      </TableHead>
-                      <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Order</TableHead>
-                      <TableHead className="hidden sm:table-cell text-xs sm:text-sm font-semibold px-3 sm:px-6">Customer</TableHead>
-                      <TableHead className="hidden md:table-cell text-xs sm:text-sm font-semibold px-3 sm:px-6">Items</TableHead>
-                      <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Total</TableHead>
-                      <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Status</TableHead>
-                      <TableHead className="hidden lg:table-cell text-xs sm:text-sm font-semibold px-3 sm:px-6">Payment</TableHead>
-                      <TableHead className="hidden md:table-cell text-xs sm:text-sm font-semibold px-3 sm:px-6">Date</TableHead>
-                      <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6 w-16 sm:w-20">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedOrders.map((order) => (
-                      <TableRow key={order.id} className={`hover:bg-gray-50 ${selectedOrderIds.has(order.id) ? 'bg-blue-50' : ''}`}>
-                        <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="w-12 px-3 sm:px-6">
+                          <Checkbox
+                            checked={ordersData && selectedOrderIds.size === ordersData.orders.length && ordersData.orders.length > 0}
+                            onCheckedChange={handleSelectAll}
+                            aria-label="Select all orders"
+                          />
+                        </TableHead>
+                        <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Order</TableHead>
+                        <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Customer</TableHead>
+                        <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Items</TableHead>
+                        <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Total</TableHead>
+                        <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Status</TableHead>
+                        <TableHead className="hidden lg:table-cell text-xs sm:text-sm font-semibold px-3 sm:px-6">Payment</TableHead>
+                        <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6">Date</TableHead>
+                        <TableHead className="text-xs sm:text-sm font-semibold px-3 sm:px-6 w-16 sm:w-20">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedOrders.map((order) => (
+                        <TableRow key={order.id} className={`hover:bg-gray-50 ${selectedOrderIds.has(order.id) ? 'bg-blue-50' : ''}`}>
+                          <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                            <Checkbox
+                              checked={selectedOrderIds.has(order.id)}
+                              onCheckedChange={() => handleSelectOrder(order.id)}
+                              aria-label={`Select order ${order.order_number}`}
+                            />
+                          </TableCell>
+                          <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                            <div className="font-medium text-xs sm:text-sm">{order.order_number}</div>
+                          </TableCell>
+                          <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                            <div className="flex items-center space-x-2">
+                              <Avatar className="w-6 h-6 sm:w-7 sm:h-7 flex-shrink-0">
+                                <AvatarImage 
+                                  src={order.customer_avatar_url || undefined} 
+                                  alt={order.customer_name}
+                                />
+                                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
+                                  {order.customer_name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0">
+                                <div className="font-medium text-xs sm:text-sm truncate">{order.customer_name}</div>
+                                <div className="text-xs text-gray-500 hidden lg:block truncate">{order.customer_email}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                            <div className="text-xs sm:text-sm">
+                              {order.order_items.slice(0, 2).map((item, index) => (
+                                <div key={index} className="truncate">
+                                  <span className="font-medium">{item.quantity}x</span> {item.product_name}
+                                </div>
+                              ))}
+                              {order.order_items.length > 2 && (
+                                <div className="text-gray-500 text-xs">+{order.order_items.length - 2} more</div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                            <div className="font-medium text-xs sm:text-sm">{order.total_amount.toLocaleString()} UGX</div>
+                          </TableCell>
+                          <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                            <Badge className={`${getStatusColor(order.status)} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1`}>
+                              <div className="flex items-center space-x-1">
+                                <span className="flex-shrink-0">{getStatusIcon(order.status)}</span>
+                                <span className="truncate">{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
+                              </div>
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell px-3 sm:px-6 py-3 sm:py-4">
+                            <Badge 
+                              className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 ${
+                                order.payment_status === 'paid' 
+                                  ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+                                  : 'bg-red-100 text-red-700 border-red-200'
+                              }`}
+                            >
+                              {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                            <div className="text-xs sm:text-sm">
+                              <div className="font-medium">{new Date(order.order_date).toLocaleDateString()}</div>
+                              {order.shipped_date && (
+                                <div className="text-gray-500 text-[10px] sm:text-xs">Shipped: {new Date(order.shipped_date).toLocaleDateString()}</div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                            <div className="flex items-center space-x-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                title="View Order" 
+                                className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                                onClick={() => handleViewOrder(order)}
+                              >
+                                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3 px-3 py-3">
+                {paginatedOrders.map((order) => (
+                  <Card 
+                    key={order.id} 
+                    className={`cursor-pointer transition-colors ${selectedOrderIds.has(order.id) ? 'bg-blue-50 border-blue-200' : ''}`}
+                    onClick={() => handleViewOrder(order)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
                           <Checkbox
                             checked={selectedOrderIds.has(order.id)}
-                            onCheckedChange={() => handleSelectOrder(order.id)}
+                            onCheckedChange={(e) => {
+                              e.stopPropagation()
+                              handleSelectOrder(order.id)
+                            }}
                             aria-label={`Select order ${order.order_number}`}
+                            className="mt-1"
                           />
-                        </TableCell>
-                        <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                          <div className="font-medium text-xs sm:text-sm">{order.order_number}</div>
-                          <div className="text-xs text-gray-500 sm:hidden mt-1">{order.customer_name}</div>
-                          <div className="text-xs text-gray-500 sm:hidden mt-1">{order.total_amount.toLocaleString()} UGX</div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4">
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="w-6 h-6 sm:w-7 sm:h-7 flex-shrink-0">
-                              <AvatarImage 
-                                src={order.customer_avatar_url || undefined} 
-                                alt={order.customer_name}
-                              />
-                              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
-                                {order.customer_name.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0">
-                              <div className="font-medium text-xs sm:text-sm truncate">{order.customer_name}</div>
-                              <div className="text-xs text-gray-500 hidden md:block truncate">{order.customer_email}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="font-semibold text-sm truncate">{order.order_number}</div>
+                              <Badge className={`${getStatusColor(order.status)} text-[10px] px-2 py-0.5 flex-shrink-0`}>
+                                <div className="flex items-center space-x-1">
+                                  <span className="flex-shrink-0">{getStatusIcon(order.status)}</span>
+                                  <span className="truncate">{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
+                                </div>
+                              </Badge>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4">
-                          <div className="text-xs sm:text-sm">
-                            {order.order_items.slice(0, 2).map((item, index) => (
-                              <div key={index} className="truncate">
-                                <span className="font-medium">{item.quantity}x</span> {item.product_name}
+                            <div className="flex items-center gap-2 mb-2">
+                              <Avatar className="w-6 h-6 flex-shrink-0">
+                                <AvatarImage 
+                                  src={order.customer_avatar_url || undefined} 
+                                  alt={order.customer_name}
+                                />
+                                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
+                                  {order.customer_name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm truncate">{order.customer_name}</div>
+                                <div className="text-xs text-gray-500 truncate">{order.customer_email}</div>
                               </div>
-                            ))}
-                            {order.order_items.length > 2 && (
-                              <div className="text-gray-500 text-xs">+{order.order_items.length - 2} more</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                          <div className="font-medium text-xs sm:text-sm">{order.total_amount.toLocaleString()} UGX</div>
-                        </TableCell>
-                        <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                          <Badge className={`${getStatusColor(order.status)} text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1`}>
-                            <div className="flex items-center space-x-1">
-                              <span className="flex-shrink-0">{getStatusIcon(order.status)}</span>
-                              <span className="hidden sm:inline truncate">{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
                             </div>
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell px-3 sm:px-6 py-3 sm:py-4">
-                          <Badge 
-                            className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 ${
-                              order.payment_status === 'paid' 
-                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
-                                : 'bg-red-100 text-red-700 border-red-200'
-                            }`}
-                          >
-                            {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4">
-                          <div className="text-xs sm:text-sm">
-                            <div className="font-medium">{new Date(order.order_date).toLocaleDateString()}</div>
-                            {order.shipped_date && (
-                              <div className="text-gray-500 text-[10px] sm:text-xs">Shipped: {new Date(order.shipped_date).toLocaleDateString()}</div>
-                            )}
+                            <div className="text-xs text-gray-600 mb-2">
+                              {order.order_items.slice(0, 2).map((item, index) => (
+                                <div key={index} className="truncate">
+                                  <span className="font-medium">{item.quantity}x</span> {item.product_name}
+                                </div>
+                              ))}
+                              {order.order_items.length > 2 && (
+                                <div className="text-gray-500">+{order.order_items.length - 2} more</div>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t">
+                              <div>
+                                <div className="font-semibold text-base">{order.total_amount.toLocaleString()} UGX</div>
+                                <div className="text-xs text-gray-500">{new Date(order.order_date).toLocaleDateString()}</div>
+                              </div>
+                              <Badge 
+                                className={`text-[10px] px-2 py-0.5 ${
+                                  order.payment_status === 'paid' 
+                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+                                    : 'bg-red-100 text-red-700 border-red-200'
+                                }`}
+                              >
+                                {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                              </Badge>
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                          <div className="flex items-center space-x-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              title="View Order" 
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                              onClick={() => handleViewOrder(order)}
-                            >
-                              <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
 
               {orders.length === 0 && (
@@ -634,17 +713,17 @@ export default function OrdersPage() {
 
               {/* Pagination */}
               {totalOrders > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-4 sm:px-6 pb-4 sm:pb-6">
-                  <div className="text-sm text-gray-600">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mt-4 sm:mt-6 px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 lg:pb-6">
+                  <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
                     Showing {startIndex + 1} to {endIndex} of {totalOrders} orders
                     {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
                   </div>
                   
                   {totalPages > 1 && (
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                       {/* Items per page selector */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">Show:</span>
+                      <div className="flex items-center gap-2 order-2 sm:order-1">
+                        <span className="text-xs sm:text-sm text-gray-600">Show:</span>
                         <Select
                           value={itemsPerPage.toString()}
                           onValueChange={(value) => {
@@ -652,7 +731,7 @@ export default function OrdersPage() {
                             setCurrentPage(1) // Reset to first page when changing page size
                           }}
                         >
-                          <SelectTrigger className="w-20 h-8">
+                          <SelectTrigger className="w-16 sm:w-20 h-8 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -665,8 +744,8 @@ export default function OrdersPage() {
                       </div>
                       
                       {/* Pagination controls */}
-                      <Pagination>
-                        <PaginationContent>
+                      <Pagination className="order-1 sm:order-2">
+                        <PaginationContent className="flex-wrap gap-1 sm:gap-2">
                           <PaginationItem>
                             <PaginationPrevious 
                               href="#" 
@@ -692,7 +771,7 @@ export default function OrdersPage() {
                                       setCurrentPage(page)
                                     }}
                                     isActive={currentPage === page}
-                                    className="cursor-pointer"
+                                    className="cursor-pointer min-w-[2rem] h-8 text-xs sm:text-sm"
                                   >
                                     {page}
                                   </PaginationLink>

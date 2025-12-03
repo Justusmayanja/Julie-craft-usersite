@@ -6,9 +6,7 @@ const __dirname = dirname(__filename)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Using webpack (automatically selected when webpack config is present)
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -29,10 +27,6 @@ const nextConfig = {
   },
   // Fix workspace root detection
   outputFileTracingRoot: __dirname,
-  // Disable problematic dev tools that cause the errors
-  experimental: {
-    // Add any experimental features here if needed
-  },
   // Configure webpack to suppress warnings
   webpack: (config, { isServer, dev }) => {
     // Suppress the PackFileCacheStrategy large string warning
