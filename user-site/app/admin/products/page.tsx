@@ -38,6 +38,13 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface Product {
   id: string
@@ -84,6 +91,7 @@ export default function AdminProductsPage() {
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(12)
+  const [totalProducts, setTotalProducts] = useState(0)
   const { toast } = useToast()
   
   // Modal state
@@ -95,10 +103,20 @@ export default function AdminProductsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
 
+  // Calculate offset based on current page
+  const offset = (currentPage - 1) * itemsPerPage
+
   useEffect(() => {
-    loadProducts()
     loadCategories()
   }, [])
+
+  // Reload products when pagination or filters change
+  useEffect(() => {
+    // Only load products after categories are loaded (for category filter)
+    if (categories.length > 0 || selectedCategory === 'all') {
+      loadProducts()
+    }
+  }, [currentPage, itemsPerPage, searchTerm, selectedCategory, selectedStatus, categories.length])
 
   const loadProducts = async (isRefresh = false) => {
     try {
@@ -111,7 +129,19 @@ export default function AdminProductsPage() {
       const token = localStorage.getItem('julie-crafts-token')
       if (!token) return
 
-      const response = await fetch(`/api/admin/products?t=${Date.now()}`, {
+      // Build query parameters for server-side filtering and pagination
+      const params = new URLSearchParams()
+      params.append('limit', itemsPerPage.toString())
+      params.append('offset', offset.toString())
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedCategory !== 'all') {
+        // Need to get category_id from category name
+        const category = categories.find(cat => cat.name === selectedCategory || cat.id === selectedCategory)
+        if (category) params.append('category_id', category.id)
+      }
+      if (selectedStatus !== 'all') params.append('status', selectedStatus)
+
+      const response = await fetch(`/api/admin/products?${params.toString()}&t=${Date.now()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -121,6 +151,7 @@ export default function AdminProductsPage() {
       if (response.ok) {
         const data = await response.json()
         setProducts(data.products || [])
+        setTotalProducts(data.total || 0)
       } else {
         console.error('Failed to fetch products:', response.status, response.statusText)
       }
@@ -148,19 +179,22 @@ export default function AdminProductsPage() {
     }
   }
 
+  // Server-side pagination - products are already filtered and paginated by API
+  // Only do client-side filtering if search/category/status filters aren't applied to API
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    // If we're doing server-side filtering, these checks are redundant but safe
+    const matchesSearch = !searchTerm || product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
     const matchesStatus = selectedStatus === "all" || product.status === selectedStatus
     return matchesSearch && matchesCategory && matchesStatus
   })
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedProducts = filteredProducts.slice(startIndex, endIndex)
+  // Pagination calculations using total from API (server-side pagination)
+  const totalPages = Math.ceil(totalProducts / itemsPerPage)
+  const startIndex = offset
+  const endIndex = Math.min(startIndex + filteredProducts.length, totalProducts)
+  const paginatedProducts = filteredProducts
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -625,65 +659,94 @@ export default function AdminProductsPage() {
         )}
 
         {/* Pagination */}
-        {filteredProducts.length > 0 && totalPages > 1 && (
+        {totalProducts > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
             <div className="text-sm text-gray-600">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length} products
+              Showing {startIndex + 1} to {endIndex} of {totalProducts} products
+              {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
             </div>
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    href="#" 
-                    onClick={(e) => {
-                      e.preventDefault()
-                      if (currentPage > 1) setCurrentPage(currentPage - 1)
+            
+            {totalPages > 1 && (
+              <div className="flex items-center gap-4">
+                {/* Items per page selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Show:</span>
+                  <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      setItemsPerPage(Number(value))
+                      setCurrentPage(1) // Reset to first page when changing page size
                     }}
-                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                  if (
-                    page === 1 ||
-                    page === totalPages ||
-                    (page >= currentPage - 1 && page <= currentPage + 1)
-                  ) {
-                    return (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            setCurrentPage(page)
-                          }}
-                          isActive={currentPage === page}
-                          className="cursor-pointer"
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  } else if (page === currentPage - 2 || page === currentPage + 2) {
-                    return (
-                      <PaginationItem key={page}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )
-                  }
-                  return null
-                })}
-                <PaginationItem>
-                  <PaginationNext 
-                    href="#" 
-                    onClick={(e) => {
-                      e.preventDefault()
-                      if (currentPage < totalPages) setCurrentPage(currentPage + 1)
-                    }}
-                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                  >
+                    <SelectTrigger className="w-20 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12">12</SelectItem>
+                      <SelectItem value="24">24</SelectItem>
+                      <SelectItem value="48">48</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Pagination controls */}
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        href="#" 
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (currentPage > 1) setCurrentPage(currentPage - 1)
+                        }}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                setCurrentPage(page)
+                              }}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                      } else if (page === currentPage - 2 || page === currentPage + 2) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )
+                      }
+                      return null
+                    })}
+                    <PaginationItem>
+                      <PaginationNext 
+                        href="#" 
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                        }}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </div>
         )}
         </div>

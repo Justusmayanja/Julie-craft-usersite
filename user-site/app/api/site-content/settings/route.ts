@@ -20,11 +20,32 @@ export async function GET(request: NextRequest) {
       query = query.eq('setting_type', type)
     }
 
-    const { data, error } = await query
+    let data, error
+    try {
+      const result = await query
+      data = result.data
+      error = result.error
+    } catch (networkError: any) {
+      console.error('Error fetching settings:', {
+        message: networkError?.message || 'TypeError: fetch failed',
+        details: networkError?.stack || String(networkError),
+        hint: 'This may indicate a network issue or Supabase connection problem',
+        code: ''
+      })
+      // Return empty settings object instead of error to allow page to load
+      return NextResponse.json({ 
+        settings: {},
+        message: 'Database connection unavailable - using fallback data'
+      })
+    }
 
     if (error) {
       console.error('Error fetching settings:', error)
-      return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 })
+      // Return empty settings object instead of error to allow page to load
+      return NextResponse.json({ 
+        settings: {},
+        message: 'Failed to fetch settings - using fallback data'
+      })
     }
 
     // Convert array to object for easier access

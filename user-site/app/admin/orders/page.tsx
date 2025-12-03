@@ -91,10 +91,15 @@ export default function OrdersPage() {
 
   const [showArchived, setShowArchived] = useState(false)
   
+  // Calculate offset based on current page
+  const offset = (currentPage - 1) * itemsPerPage
+  
   const { data: ordersData, loading, error, refresh, updateOrder } = useOrders({
     search: searchTerm || undefined,
     status: selectedStatus === "All" || selectedStatus === "archived" ? undefined : selectedStatus,
     includeArchived: selectedStatus === "archived" || showArchived,
+    limit: itemsPerPage,
+    offset: offset,
     autoRefresh: true,
     refreshInterval: 300000 // 5 minutes
   })
@@ -197,10 +202,10 @@ export default function OrdersPage() {
         updates.updates.payment_status = bulkPaymentStatusValue
       } else if (bulkAction === 'archive') {
         updates.updates.is_archived = true
-        updates.updates.archived_at = new Date().toISOString()
+        // archived_at will be set automatically by the API
       } else if (bulkAction === 'unarchive') {
         updates.updates.is_archived = false
-        updates.updates.archived_at = null
+        // archived_at will be cleared automatically by the API
       }
 
       const response = await fetch('/api/orders/bulk', {
@@ -280,7 +285,7 @@ export default function OrdersPage() {
     )
   }
 
-  const { orders, stats } = ordersData
+  const { orders, stats, total, limit: apiLimit, offset: apiOffset } = ordersData
   
   // Provide default values for stats to prevent undefined errors
   const safeStats = stats || {
@@ -290,11 +295,14 @@ export default function OrdersPage() {
     completedOrders: 0
   }
 
-  // Pagination calculations
-  const totalPages = Math.ceil(orders.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedOrders = orders.slice(startIndex, endIndex)
+  // Pagination calculations using total from API (server-side pagination)
+  const totalOrders = total || orders.length
+  const totalPages = Math.ceil(totalOrders / itemsPerPage)
+  const startIndex = apiOffset !== undefined ? apiOffset : (currentPage - 1) * itemsPerPage
+  const endIndex = Math.min(startIndex + orders.length, totalOrders)
+  
+  // Use orders directly (already paginated by API)
+  const paginatedOrders = orders
 
   return (
     <div className="h-full">
@@ -625,65 +633,94 @@ export default function OrdersPage() {
               )}
 
               {/* Pagination */}
-              {orders.length > 0 && totalPages > 1 && (
+              {totalOrders > 0 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-4 sm:px-6 pb-4 sm:pb-6">
                   <div className="text-sm text-gray-600">
-                    Showing {startIndex + 1} to {Math.min(endIndex, orders.length)} of {orders.length} orders
+                    Showing {startIndex + 1} to {endIndex} of {totalOrders} orders
+                    {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
                   </div>
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          href="#" 
-                          onClick={(e) => {
-                            e.preventDefault()
-                            if (currentPage > 1) setCurrentPage(currentPage - 1)
+                  
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-4">
+                      {/* Items per page selector */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Show:</span>
+                        <Select
+                          value={itemsPerPage.toString()}
+                          onValueChange={(value) => {
+                            setItemsPerPage(Number(value))
+                            setCurrentPage(1) // Reset to first page when changing page size
                           }}
-                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                        if (
-                          page === 1 ||
-                          page === totalPages ||
-                          (page >= currentPage - 1 && page <= currentPage + 1)
-                        ) {
-                          return (
-                            <PaginationItem key={page}>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  setCurrentPage(page)
-                                }}
-                                isActive={currentPage === page}
-                                className="cursor-pointer"
-                              >
-                                {page}
-                              </PaginationLink>
-                            </PaginationItem>
-                          )
-                        } else if (page === currentPage - 2 || page === currentPage + 2) {
-                          return (
-                            <PaginationItem key={page}>
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          )
-                        }
-                        return null
-                      })}
-                      <PaginationItem>
-                        <PaginationNext 
-                          href="#" 
-                          onClick={(e) => {
-                            e.preventDefault()
-                            if (currentPage < totalPages) setCurrentPage(currentPage + 1)
-                          }}
-                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                        >
+                          <SelectTrigger className="w-20 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="20">20</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                            <SelectItem value="100">100</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Pagination controls */}
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              href="#" 
+                              onClick={(e) => {
+                                e.preventDefault()
+                                if (currentPage > 1) setCurrentPage(currentPage - 1)
+                              }}
+                              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                            if (
+                              page === 1 ||
+                              page === totalPages ||
+                              (page >= currentPage - 1 && page <= currentPage + 1)
+                            ) {
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationLink
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      setCurrentPage(page)
+                                    }}
+                                    isActive={currentPage === page}
+                                    className="cursor-pointer"
+                                  >
+                                    {page}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              )
+                            } else if (page === currentPage - 2 || page === currentPage + 2) {
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              )
+                            }
+                            return null
+                          })}
+                          <PaginationItem>
+                            <PaginationNext 
+                              href="#" 
+                              onClick={(e) => {
+                                e.preventDefault()
+                                if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                              }}
+                              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

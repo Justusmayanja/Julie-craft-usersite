@@ -5,6 +5,10 @@
 -- It handles: stock validation, inventory deduction, order creation, and order items
 -- in a single database transaction to prevent data inconsistency
 
+-- Drop existing function(s) to avoid ambiguity
+-- This handles cases where the function exists with a different signature
+DROP FUNCTION IF EXISTS create_order_atomic CASCADE;
+
 CREATE OR REPLACE FUNCTION create_order_atomic(
   -- Required parameters (no defaults) - must come first
   p_order_number VARCHAR,
@@ -27,7 +31,8 @@ CREATE OR REPLACE FUNCTION create_order_atomic(
   p_discount_amount NUMERIC DEFAULT 0,
   p_currency TEXT DEFAULT 'UGX',
   p_notes TEXT DEFAULT NULL,
-  p_reservation_ids UUID[] DEFAULT NULL
+  p_reservation_ids UUID[] DEFAULT NULL,
+  p_idempotency_key VARCHAR DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -51,7 +56,29 @@ DECLARE
   v_stock_movement_id UUID;
   v_error_message TEXT;
   v_failed_products TEXT[] := ARRAY[]::TEXT[];
+  v_reservation_record RECORD;
+  v_reservation_quantity INTEGER;
+  v_existing_order_id UUID;
+  v_consumed_reservations INTEGER := 0;
 BEGIN
+  -- Check idempotency: if idempotency_key provided and order exists, return existing order
+  IF p_idempotency_key IS NOT NULL AND p_idempotency_key != '' THEN
+    SELECT id INTO v_existing_order_id
+    FROM orders
+    WHERE idempotency_key = p_idempotency_key
+    LIMIT 1;
+    
+    IF v_existing_order_id IS NOT NULL THEN
+      RETURN jsonb_build_object(
+        'success', true,
+        'order_id', v_existing_order_id,
+        'order_number', p_order_number,
+        'message', 'Order already exists (idempotency)',
+        'is_duplicate', true
+      );
+    END IF;
+  END IF;
+
   -- Validate required parameters
   IF p_order_items IS NULL OR jsonb_array_length(p_order_items) = 0 THEN
     RETURN jsonb_build_object(
@@ -61,8 +88,74 @@ BEGIN
     );
   END IF;
 
-  -- Validate all items have sufficient stock BEFORE creating order
+  -- STEP 1: Validate and consume reservations BEFORE processing order items
+  -- This ensures reservations are consumed atomically and prevents double-counting
+  IF p_reservation_ids IS NOT NULL AND array_length(p_reservation_ids, 1) > 0 THEN
+    -- Validate each reservation before consuming
+    FOREACH v_reservation_id IN ARRAY p_reservation_ids
+    LOOP
+      -- Lock and validate reservation
+      SELECT 
+        id,
+        product_id,
+        reserved_quantity,
+        status,
+        expires_at,
+        user_id,
+        session_id
+      INTO v_reservation_record
+      FROM order_item_reservations
+      WHERE id = v_reservation_id
+      FOR UPDATE; -- Lock reservation row
+      
+      -- Validate reservation exists
+      IF NOT FOUND THEN
+        RETURN jsonb_build_object(
+          'success', false,
+          'error', format('Reservation %s not found', v_reservation_id),
+          'error_code', 'RESERVATION_NOT_FOUND',
+          'reservation_id', v_reservation_id
+        );
+      END IF;
+      
+      -- Validate reservation is active
+      IF v_reservation_record.status != 'active' THEN
+        RETURN jsonb_build_object(
+          'success', false,
+          'error', format('Reservation %s is not active (status: %s)', v_reservation_id, v_reservation_record.status),
+          'error_code', 'RESERVATION_NOT_ACTIVE',
+          'reservation_id', v_reservation_id,
+          'reservation_status', v_reservation_record.status
+        );
+      END IF;
+      
+      -- Validate reservation has not expired
+      IF v_reservation_record.expires_at IS NOT NULL AND v_reservation_record.expires_at < NOW() THEN
+        RETURN jsonb_build_object(
+          'success', false,
+          'error', format('Reservation %s has expired', v_reservation_id),
+          'error_code', 'RESERVATION_EXPIRED',
+          'reservation_id', v_reservation_id,
+          'expires_at', v_reservation_record.expires_at
+        );
+      END IF;
+      
+      -- Validate reservation matches order items (will be checked again in item loop)
+      -- For now, just mark as consumed - detailed validation happens in item processing
+      UPDATE order_item_reservations
+      SET 
+        status = 'fulfilled',
+        released_at = NOW(),
+        order_id = NULL -- Will be set after order is created
+      WHERE id = v_reservation_id;
+      
+      v_consumed_reservations := v_consumed_reservations + 1;
+    END LOOP;
+  END IF;
+
+  -- STEP 2: Validate all items have sufficient stock BEFORE creating order
   -- This prevents creating orders for unavailable items
+  -- Use dynamic reserved stock calculation (excluding consumed reservations)
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_order_items)
   LOOP
     v_product_id := (v_item->>'product_id')::UUID;
@@ -71,13 +164,11 @@ BEGIN
     -- Lock the product row to prevent race conditions
     SELECT 
       stock_quantity,
-      COALESCE(reserved_stock, 0),
       name,
       sku,
       COALESCE(reorder_point, 10)
     INTO 
       v_current_stock,
-      v_reserved_stock,
       v_product_name,
       v_product_sku,
       v_reorder_point
@@ -95,7 +186,16 @@ BEGIN
       );
     END IF;
     
-    -- Calculate available stock (considering reservations)
+    -- Calculate reserved stock dynamically (active, non-expired reservations)
+    -- Exclude reservations that were just consumed above
+    SELECT COALESCE(SUM(reserved_quantity), 0) INTO v_reserved_stock
+    FROM order_item_reservations
+    WHERE product_id = v_product_id
+      AND status = 'active'
+      AND (expires_at IS NULL OR expires_at > NOW());
+    
+    -- Calculate available stock (current stock minus active reservations)
+    -- Note: Consumed reservations are already marked as 'fulfilled' so they're excluded
     v_available_stock := v_current_stock - v_reserved_stock;
     
     -- Validate stock availability
@@ -117,7 +217,7 @@ BEGIN
     );
   END IF;
   
-  -- All validations passed, create the order
+  -- STEP 3: All validations passed, create the order
   INSERT INTO orders (
     order_number,
     customer_email,
@@ -140,7 +240,8 @@ BEGIN
     notes,
     order_date,
     inventory_reserved,
-    reserved_at
+    reserved_at,
+    idempotency_key
   ) VALUES (
     p_order_number,
     p_customer_email,
@@ -163,11 +264,20 @@ BEGIN
     p_notes,
     NOW(),
     TRUE, -- Mark as reserved since we're about to deduct
-    NOW()
+    NOW(),
+    p_idempotency_key
   )
   RETURNING id INTO v_order_id;
   
-  -- Create order items and deduct inventory atomically
+  -- STEP 4: Link consumed reservations to order
+  IF p_reservation_ids IS NOT NULL AND array_length(p_reservation_ids, 1) > 0 THEN
+    UPDATE order_item_reservations
+    SET order_id = v_order_id
+    WHERE id = ANY(p_reservation_ids)
+      AND status = 'fulfilled';
+  END IF;
+  
+  -- STEP 5: Create order items and deduct inventory atomically
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_order_items)
   LOOP
     v_product_id := (v_item->>'product_id')::UUID;
@@ -180,17 +290,34 @@ BEGIN
     -- Get current stock with lock (already locked above, but get fresh values)
     SELECT 
       stock_quantity,
-      COALESCE(reserved_stock, 0),
       COALESCE(reorder_point, 10)
     INTO 
       v_current_stock,
-      v_reserved_stock,
       v_reorder_point
     FROM products
     WHERE id = v_product_id
     FOR UPDATE;
     
-    -- Calculate new stock
+    -- Validate reservation matches this order item (if reservations were provided)
+    IF p_reservation_ids IS NOT NULL AND array_length(p_reservation_ids, 1) > 0 THEN
+      -- Check if there's a consumed reservation for this product with matching quantity
+      SELECT COUNT(*) INTO v_consumed_reservations
+      FROM order_item_reservations
+      WHERE id = ANY(p_reservation_ids)
+        AND product_id = v_product_id
+        AND reserved_quantity = v_quantity
+        AND status = 'fulfilled';
+      
+      -- If reservation exists but doesn't match, log warning but continue
+      -- (This allows fallback to direct deduction if reservation validation fails)
+      IF v_consumed_reservations = 0 THEN
+        RAISE NOTICE 'Warning: No matching reservation found for product % with quantity %. Using direct stock deduction.', v_product_id, v_quantity;
+      END IF;
+    END IF;
+    
+    -- Calculate new stock (deduct quantity from current stock)
+    -- Note: Reserved stock was already accounted for in available stock calculation
+    -- and reservations are already consumed, so we just deduct the quantity
     v_new_stock := GREATEST(0, v_current_stock - v_quantity);
     
     -- Create order item
@@ -281,20 +408,8 @@ BEGIN
       END;
     END IF;
     
-    -- Consume reservations if provided
-    IF p_reservation_ids IS NOT NULL AND array_length(p_reservation_ids, 1) > 0 THEN
-      FOREACH v_reservation_id IN ARRAY p_reservation_ids
-      LOOP
-        -- Mark reservation as fulfilled
-        UPDATE order_item_reservations
-        SET 
-          status = 'fulfilled',
-          released_at = NOW()
-        WHERE id = v_reservation_id
-          AND product_id = v_product_id
-          AND status = 'active';
-      END LOOP;
-    END IF;
+    -- Reservations were already consumed in STEP 1, so no need to do it here
+    -- This prevents double-processing
   END LOOP;
   
   -- Create internal order note
@@ -364,9 +479,16 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Grant execute permission
-GRANT EXECUTE ON FUNCTION create_order_atomic TO authenticated;
-GRANT EXECUTE ON FUNCTION create_order_atomic TO service_role;
+-- Grant execute permission (specify full signature to avoid ambiguity)
+GRANT EXECUTE ON FUNCTION create_order_atomic(
+  VARCHAR, TEXT, TEXT, NUMERIC, NUMERIC, TEXT, TEXT, JSONB,
+  VARCHAR, UUID, UUID, BOOLEAN, VARCHAR, NUMERIC, NUMERIC, NUMERIC, TEXT, TEXT, UUID[], VARCHAR
+) TO authenticated;
+
+GRANT EXECUTE ON FUNCTION create_order_atomic(
+  VARCHAR, TEXT, TEXT, NUMERIC, NUMERIC, TEXT, TEXT, JSONB,
+  VARCHAR, UUID, UUID, BOOLEAN, VARCHAR, NUMERIC, NUMERIC, NUMERIC, TEXT, TEXT, UUID[], VARCHAR
+) TO service_role;
 
 -- Add comment
 COMMENT ON FUNCTION create_order_atomic IS 

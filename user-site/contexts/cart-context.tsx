@@ -601,10 +601,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Generate order items from cart
       const orderItems = generateOrderItemsFromCart(state.items)
       
+      // Extract reservation IDs from cart items - validate they correspond to current cart items
+      const reservationIds = state.items
+        .filter(item => item.reservationId && item.reservationId.trim() !== '')
+        .map(item => item.reservationId!)
+      
+      // Validate reservation IDs match cart items
+      if (reservationIds.length > 0 && reservationIds.length !== state.items.length) {
+        console.warn('Warning: Some cart items are missing reservation IDs. Order will proceed but reservations may not be consumed correctly.')
+      }
+      
       // Calculate totals
       const totals = calculateOrderTotals(state.items, 10000) // 10,000 UGX shipping
 
-      // Create order data
+      // Create order data with reservation IDs
       const createOrderData = {
         customer_email: orderData.customer_email,
         customer_name: orderData.customer_name,
@@ -615,7 +625,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ...totals,
         currency: 'UGX',
         notes: orderData.notes,
-        payment_method: orderData.payment_method
+        payment_method: orderData.payment_method,
+        reservation_ids: reservationIds.length > 0 ? reservationIds : undefined
       }
 
       console.log('Submitting order to API...')

@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { playNotificationSound, isSoundEnabled } from '@/lib/sound-notification'
 
 export function useChatUnreadCount() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const previousUnreadCountRef = useRef(0)
+  const isInitialLoadRef = useRef(true)
 
   useEffect(() => {
     const fetchUnreadCount = async () => {
@@ -30,7 +33,26 @@ export function useChatUnreadCount() {
             (sum: number, conv: any) => sum + (conv.unread_count || 0),
             0
           )
+          
+          // Play sound if:
+          // 1. Sound is enabled
+          // 2. Not the initial load (skip sound on first fetch)
+          // 3. Unread count increased (new message arrived)
+          if (!isInitialLoadRef.current && isSoundEnabled() && totalUnread > previousUnreadCountRef.current) {
+            playNotificationSound('chat')
+          }
+          
+          // Mark initial load as complete after first fetch
+          if (isInitialLoadRef.current) {
+            isInitialLoadRef.current = false
+          }
+          
+          // Update ref for next comparison
+          previousUnreadCountRef.current = totalUnread
           setUnreadCount(totalUnread)
+        } else {
+          console.error('Failed to fetch unread count:', response.status, response.statusText)
+          setUnreadCount(0)
         }
       } catch (error) {
         console.error('Error fetching unread chat count:', error)

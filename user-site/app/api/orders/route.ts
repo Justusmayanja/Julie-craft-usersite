@@ -223,6 +223,9 @@ export async function POST(request: NextRequest) {
 
     // Get reservation IDs from request if available (from cart context)
     const reservationIds = (body as any).reservation_ids || null
+    
+    // Generate idempotency key if not provided (use order number + timestamp as fallback)
+    const idempotencyKey = (body as any).idempotency_key || `order_${orderNumber}_${Date.now()}`
 
     // Call the atomic order creation function
     // This function handles: stock validation, inventory deduction, order creation, and order items
@@ -249,7 +252,8 @@ export async function POST(request: NextRequest) {
       p_discount_amount: body.discount_amount || 0,
       p_currency: body.currency || 'UGX',
       p_notes: body.notes || null,
-      p_reservation_ids: reservationIds
+      p_reservation_ids: reservationIds,
+      p_idempotency_key: idempotencyKey
     })
 
     if (rpcError) {
@@ -266,7 +270,15 @@ export async function POST(request: NextRequest) {
       const errorMessage = result?.error || 'Order creation failed'
       const failedProducts = result?.failed_products || []
       
-      console.error('Order creation failed:', errorMessage, errorCode)
+      // Log detailed error information for debugging (but don't expose to client)
+      console.error('Order creation failed:', {
+        errorCode,
+        errorMessage,
+        failedProducts,
+        reservationIds: reservationIds ? reservationIds.length : 0,
+        idempotencyKey,
+        orderNumber
+      })
       
       // Return appropriate error based on error code
       if (errorCode === 'INSUFFICIENT_STOCK') {

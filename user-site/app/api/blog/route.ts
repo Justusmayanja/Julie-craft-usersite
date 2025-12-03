@@ -376,7 +376,7 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         console.log('Token verification error for blog, returning published posts only')
         // Try to return published posts even on auth error
-        const { data, error: queryError } = await supabaseAdmin
+        const { data: publishedPosts, error: queryError } = await supabaseAdmin
           .from('blog_posts')
           .select(`
             *,
@@ -390,7 +390,7 @@ export async function GET(request: NextRequest) {
           .order('published_at', { ascending: false })
           .limit(50)
         
-        if (queryError || !data) {
+        if (queryError || !publishedPosts) {
           return NextResponse.json({
             posts: mockBlogPosts.filter(p => p.status === 'published').slice(0, 5),
             total: mockBlogPosts.filter(p => p.status === 'published').length,
@@ -401,7 +401,7 @@ export async function GET(request: NextRequest) {
         }
         
         // Transform database fields to match frontend format
-        const transformedPosts = (data || []).map((post: any) => {
+        const transformedPosts = (publishedPosts || []).map((post: any) => {
           const author = post.author || {}
           const authorName = author.first_name && author.last_name 
             ? `${author.first_name} ${author.last_name}`
@@ -434,7 +434,7 @@ export async function GET(request: NextRequest) {
         
         return NextResponse.json({
           posts: transformedPosts,
-          total: data?.length || 0,
+          total: publishedPosts?.length || 0,
           limit: 50,
           offset: 0
         })
@@ -501,15 +501,36 @@ export async function GET(request: NextRequest) {
     // Apply pagination
     query = query.range(filters.offset, filters.offset + filters.limit - 1)
 
-    const { data, error, count } = await query
+    let data, error, count
+    try {
+      const result = await query
+      data = result.data
+      error = result.error
+      count = result.count
+    } catch (networkError: any) {
+      console.error('Database error:', {
+        message: networkError?.message || 'TypeError: fetch failed',
+        details: networkError?.stack || String(networkError),
+        hint: 'This may indicate a network issue or Supabase connection problem',
+        code: ''
+      })
+      // Return mock data for network errors
+      return NextResponse.json({
+        posts: mockBlogPosts.slice(0, filters.limit),
+        total: mockBlogPosts.length,
+        limit: filters.limit,
+        offset: filters.offset,
+        message: 'Database connection unavailable - using fallback data'
+      })
+    }
 
     if (error) {
       console.error('Database error:', error)
       return NextResponse.json({
-        posts: mockBlogPosts.slice(0, 5),
+        posts: mockBlogPosts.slice(0, filters.limit),
         total: mockBlogPosts.length,
-        limit: 5,
-        offset: 0,
+        limit: filters.limit,
+        offset: filters.offset,
         message: 'Mock data - database error fallback'
       })
     }

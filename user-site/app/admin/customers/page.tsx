@@ -91,23 +91,32 @@ export default function CustomersPage() {
   const { toast } = useToast()
   const { user } = useAuth()
 
-  const { customers, loading, error, total, fetchCustomers, refresh } = useCustomers()
+  // Calculate offset based on current page
+  const offset = (currentPage - 1) * itemsPerPage
+
+  const { customers, loading, error, total: totalCustomers, fetchCustomers, refresh } = useCustomers()
 
   const { stats, loading: statsLoading } = useCustomerStats()
 
-  // Pagination calculations
-  const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (customer.phone && customer.phone.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesStatus = statusFilter === "all" || customer.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  // Fetch customers with server-side pagination
+  useEffect(() => {
+    fetchCustomers({
+      search: searchTerm || undefined,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      limit: itemsPerPage,
+      offset: offset,
+      sort_by: 'created_at',
+      sort_order: 'desc'
+    })
+  }, [searchTerm, statusFilter, currentPage, itemsPerPage, offset, fetchCustomers])
 
-  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex)
+  // Pagination calculations using total from API (server-side pagination)
+  const totalPages = Math.ceil((totalCustomers || customers.length) / itemsPerPage)
+  const startIndex = offset
+  const endIndex = Math.min(startIndex + customers.length, totalCustomers || customers.length)
+  
+  // Use customers directly (already paginated by API)
+  const paginatedCustomers = customers
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -542,7 +551,7 @@ export default function CustomersPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Customer List ({total})</span>
+            <span>Customer List ({totalCustomers || customers.length})</span>
             <Button variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
               Export
@@ -617,7 +626,7 @@ export default function CustomersPage() {
                         </TableCell>
                       </TableRow>
                     ))
-                  ) : filteredCustomers.length === 0 ? (
+                  ) : customers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                         No customers found
@@ -738,65 +747,94 @@ export default function CustomersPage() {
             </div>
 
             {/* Pagination */}
-            {filteredCustomers.length > 0 && totalPages > 1 && (
+            {(totalCustomers || customers.length) > 0 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 px-4 sm:px-6 pb-4 sm:pb-6">
                 <div className="text-sm text-gray-600">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length} customers
+                  Showing {startIndex + 1} to {endIndex} of {totalCustomers || customers.length} customers
+                  {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
                 </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious 
-                        href="#" 
-                        onClick={(e) => {
-                          e.preventDefault()
-                          if (currentPage > 1) setCurrentPage(currentPage - 1)
+                
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-4">
+                    {/* Items per page selector */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Show:</span>
+                      <Select
+                        value={itemsPerPage.toString()}
+                        onValueChange={(value) => {
+                          setItemsPerPage(Number(value))
+                          setCurrentPage(1) // Reset to first page when changing page size
                         }}
-                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                      />
-                    </PaginationItem>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                      if (
-                        page === 1 ||
-                        page === totalPages ||
-                        (page >= currentPage - 1 && page <= currentPage + 1)
-                      ) {
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                setCurrentPage(page)
-                              }}
-                              isActive={currentPage === page}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      } else if (page === currentPage - 2 || page === currentPage + 2) {
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        )
-                      }
-                      return null
-                    })}
-                    <PaginationItem>
-                      <PaginationNext 
-                        href="#" 
-                        onClick={(e) => {
-                          e.preventDefault()
-                          if (currentPage < totalPages) setCurrentPage(currentPage + 1)
-                        }}
-                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                      >
+                        <SelectTrigger className="w-20 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Pagination controls */}
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            href="#" 
+                            onClick={(e) => {
+                              e.preventDefault()
+                              if (currentPage > 1) setCurrentPage(currentPage - 1)
+                            }}
+                            className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                          if (
+                            page === 1 ||
+                            page === totalPages ||
+                            (page >= currentPage - 1 && page <= currentPage + 1)
+                          ) {
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    setCurrentPage(page)
+                                  }}
+                                  isActive={currentPage === page}
+                                  className="cursor-pointer"
+                                >
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          } else if (page === currentPage - 2 || page === currentPage + 2) {
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )
+                          }
+                          return null
+                        })}
+                        <PaginationItem>
+                          <PaginationNext 
+                            href="#" 
+                            onClick={(e) => {
+                              e.preventDefault()
+                              if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                            }}
+                            className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </div>
             )}
         </CardContent>

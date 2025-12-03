@@ -33,6 +33,21 @@ const nextConfig = {
   experimental: {
     // Add any experimental features here if needed
   },
+  // Configure webpack to suppress the large string serialization warning
+  webpack: (config, { isServer, dev }) => {
+    // Suppress the PackFileCacheStrategy large string warning
+    // This is a performance optimization warning, not an error
+    // It occurs when webpack caches large strings (common in Next.js builds)
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      {
+        module: /./,
+        message: /Serializing big strings.*PackFileCacheStrategy/,
+      },
+    ]
+    
+    return config
+  },
 }
 
 export default nextConfig

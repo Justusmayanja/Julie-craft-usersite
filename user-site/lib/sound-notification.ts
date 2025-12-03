@@ -1,10 +1,10 @@
 /**
  * Sound Notification Utility
- * Provides functions to play notification sounds for new orders and notifications
+ * Provides functions to play notification sounds for new orders, notifications, and chat messages
  */
 
 // Generate a simple notification sound using Web Audio API
-export function playNotificationSound(type: 'order' | 'notification' = 'notification'): void {
+export function playNotificationSound(type: 'order' | 'notification' | 'chat' = 'notification'): void {
   try {
     // Check if audio context is available
     if (typeof window === 'undefined' || !window.AudioContext && !(window as any).webkitAudioContext) {
@@ -16,8 +16,11 @@ export function playNotificationSound(type: 'order' | 'notification' = 'notifica
     const audioContext = new AudioContext()
 
     // Create a pleasant notification sound
-    // For order notifications, use a slightly different tone
-    const frequency = type === 'order' ? 800 : 600
+    // Different tones for different notification types:
+    // - Order: 800Hz (higher, more urgent)
+    // - Chat: 1000Hz (distinct, friendly tone)
+    // - Notification: 600Hz (standard)
+    const frequency = type === 'order' ? 800 : type === 'chat' ? 1000 : 600
     const duration = 0.2
     const oscillator = audioContext.createOscillator()
     const gainNode = audioContext.createGain()

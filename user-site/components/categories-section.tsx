@@ -34,21 +34,60 @@ export function CategoriesSection() {
         setLoading(true)
         setError(null)
 
-        const response = await fetch('/api/categories')
+        const response = await fetch('/api/categories', {
+          // Add timeout to prevent hanging requests
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        })
+        
         if (!response.ok) {
+          // Check if it's a network error or server error
+          if (response.status >= 500) {
+            throw new Error('Service temporarily unavailable. Please try again later.')
+          }
           throw new Error('Failed to fetch categories')
         }
 
         const data = await response.json()
-        // Filter only active categories and sort by sort_order
-        const activeCategories = (data.categories || [])
-          .filter((cat: Category) => cat.is_active)
+        
+        // Debug logging
+        console.log('Categories API response:', {
+          hasCategories: !!data.categories,
+          categoriesCount: data.categories?.length || 0,
+          total: data.total,
+          message: data.message
+        })
+        
+        // Check if we got fallback data
+        if (data.message && data.message.includes('fallback')) {
+          console.warn('Using fallback data:', data.message)
+        }
+        
+        // API already filters for active categories, but we'll do a final check
+        // and sort by sort_order
+        const allCategories = data.categories || []
+        const activeCategories = allCategories
+          .filter((cat: Category) => cat.is_active !== false) // Final safety check
           .sort((a: Category, b: Category) => (a.sort_order || 0) - (b.sort_order || 0))
 
+        console.log('Filtered categories:', {
+          total: allCategories.length,
+          active: activeCategories.length,
+          categories: activeCategories.map(c => ({ id: c.id, name: c.name, is_active: c.is_active }))
+        })
+
         setCategories(activeCategories)
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching categories:', err)
-        setError('Failed to load categories')
+        
+        // Handle different error types
+        if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+          setError('Request timed out. Please check your connection and try again.')
+        } else if (err.message?.includes('fetch')) {
+          setError('Unable to connect to server. Please check your internet connection.')
+        } else {
+          setError(err.message || 'Failed to load categories')
+        }
+        
         // Fallback to empty array instead of static data
         setCategories([])
       } finally {
@@ -153,8 +192,8 @@ export function CategoriesSection() {
     )
   }
 
-  // Empty State
-  if (categories.length === 0) {
+  // Empty State (only show if not loading and no error)
+  if (!loading && !error && categories.length === 0) {
     return (
       <section 
         className="py-8 sm:py-12 md:py-16 lg:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-50"

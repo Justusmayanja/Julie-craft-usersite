@@ -34,7 +34,6 @@ import {
   ArrowUpDown,
   Settings,
   X,
-  Database,
   Loader2
 } from "lucide-react"
 import { useRobustInventory } from "@/hooks/admin/use-robust-inventory"
@@ -42,6 +41,7 @@ import { StockAdjustmentModal } from "@/components/admin/inventory/stock-adjustm
 import { InventoryHistoryModal } from "@/components/admin/inventory/inventory-history-modal"
 import { StockAlertSettings } from "@/components/admin/inventory/stock-alert-settings"
 import { RobustInventoryDashboard } from "@/components/admin/inventory/robust-inventory-dashboard"
+import { BulkStockUpdateModal } from "@/components/admin/inventory/bulk-stock-update-modal"
 import { useToast } from "@/components/ui/use-toast"
 import { format } from "date-fns"
 
@@ -106,6 +106,7 @@ export default function InventoryPage() {
   const [isInitializingDatabase, setIsInitializingDatabase] = useState(false)
   const [isMigratingStock, setIsMigratingStock] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false)
 
   // Use robust inventory data
   const { 
@@ -208,41 +209,33 @@ export default function InventoryPage() {
     setShowHistoryModal(true)
   }
 
-  const handleInitializeDatabase = async () => {
-    setIsInitializingDatabase(true)
-    try {
-      const response = await fetch('/api/admin/setup-basic', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
+  // Handle reorder low stock - filter to show only low stock items
+  const handleReorderLowStock = () => {
+    setFilters(prev => ({
+      ...prev,
+      status: 'low_stock' as const,
+      show_low_stock_only: true,
+      page: 1
+    }))
+    toast({
+      title: "Low Stock Items",
+      description: `Showing ${lowStockCount} items that need reordering.`,
+    })
+  }
 
-      const result = await response.json()
+  // Handle bulk stock update
+  const handleBulkStockUpdate = () => {
+    setShowBulkUpdateModal(true)
+  }
 
-      if (response.ok) {
-        toast({
-          title: 'Database Initialized',
-          description: result.message || 'Database setup completed successfully!',
-        })
-        // Refresh the data
-        await refreshData()
-      } else {
-        toast({
-          title: 'Initialization Failed',
-          description: result.error || 'Failed to initialize database',
-          variant: 'destructive',
-        })
-      }
-    } catch (error) {
-      toast({
-        title: 'Initialization Error',
-        description: 'Failed to initialize database',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsInitializingDatabase(false)
-    }
+  // Handle bulk update success
+  const handleBulkUpdateSuccess = () => {
+    setShowBulkUpdateModal(false)
+    refreshData()
+    toast({
+      title: "Bulk Update Complete",
+      description: "Stock levels have been updated successfully.",
+    })
   }
 
   const handleMigrateStockData = async () => {
@@ -787,7 +780,11 @@ export default function InventoryPage() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Button variant="outline" className="justify-start h-auto p-4 bg-white hover:bg-gradient-to-br hover:from-red-50 hover:to-rose-50 hover:text-red-700 border-slate-300 min-h-[90px] w-full rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group">
+                <Button 
+                  variant="outline" 
+                  onClick={handleReorderLowStock}
+                  disabled={lowStockCount === 0}
+                  className="justify-start h-auto p-4 bg-white hover:bg-gradient-to-br hover:from-red-50 hover:to-rose-50 hover:text-red-700 border-slate-300 min-h-[90px] w-full rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed">
                   <div className="flex items-start space-x-3 w-full">
                     <div className="p-2 bg-gradient-to-br from-red-500 to-rose-500 rounded-lg flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-300">
                       <AlertTriangle className="w-4 h-4 text-white" />
@@ -801,7 +798,10 @@ export default function InventoryPage() {
                   </div>
                 </Button>
                 
-                <Button variant="outline" className="justify-start h-auto p-4 bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 border-slate-300 min-h-[90px] w-full rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group">
+                <Button 
+                  variant="outline" 
+                  onClick={handleBulkStockUpdate}
+                  className="justify-start h-auto p-4 bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 border-slate-300 min-h-[90px] w-full rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group">
                   <div className="flex items-start space-x-3 w-full">
                     <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-300">
                       <RefreshCw className="w-4 h-4 text-white" />
@@ -815,15 +815,25 @@ export default function InventoryPage() {
                   </div>
                 </Button>
                 
-                <Button variant="outline" className="justify-start h-auto p-4 bg-white hover:bg-gradient-to-br hover:from-emerald-50 hover:to-green-50 hover:text-emerald-700 border-slate-300 min-h-[90px] w-full rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group">
+                <Button 
+                  variant="outline" 
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  className="justify-start h-auto p-4 bg-white hover:bg-gradient-to-br hover:from-emerald-50 hover:to-green-50 hover:text-emerald-700 border-slate-300 min-h-[90px] w-full rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed">
                   <div className="flex items-start space-x-3 w-full">
                     <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-500 rounded-lg flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-300">
-                      <Download className="w-4 h-4 text-white" />
+                      {isExporting ? (
+                        <RefreshCw className="w-4 h-4 text-white animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 text-white" />
+                      )}
                     </div>
                     <div className="text-left flex-1 overflow-hidden">
-                      <div className="font-bold text-slate-900 text-sm leading-tight mb-1">Generate Report</div>
+                      <div className="font-bold text-slate-900 text-sm leading-tight mb-1">
+                        {isExporting ? 'Generating Report...' : 'Generate Report'}
+                      </div>
                       <div className="text-xs text-slate-600 leading-relaxed break-words font-medium">
-                        Export inventory data
+                        {isExporting ? 'Preparing export...' : 'Export inventory data'}
                       </div>
                     </div>
                   </div>
@@ -875,33 +885,6 @@ export default function InventoryPage() {
                   </Button>
                 )}
 
-                {/* Database Setup Button - show if robust inventory not set up or there are errors */}
-                {(!showRobustDashboard || error) && (
-                  <Button 
-                    onClick={handleInitializeDatabase}
-                    disabled={isInitializingDatabase}
-                    variant="outline" 
-                    className="justify-start h-auto p-4 bg-white hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-50 hover:text-green-700 border-slate-300 min-h-[90px] w-full rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group"
-                  >
-                    <div className="flex items-start space-x-3 w-full">
-                      <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex-shrink-0 shadow-sm group-hover:shadow-md transition-all duration-300">
-                        {isInitializingDatabase ? (
-                          <RefreshCw className="w-4 h-4 text-white animate-spin" />
-                        ) : (
-                          <Database className="w-4 h-4 text-white" />
-                        )}
-                      </div>
-                      <div className="text-left flex-1 overflow-hidden">
-                        <div className="font-bold text-slate-900 text-sm leading-tight mb-1">
-                          {isInitializingDatabase ? 'Setting Up...' : 'Setup Database'}
-                        </div>
-                        <div className="text-xs text-slate-600 leading-relaxed break-words font-medium">
-                          {isInitializingDatabase ? 'Initializing robust inventory system' : 'Enable stock adjustments & advanced features'}
-                        </div>
-                      </div>
-                    </div>
-                  </Button>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -943,6 +926,14 @@ export default function InventoryPage() {
       <StockAlertSettings
         isOpen={showAlertSettings}
         onClose={() => setShowAlertSettings(false)}
+      />
+
+      {/* Bulk Stock Update Modal */}
+      <BulkStockUpdateModal
+        isOpen={showBulkUpdateModal}
+        onClose={() => setShowBulkUpdateModal(false)}
+        onSuccess={handleBulkUpdateSuccess}
+        products={inventory}
       />
     </div>
   )

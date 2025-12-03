@@ -43,7 +43,31 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ conversations: conversations || [] })
+    // Calculate unread_count for each conversation
+    const conversationsWithUnread = await Promise.all(
+      (conversations || []).map(async (conv: any) => {
+        // Determine which messages are unread for this user
+        // For customers: count unread messages from admin
+        // For admins: count unread messages from customers
+        const senderTypeFilter = isAdmin ? 'customer' : 'admin'
+        
+        const { count, error: countError } = await supabaseAdmin
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', conv.id)
+          .eq('sender_type', senderTypeFilter)
+          .eq('is_read', false)
+
+        if (countError) {
+          console.error('Error counting unread messages:', countError)
+          return { ...conv, unread_count: conv.unread_count || 0 }
+        }
+
+        return { ...conv, unread_count: count || 0 }
+      })
+    )
+
+    return NextResponse.json({ conversations: conversationsWithUnread })
   } catch (error) {
     console.error('Error fetching conversations:', error)
     return NextResponse.json(

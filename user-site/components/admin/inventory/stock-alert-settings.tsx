@@ -29,7 +29,7 @@ import {
   Info,
   X
 } from "lucide-react"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/use-toast"
 
 interface AlertSettings {
   low_stock_threshold: number

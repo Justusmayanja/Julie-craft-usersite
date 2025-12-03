@@ -63,6 +63,8 @@ export interface CreateOrderData {
   currency?: string
   notes?: string
   payment_method?: string
+  reservation_ids?: string[] // UUIDs of order_item_reservations to consume
+  idempotency_key?: string // Optional idempotency key to prevent duplicate orders
 }
 
 export interface OrderFilters {

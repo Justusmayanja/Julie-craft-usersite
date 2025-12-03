@@ -123,14 +123,14 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
   useEffect(() => {
     fetchOrders()
-  }, [search, status, payment_status, date_from, date_to, customer_id, sort_by, sort_order, limit, offset])
+  }, [search, status, payment_status, date_from, date_to, customer_id, sort_by, sort_order, limit, offset, includeArchived])
 
   useEffect(() => {
     if (!autoRefresh) return
 
     const interval = setInterval(fetchOrders, refreshInterval)
     return () => clearInterval(interval)
-  }, [autoRefresh, refreshInterval, search, status, payment_status, date_from, date_to, customer_id, sort_by, sort_order, limit, offset])
+  }, [autoRefresh, refreshInterval, search, status, payment_status, date_from, date_to, customer_id, sort_by, sort_order, limit, offset, includeArchived])
 
   const refresh = () => {
     fetchOrders()
