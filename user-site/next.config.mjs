@@ -6,11 +6,6 @@ const __dirname = dirname(__filename)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Explicitly use webpack by providing empty turbopack config
-  // This silences the Turbopack conflict warning while using webpack
-  experimental: {
-    turbopack: {},
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
