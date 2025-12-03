@@ -47,7 +47,7 @@ export function LayoutContent({ children }: LayoutContentProps) {
       <AdminRedirectGuard>
         <div className="relative flex min-h-screen flex-col overflow-x-hidden w-full">
           <Navigation />
-          <main className="flex-1 w-full overflow-x-hidden">
+          <main className="flex-1 w-full overflow-x-hidden pt-14 sm:pt-16">
             {children}
           </main>
           {!shouldHideFooter && <Footer />}

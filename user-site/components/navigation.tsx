@@ -63,7 +63,7 @@ export function Navigation() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-lg">
+      <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 shadow-lg">
         <div className="container mx-auto px-3 sm:px-4">
           <div className="flex h-14 sm:h-16 items-center justify-between gap-2">
             {/* Logo */}
