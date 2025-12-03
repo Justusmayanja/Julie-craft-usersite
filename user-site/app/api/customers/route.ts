@@ -246,6 +246,7 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const { searchParams } = new URL(request.url)
+    const includeArchived = searchParams.get('include_archived') === 'true'
     const filters = {
       search: searchParams.get('search') || undefined,
       status: searchParams.get('status') || undefined,
@@ -260,6 +261,14 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select('*', { count: 'exact' })
       .eq('is_admin', false) // Only get customers, not admins
+
+    // Apply archive filter
+    if (filters.status === 'archived') {
+      query = query.eq('is_archived', true)
+    } else if (!includeArchived) {
+      // By default, exclude archived customers unless explicitly requested
+      query = query.eq('is_archived', false)
+    }
 
     // Apply search filter
     if (filters.search) {

@@ -52,7 +52,6 @@ export function FeaturedProducts() {
           setProducts(mappedProducts)
         } else {
           // Use fallback data when API returns empty results (only in-stock products)
-          console.log('API returned empty products, using fallback data')
           const fallbackProducts = [
             {
               id: '1',

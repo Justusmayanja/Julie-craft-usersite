@@ -6,7 +6,6 @@ export async function GET(request: NextRequest) {
   try {
     // Check if Supabase is configured
     if (!isSupabaseConfigured || !supabaseAdmin) {
-      console.log('Supabase not configured, returning empty categories array')
       return NextResponse.json({
         categories: [],
         total: 0,

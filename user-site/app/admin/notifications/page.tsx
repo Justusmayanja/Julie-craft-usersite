@@ -1,17 +1,26 @@
 "use client"
 
+import { useState } from "react"
 import { useNotifications } from "@/contexts/notification-context"
 import { NotificationItem } from "@/components/notifications/notification-item"
 import { Button } from "@/components/ui/button"
-import { Loader2, CheckCheck, Bell } from "lucide-react"
+import { Loader2, CheckCheck, Bell, Filter } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function AdminNotificationsPage() {
-  const { notifications, unreadCount, loading, markAllAsRead } = useNotifications()
+  const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const { notifications, unreadCount, loading, markAllAsRead, refreshNotifications } = useNotifications()
 
   const handleMarkAllAsRead = async () => {
     await markAllAsRead()
+    // Refresh to update the list
+    await refreshNotifications()
   }
+
+  // Filter notifications based on selected filter
+  const filteredNotifications = filter === 'unread' 
+    ? notifications.filter(n => !n.is_read)
+    : notifications
 
   return (
     <div className="h-full">
@@ -23,17 +32,44 @@ export default function AdminNotificationsPage() {
 
         <Card className="bg-white border-0 shadow-lg">
           <CardHeader className="border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-gray-900">
-                {unreadCount > 0 ? (
-                  <span>
-                    All Notifications <span className="text-orange-600">({unreadCount} unread)</span>
-                  </span>
-                ) : (
-                  "All Notifications"
-                )}
-              </CardTitle>
-              {unreadCount > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex-1">
+                <CardTitle className="text-lg font-semibold text-gray-900 mb-3">
+                  {unreadCount > 0 ? (
+                    <span>
+                      All Notifications <span className="text-orange-600">({unreadCount} unread)</span>
+                    </span>
+                  ) : (
+                    "All Notifications"
+                  )}
+                </CardTitle>
+                
+                {/* Filter Buttons */}
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-gray-500" />
+                  <div className="flex gap-2">
+                    <Button
+                      variant={filter === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilter('all')}
+                      className="h-8"
+                    >
+                      All
+                    </Button>
+                    <Button
+                      variant={filter === 'unread' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilter('unread')}
+                      className="h-8"
+                      disabled={unreadCount === 0}
+                    >
+                      Unread {unreadCount > 0 && `(${unreadCount})`}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              {unreadCount > 0 && filter === 'all' && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -51,15 +87,31 @@ export default function AdminNotificationsPage() {
               <div className="flex items-center justify-center p-12">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
-            ) : notifications.length === 0 ? (
+            ) : filteredNotifications.length === 0 ? (
               <div className="p-12 text-center">
                 <Bell className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-lg font-medium text-gray-900 mb-2">No notifications</p>
-                <p className="text-sm text-gray-500">You're all caught up! New notifications will appear here.</p>
+                <p className="text-lg font-medium text-gray-900 mb-2">
+                  {filter === 'unread' ? 'No unread notifications' : 'No notifications'}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {filter === 'unread' 
+                    ? 'You have no unread notifications. Switch to "All" to view your notification history.'
+                    : "You're all caught up! New notifications will appear here."}
+                </p>
+                {filter === 'unread' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilter('all')}
+                    className="mt-4"
+                  >
+                    View All Notifications
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {notifications.map((notification) => (
+                {filteredNotifications.map((notification) => (
                   <NotificationItem
                     key={notification.id}
                     notification={notification}

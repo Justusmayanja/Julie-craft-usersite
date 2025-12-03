@@ -11,8 +11,6 @@ export async function GET(
 
     // Check if Supabase is configured
     if (!isSupabaseConfigured || !supabaseAdmin) {
-      console.log('Supabase not configured, returning mock category')
-      
       // Mock category data based on ID
       const mockCategories: Record<string, any> = {
         '1': {

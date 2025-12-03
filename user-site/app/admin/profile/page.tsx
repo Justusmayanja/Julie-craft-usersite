@@ -59,9 +59,7 @@ function ProfilePageContent() {
 
       try {
         setOrdersLoading(true)
-        console.log('Fetching orders for user:', user.id)
         const response = await getUserOrders(user.id)
-        console.log('Orders response:', response)
         // Extract orders array from the response object
         setOrders(response.orders || [])
       } catch (error) {
@@ -104,8 +102,6 @@ function ProfilePageContent() {
     // Create a preview URL for immediate display
     const previewUrl = URL.createObjectURL(file)
     setProfileImage(previewUrl)
-    
-    console.log('Image selected, will upload when saving profile:', file.name)
   }
 
   const handleImageUpload = async (file: File) => {
@@ -126,8 +122,6 @@ function ProfilePageContent() {
           localStorage.removeItem(`profile_image_${user.id}`)
         }
         
-        console.log('Profile image uploaded successfully:', response.avatar_url)
-        
         // Refresh user data to get updated avatar_url
         await refreshUser()
         
@@ -147,24 +141,18 @@ function ProfilePageContent() {
     // Just clear the selected file and preview, actual removal happens on save
     setSelectedFile(null)
     setProfileImage(user?.avatar_url || null)
-    console.log('Image removal scheduled for save')
   }
 
   // Load profile image from user data or localStorage on component mount
   useEffect(() => {
     if (user) {
-      console.log('User object in profile page:', user)
-      console.log('User avatar_url:', user.avatar_url)
-      
       // First check if user has an avatar_url from the database
       if (user.avatar_url) {
-        console.log('Setting profile image from database:', user.avatar_url)
         setProfileImage(user.avatar_url)
       } else if (user.id) {
         // Fallback to localStorage for backward compatibility
         const savedImage = localStorage.getItem(`profile_image_${user.id}`)
         if (savedImage) {
-          console.log('Setting profile image from localStorage:', savedImage)
           setProfileImage(savedImage)
         }
       }
@@ -225,20 +213,12 @@ function ProfilePageContent() {
     if (!user?.id) return
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('julie-crafts-token') : null
-    console.log('Save Profile - User check:', {
-      userId: user?.id,
-      userEmail: user?.email,
-      isAuthenticated,
-      token: token ? `${token.substring(0, 20)}...` : 'missing',
-      tokenLength: token?.length || 0
-    })
 
     // Clear any previous messages
     setSaveMessage(null)
 
     // Check if token is missing and try to refresh user data
     if (!token && isAuthenticated) {
-      console.log('Token missing but user is authenticated, refreshing user data...')
       try {
         await refreshUser()
         // Check again after refresh
@@ -318,10 +298,7 @@ function ProfilePageContent() {
         profileData.email = editForm.email.trim()
       }
       
-      console.log('Sending profile update:', profileData)
       const response = await updateUserProfile(user.id, profileData)
-      
-      console.log('Profile updated:', response)
       
       // Refresh user data from server to get updated profile info
       await refreshUser()

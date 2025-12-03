@@ -63,6 +63,7 @@ interface UseOrdersOptions {
   offset?: number
   autoRefresh?: boolean
   refreshInterval?: number
+  includeArchived?: boolean
 }
 
 export function useOrders(options: UseOrdersOptions = {}) {
@@ -82,7 +83,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
     limit = 20,
     offset = 0,
     autoRefresh = false,
-    refreshInterval = 300000 // 5 minutes
+    refreshInterval = 300000, // 5 minutes
+    includeArchived = false
   } = options
 
   const fetchOrders = async () => {
@@ -101,6 +103,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       if (sort_order) params.append('sort_order', sort_order)
       if (limit) params.append('limit', limit.toString())
       if (offset) params.append('offset', offset.toString())
+      if (includeArchived) params.append('include_archived', 'true')
 
       const response = await fetch(`/api/orders?${params}`)
       

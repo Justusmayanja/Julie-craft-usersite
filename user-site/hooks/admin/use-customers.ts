@@ -32,6 +32,7 @@ export interface CustomerFilters {
   sort_order?: 'asc' | 'desc'
   limit?: number
   offset?: number
+  includeArchived?: boolean
 }
 
 export interface CustomerStats {
@@ -72,6 +73,7 @@ export function useCustomers() {
       if (filters.sort_order) params.append('sort_order', filters.sort_order)
       if (filters.limit) params.append('limit', filters.limit.toString())
       if (filters.offset) params.append('offset', filters.offset.toString())
+      if (filters.includeArchived) params.append('include_archived', 'true')
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',

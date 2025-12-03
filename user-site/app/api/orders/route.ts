@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
   try {
     // Check if Supabase is configured
     if (!isSupabaseConfigured || !supabaseAdmin) {
-      console.log('Supabase not configured, returning empty orders array')
       return NextResponse.json({
         orders: [],
         total: 0,
@@ -27,6 +26,7 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const { searchParams } = new URL(request.url)
+    const includeArchived = searchParams.get('include_archived') === 'true'
     const filters: OrderFilters = {
       status: searchParams.get('status') as any || undefined,
       payment_status: searchParams.get('payment_status') as any || undefined,
@@ -47,8 +47,16 @@ export async function GET(request: NextRequest) {
         order_items:order_items(*)
       `, { count: 'exact' })
 
+    // Apply archive filter
+    if (filters.status === 'archived') {
+      query = query.eq('is_archived', true)
+    } else if (!includeArchived) {
+      // By default, exclude archived orders unless explicitly requested
+      query = query.eq('is_archived', false)
+    }
+
     // Apply filters
-    if (filters.status) {
+    if (filters.status && filters.status !== 'archived') {
       query = query.eq('status', filters.status)
     }
 
@@ -143,8 +151,6 @@ export async function POST(request: NextRequest) {
   try {
     // Check if Supabase is configured
     if (!isSupabaseConfigured || !supabaseAdmin) {
-      console.log('Supabase not configured, simulating order creation')
-      
       // Generate a mock order number
       const orderNumber = `ORD-${Date.now()}`
       
@@ -175,7 +181,7 @@ export async function POST(request: NextRequest) {
         const { data: { user } } = await supabaseAdmin.auth.getUser(token)
         userId = user?.id
       } catch (error) {
-        console.log('Could not verify user token:', error)
+        // Token verification failed, continue as guest order
       }
     }
 
@@ -222,7 +228,6 @@ export async function POST(request: NextRequest) {
     // This function handles: stock validation, inventory deduction, order creation, and order items
     // all in a single database transaction
     // Note: Parameter order matters - required params first, then optional ones
-    console.log('Calling atomic order creation function...')
     const { data: result, error: rpcError } = await supabaseAdmin.rpc('create_order_atomic', {
       // Required parameters (must be in this order)
       p_order_number: orderNumber,
@@ -355,7 +360,6 @@ export async function POST(request: NextRequest) {
 
         // Wait for all emails to be sent (but don't block the response)
         await Promise.allSettled(emailPromises)
-        console.log(`[Orders API] Sent new order notifications to ${adminEmails.length} admin user(s)`)
       }).catch(err => {
         console.error('[Orders API] Error getting admin emails:', err)
         // Don't fail the request if email sending fails

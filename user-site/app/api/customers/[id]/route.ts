@@ -170,6 +170,16 @@ export async function PUT(
       updateData.status = body.status
     }
 
+    // Handle archive/unarchive
+    if (body.is_archived !== undefined) {
+      updateData.is_archived = body.is_archived
+      if (body.is_archived === true) {
+        updateData.archived_at = new Date().toISOString()
+      } else {
+        updateData.archived_at = null
+      }
+    }
+
     const { data: updatedProfile, error: updateError } = await supabaseAdmin
       .from('profiles')
       .update(updateData)

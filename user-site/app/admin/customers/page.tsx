@@ -7,7 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { 
   Table,
   TableBody,
@@ -31,7 +39,11 @@ import {
   Calendar,
   Star,
   RefreshCw,
-  UserPlus
+  UserPlus,
+  CheckSquare,
+  Square,
+  Archive,
+  ArchiveRestore
 } from "lucide-react"
 import { useCustomers, useCustomerStats, useCustomer, type Customer } from "@/hooks/admin/use-customers"
 import { useToast } from "@/contexts/toast-context"
@@ -56,6 +68,9 @@ export default function CustomersPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(20)
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set())
+  const [bulkUpdating, setBulkUpdating] = useState(false)
+  const [bulkAction, setBulkAction] = useState<'archive' | 'unarchive' | null>(null)
   
   // Form states for edit
   const [editForm, setEditForm] = useState({
@@ -208,7 +223,8 @@ export default function CustomersPage() {
     fetchCustomers({
       search: searchTerm || undefined,
       status: status !== 'all' ? status : undefined,
-      limit: 50
+      limit: 50,
+      includeArchived: status === 'archived'
     })
   }
 
@@ -230,6 +246,88 @@ export default function CustomersPage() {
       case 'inactive': return 'bg-gray-100 text-gray-800'
       case 'blocked': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const handleSelectCustomer = (customerId: string) => {
+    setSelectedCustomerIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(customerId)) {
+        newSet.delete(customerId)
+      } else {
+        newSet.add(customerId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAll = () => {
+    if (selectedCustomerIds.size === filteredCustomers.length) {
+      setSelectedCustomerIds(new Set())
+    } else {
+      setSelectedCustomerIds(new Set(filteredCustomers.map(c => c.id)))
+    }
+  }
+
+  const handleBulkArchive = async () => {
+    if (selectedCustomerIds.size === 0) {
+      toast.showError('No Customers Selected', 'Please select at least one customer to archive.')
+      return
+    }
+
+    if (!bulkAction) {
+      toast.showError('No Action Selected', 'Please select an action to perform.')
+      return
+    }
+
+    setBulkUpdating(true)
+    try {
+      const token = user?.token || localStorage.getItem('julie-crafts-token')
+      const isArchiving = bulkAction === 'archive'
+      
+      // Update each customer
+      const updatePromises = Array.from(selectedCustomerIds).map(customerId =>
+        fetch(`/api/customers/${customerId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            is_archived: isArchiving
+          })
+        })
+      )
+
+      const results = await Promise.allSettled(updatePromises)
+      const successful = results.filter(r => r.status === 'fulfilled').length
+      const failed = results.filter(r => r.status === 'rejected').length
+
+      if (successful > 0) {
+        toast.showSuccess(
+          `${isArchiving ? 'Archive' : 'Unarchive'} Successful`,
+          `Successfully ${isArchiving ? 'archived' : 'unarchived'} ${successful} customer${successful !== 1 ? 's' : ''}.`
+        )
+      }
+
+      if (failed > 0) {
+        toast.showError(
+          'Partial Failure',
+          `Failed to ${isArchiving ? 'archive' : 'unarchive'} ${failed} customer${failed !== 1 ? 's' : ''}.`
+        )
+      }
+
+      // Clear selection and reset bulk action
+      setSelectedCustomerIds(new Set())
+      setBulkAction(null)
+      
+      // Refresh customers
+      refresh()
+    } catch (error) {
+      console.error('Error performing bulk archive:', error)
+      toast.showError('Bulk Archive Failed', error instanceof Error ? error.message : 'Failed to archive customers')
+    } finally {
+      setBulkUpdating(false)
     }
   }
 
@@ -356,7 +454,7 @@ export default function CustomersPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   variant={statusFilter === 'all' ? 'default' : 'outline'}
                   size="sm"
@@ -378,11 +476,67 @@ export default function CustomersPage() {
                 >
                   VIP
                 </Button>
+                <Button
+                  variant={statusFilter === 'archived' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleStatusFilter('archived')}
+                >
+                  Archived
+                </Button>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Actions Toolbar */}
+      {selectedCustomerIds.size > 0 && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">
+                  {selectedCustomerIds.size} customer{selectedCustomerIds.size !== 1 ? 's' : ''} selected
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedCustomerIds(new Set())
+                    setBulkAction(null)
+                  }}
+                  className="h-7 px-2 text-xs"
+                >
+                  Clear
+                </Button>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <Select
+                  value={bulkAction || ''}
+                  onValueChange={(value) => setBulkAction(value as 'archive' | 'unarchive' | null)}
+                >
+                  <SelectTrigger className="w-full sm:w-40 h-8 text-xs">
+                    <SelectValue placeholder="Select action" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="archive">Archive Customers</SelectItem>
+                    <SelectItem value="unarchive">Unarchive Customers</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleBulkArchive}
+                  disabled={bulkUpdating || !bulkAction}
+                  size="sm"
+                  className="h-8 px-3 text-xs"
+                >
+                  {bulkUpdating ? 'Processing...' : 'Apply'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Customers Table */}
       <Card>
@@ -411,6 +565,12 @@ export default function CustomersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedCustomerIds.size > 0 && selectedCustomerIds.size === filteredCustomers.length}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead className="hidden sm:table-cell">Contact</TableHead>
                   <TableHead className="hidden md:table-cell">Orders</TableHead>
@@ -459,13 +619,19 @@ export default function CustomersPage() {
                     ))
                   ) : filteredCustomers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                         No customers found
                       </TableCell>
                     </TableRow>
                   ) : (
                     paginatedCustomers.map((customer) => (
                       <TableRow key={customer.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedCustomerIds.has(customer.id)}
+                            onCheckedChange={() => handleSelectCustomer(customer.id)}
+                          />
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-3">
                             <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden flex-shrink-0">

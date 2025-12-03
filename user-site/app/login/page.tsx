@@ -185,7 +185,7 @@ function LoginForm() {
                 showPasswordToggle
                 showPassword={showPassword}
                 onTogglePassword={() => setShowPassword(!showPassword)}
-                required
+                required={false}
                 disabled={isLoading}
                 autoComplete="current-password"
               />

@@ -51,7 +51,7 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination"
 
-const statusOptions = ["All", "pending", "processing", "shipped", "delivered", "cancelled"]
+const statusOptions = ["All", "pending", "processing", "shipped", "delivered", "cancelled", "archived"]
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -82,16 +82,19 @@ export default function OrdersPage() {
   const [showOrderDetail, setShowOrderDetail] = useState(false)
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set())
   const [bulkUpdating, setBulkUpdating] = useState(false)
-  const [bulkAction, setBulkAction] = useState<'status' | 'payment_status' | null>(null)
+  const [bulkAction, setBulkAction] = useState<'status' | 'payment_status' | 'archive' | 'unarchive' | null>(null)
   const [bulkStatusValue, setBulkStatusValue] = useState<string>('')
   const [bulkPaymentStatusValue, setBulkPaymentStatusValue] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(20)
   const toast = useToast()
 
+  const [showArchived, setShowArchived] = useState(false)
+  
   const { data: ordersData, loading, error, refresh, updateOrder } = useOrders({
     search: searchTerm || undefined,
-    status: selectedStatus === "All" ? undefined : selectedStatus,
+    status: selectedStatus === "All" || selectedStatus === "archived" ? undefined : selectedStatus,
+    includeArchived: selectedStatus === "archived" || showArchived,
     autoRefresh: true,
     refreshInterval: 300000 // 5 minutes
   })
@@ -192,6 +195,12 @@ export default function OrdersPage() {
         }
       } else if (bulkAction === 'payment_status') {
         updates.updates.payment_status = bulkPaymentStatusValue
+      } else if (bulkAction === 'archive') {
+        updates.updates.is_archived = true
+        updates.updates.archived_at = new Date().toISOString()
+      } else if (bulkAction === 'unarchive') {
+        updates.updates.is_archived = false
+        updates.updates.archived_at = null
       }
 
       const response = await fetch('/api/orders/bulk', {
@@ -431,6 +440,8 @@ export default function OrdersPage() {
                         <SelectContent>
                           <SelectItem value="status">Update Status</SelectItem>
                           <SelectItem value="payment_status">Update Payment Status</SelectItem>
+                          <SelectItem value="archive">Archive Orders</SelectItem>
+                          <SelectItem value="unarchive">Unarchive Orders</SelectItem>
                         </SelectContent>
                       </Select>
 

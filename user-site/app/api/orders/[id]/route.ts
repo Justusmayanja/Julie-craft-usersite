@@ -186,12 +186,20 @@ export async function PUT(
     }
 
     // Only allow updating certain fields
-    const allowedUpdates = ['status', 'payment_status', 'tracking_number', 'notes', 'shipped_date', 'delivered_date']
+    const allowedUpdates = ['status', 'payment_status', 'tracking_number', 'notes', 'shipped_date', 'delivered_date', 'is_archived']
     const updates: any = {}
 
     for (const field of allowedUpdates) {
       if (body[field] !== undefined) {
         updates[field] = body[field]
+        // Set archived_at timestamp when archiving
+        if (field === 'is_archived' && body[field] === true) {
+          updates.archived_at = new Date().toISOString()
+        }
+        // Clear archived_at when unarchiving
+        if (field === 'is_archived' && body[field] === false) {
+          updates.archived_at = null
+        }
       }
     }
 

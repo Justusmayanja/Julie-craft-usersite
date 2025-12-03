@@ -96,17 +96,15 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
       </div>
 
       {/* Footer - Always visible and accessible */}
-      {unreadNotifications.length > 0 && (
-        <div className="p-3 border-t border-gray-200 text-center bg-white flex-shrink-0 sticky bottom-0 z-10">
-          <Link
-            href={isAdmin ? "/admin/notifications" : "/notifications"}
-            onClick={onClose}
-            className="inline-block text-sm text-orange-600 hover:text-orange-700 font-medium transition-colors px-3 py-1.5 rounded-md hover:bg-orange-50"
-          >
-            View all notifications
-          </Link>
-        </div>
-      )}
+      <div className="p-3 border-t border-gray-200 text-center bg-white flex-shrink-0 sticky bottom-0 z-10">
+        <Link
+          href={isAdmin ? "/admin/notifications" : "/notifications"}
+          onClick={onClose}
+          className="inline-block text-sm text-orange-600 hover:text-orange-700 font-medium transition-colors px-3 py-1.5 rounded-md hover:bg-orange-50"
+        >
+          View all notifications
+        </Link>
+      </div>
     </div>
   )
 }

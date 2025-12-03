@@ -51,8 +51,7 @@ const customerApiRoutes = [
 const publicRoutes = [
   '/login',
   '/register',
-  '/api/auth',
-  '/api/debug'
+  '/api/auth'
 ]
 
 export async function middleware(request: NextRequest) {
@@ -133,22 +132,12 @@ export async function middleware(request: NextRequest) {
     const authHeader = request.headers.get('authorization')
     const cookieToken = request.cookies.get('julie-crafts-token')?.value
     
-    console.log(`[Middleware] Checking ${pathname}:`, {
-      hasAuthHeader: !!authHeader,
-      hasCookieToken: !!cookieToken,
-      method: request.method
-    })
-    
     let token = null
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7)
-      console.log(`[Middleware] Using token from Authorization header`)
     } else if (cookieToken) {
       token = cookieToken
-      console.log(`[Middleware] Using token from cookie`)
-    } else {
-      console.log(`[Middleware] No token found in header or cookie`)
     }
     
     // For POST to /api/orders, allow both authenticated and guest users
@@ -161,9 +150,6 @@ export async function middleware(request: NextRequest) {
             const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
             // If token is invalid, still allow the request (guest checkout)
             // The API endpoint will handle the case appropriately
-            if (error || !user) {
-              console.log('Invalid token for order placement, allowing as guest order')
-            }
           }
         } catch (error) {
           console.error('Token verification error for order placement:', error)
@@ -178,7 +164,6 @@ export async function middleware(request: NextRequest) {
     if (!token) {
       // For API routes, return 401 with more helpful message
       if (isAdminApiRoute) {
-        console.log('No token found for admin API route:', pathname)
         return NextResponse.json(
           { 
             error: 'Unauthorized - Authentication required',
@@ -197,7 +182,6 @@ export async function middleware(request: NextRequest) {
     try {
       // Check if Supabase is configured before attempting verification
       if (!isSupabaseConfigured || !supabaseAdmin) {
-        console.log('Supabase not configured in middleware, allowing admin access')
         // For development/testing, allow access if Supabase is not configured
         if (isAdminApiRoute) {
           const requestHeaders = new Headers(request.headers)
@@ -217,8 +201,6 @@ export async function middleware(request: NextRequest) {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
       
       if (error || !user) {
-        console.log('Token verification failed in middleware:', error?.message)
-        
         // Clear the invalid token cookie
         const response = isAdminApiRoute 
           ? NextResponse.json(
@@ -251,9 +233,7 @@ export async function middleware(request: NextRequest) {
         .single()
 
       if (profileError || !profile) {
-        console.log('Profile fetch failed in middleware:', profileError?.message)
         // If profile doesn't exist, assume admin role for development
-        console.log('Assuming admin role for development')
         const isAdmin = true // Allow access for development
         
         if (isAdminApiRoute) {
@@ -308,8 +288,6 @@ export async function middleware(request: NextRequest) {
       console.error('Middleware error:', error)
       
       // For development, allow access even if there are errors
-      console.log('Allowing admin access despite middleware error for development')
-      
       if (isAdminApiRoute) {
         const requestHeaders = new Headers(request.headers)
         requestHeaders.set('x-user-id', 'dev-admin')
@@ -390,7 +368,6 @@ export async function middleware(request: NextRequest) {
                                      pathname === '/'
               
               if (isAdmin && !isExcludedPath) {
-                console.log(`Admin user detected on user-site page (${pathname}), redirecting to /admin`)
                 const adminUrl = new URL('/admin', request.url)
                 return NextResponse.redirect(adminUrl)
               }

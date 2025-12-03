@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate allowed update fields
-    const allowedFields = ['status', 'payment_status', 'tracking_number', 'shipped_date', 'delivered_date']
+    const allowedFields = ['status', 'payment_status', 'tracking_number', 'shipped_date', 'delivered_date', 'is_archived']
     const updateFields = Object.keys(updates)
     const invalidFields = updateFields.filter(field => !allowedFields.includes(field))
     
@@ -90,6 +90,15 @@ export async function POST(request: NextRequest) {
       }
       if (updates.status === 'delivered' && !updates.delivered_date) {
         updateData.delivered_date = now
+      }
+    }
+
+    // Handle archive/unarchive
+    if (updates.is_archived !== undefined) {
+      if (updates.is_archived === true) {
+        updateData.archived_at = now
+      } else {
+        updateData.archived_at = null
       }
     }
 

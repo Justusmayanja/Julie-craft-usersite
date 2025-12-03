@@ -48,7 +48,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       if (!isAuthenticated || !token) {
         // User is not authenticated or token is missing
         if (pathname.startsWith('/admin')) {
-          console.log('User not authenticated, redirecting to login')
           router.push('/login?redirect=/admin&message=session_expired')
         }
         return
@@ -60,11 +59,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         const userIsAdmin = user?.is_admin === true || user?.role === 'admin' || user?.role === 'super_admin'
         
         if (!userIsAdmin && !isAdmin) {
-          console.log('Non-admin user attempting to access admin page, redirecting to home')
           router.push('/?error=insufficient_privileges')
-        } else if (userIsAdmin && !isAdmin) {
-          // User object says admin but role context doesn't - wait a bit for role to load
-          console.log('User appears to be admin but role context not loaded yet, waiting...')
         }
       }
     }

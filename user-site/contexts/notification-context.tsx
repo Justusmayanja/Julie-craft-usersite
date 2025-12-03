@@ -71,7 +71,6 @@ export function NotificationProvider({ children, isAdmin = false }: { children: 
         if (response.status === 500) {
           const errorData = await response.json().catch(() => ({}))
           if (errorData.error?.includes('not found') || errorData.error?.includes('schema cache')) {
-            console.log('Notifications table does not exist yet. Returning empty notifications.')
             setNotifications([])
             setUnreadCount(0)
             setLoading(false)
@@ -278,7 +277,6 @@ export function NotificationProvider({ children, isAdmin = false }: { children: 
   // Listen for logout events to clear notifications
   useEffect(() => {
     const handleLogout = (event: CustomEvent) => {
-      console.log('User logged out, clearing notifications')
       setNotifications([])
       setUnreadCount(0)
     }

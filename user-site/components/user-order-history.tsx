@@ -223,7 +223,6 @@ export function UserOrderHistory() {
                       size="sm"
                       onClick={() => {
                         // TODO: Implement reorder functionality
-                        console.log('Reorder order:', order.order_id)
                       }}
                     >
                       <CreditCard className="h-4 w-4 mr-2" />

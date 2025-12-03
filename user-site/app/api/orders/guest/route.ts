@@ -11,8 +11,6 @@ export async function POST(request: NextRequest) {
 
     // Check if Supabase is configured
     if (!isSupabaseConfigured || !supabaseAdmin) {
-      console.log('Supabase not configured, simulating guest order creation')
-      
       // Generate a mock order number
       const orderNumber = `ORD-${Date.now()}`
       
@@ -72,7 +70,6 @@ export async function POST(request: NextRequest) {
     // This function handles: stock validation, inventory deduction, order creation, and order items
     // all in a single database transaction
     // Note: Parameter order matters - required params first, then optional ones
-    console.log('Calling atomic order creation function for guest order...')
     const { data: result, error: rpcError } = await supabaseAdmin.rpc('create_order_atomic', {
       // Required parameters (must be in this order)
       p_order_number: orderNumber,
