@@ -88,7 +88,7 @@ export default function CustomersPage() {
     phone: ''
   })
 
-  const { toast } = useToast()
+  const toast = useToast()
   const { user } = useAuth()
 
   // Calculate offset based on current page
@@ -145,7 +145,7 @@ export default function CustomersPage() {
     try {
       setIsSaving(true)
       
-      const token = user?.token || localStorage.getItem('julie-crafts-token')
+      const token = user && (user as any).token ? (user as any).token : localStorage.getItem('julie-crafts-token')
       const response = await fetch(`/api/customers/${selectedCustomer.id}`, {
         method: 'PUT',
         headers: {
@@ -186,7 +186,7 @@ export default function CustomersPage() {
     try {
       setIsSaving(true)
       
-      const token = user?.token || localStorage.getItem('julie-crafts-token')
+      const token = user && (user as any).token ? (user as any).token : localStorage.getItem('julie-crafts-token')
       const response = await fetch('/api/customers', {
         method: 'POST',
         headers: {
@@ -271,10 +271,10 @@ export default function CustomersPage() {
   }
 
   const handleSelectAll = () => {
-    if (selectedCustomerIds.size === filteredCustomers.length) {
+    if (selectedCustomerIds.size === paginatedCustomers.length) {
       setSelectedCustomerIds(new Set())
     } else {
-      setSelectedCustomerIds(new Set(filteredCustomers.map(c => c.id)))
+      setSelectedCustomerIds(new Set(paginatedCustomers.map(c => c.id)))
     }
   }
 
@@ -291,7 +291,7 @@ export default function CustomersPage() {
 
     setBulkUpdating(true)
     try {
-      const token = user?.token || localStorage.getItem('julie-crafts-token')
+      const token = user && (user as any).token ? (user as any).token : localStorage.getItem('julie-crafts-token')
       const isArchiving = bulkAction === 'archive'
       
       // Update each customer
@@ -576,7 +576,7 @@ export default function CustomersPage() {
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={selectedCustomerIds.size > 0 && selectedCustomerIds.size === filteredCustomers.length}
+                      checked={selectedCustomerIds.size > 0 && selectedCustomerIds.size === paginatedCustomers.length}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
