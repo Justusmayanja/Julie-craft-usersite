@@ -53,16 +53,16 @@ export function ContactPage() {
     {
       icon: Phone,
       title: "Call Us",
-      details: ["0753445091", "+256 753 445 091"],
+      details: ["+256777796529", "+2567570200348"],
       action: "Call Now",
-      actionHandler: () => window.open("tel:+256753445091", "_self"),
+      actionHandler: () => window.open("tel:+256777796529", "_self"),
     },
     {
       icon: Mail,
       title: "Email Us",
-      details: ["hello@juliecrafts.ug", "orders@juliecrafts.ug"],
+      details: ["kingjuliet90@gmail.com"],
       action: "Send Email",
-      actionHandler: () => window.open("mailto:hello@juliecrafts.ug", "_self"),
+      actionHandler: () => window.open("mailto:kingjuliet90@gmail.com", "_self"),
     },
     {
       icon: Clock,
