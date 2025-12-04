@@ -49,6 +49,7 @@ interface NotificationItemProps {
     customer_name?: string
   }
   onClose: () => void
+  onExpandedChange?: (id: string, expanded: boolean) => void
 }
 
 const getNotificationIcon = (type: string) => {
@@ -113,7 +114,7 @@ interface OrderDetails {
   }>
 }
 
-export function NotificationItem({ notification, onClose }: NotificationItemProps) {
+export function NotificationItem({ notification, onClose, onExpandedChange }: NotificationItemProps) {
   const { markAsRead, deleteNotification, isAdmin } = useNotifications()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -191,13 +192,32 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
   const handleToggleExpand = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
-    if (!isExpanded && !notification.is_read) {
-      await markAsRead(notification.id)
+
+    // Toggle expanded state first and inform parent so the dropdown
+    // keeps this item visible while we asynchronously mark it read.
+    const next = !isExpanded
+    setIsExpanded(next)
+    if (typeof onExpandedChange === 'function') {
+      try { onExpandedChange(notification.id, next) } catch (err) { }
     }
-    
-    setIsExpanded(!isExpanded)
+
+    // If we're expanding and the notification is unread, mark it as read
+    // asynchronously. Do not await here to avoid race with parent visibility.
+    if (next && !notification.is_read) {
+      markAsRead(notification.id).catch(err => {
+        console.error('Error marking notification as read:', err)
+      })
+    }
   }
+
+  // Ensure parent knows when this item unmounts while expanded
+  useEffect(() => {
+    return () => {
+      if (isExpanded && typeof onExpandedChange === 'function') {
+        try { onExpandedChange(notification.id, false) } catch (err) { }
+      }
+    }
+  }, [isExpanded, notification.id, onExpandedChange])
 
   const handleClick = async () => {
     if (!notification.is_read) {

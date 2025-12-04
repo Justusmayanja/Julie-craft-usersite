@@ -11,7 +11,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    const notificationId = params.id
+    // Next.js may provide `params` as a thenable in some runtimes — await it first
+    const resolvedParams = await (params as any)
+    const notificationId = resolvedParams.id
     const body = await request.json()
     const { is_read } = body
 

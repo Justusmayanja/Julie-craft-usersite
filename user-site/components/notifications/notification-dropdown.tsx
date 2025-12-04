@@ -15,9 +15,11 @@ interface NotificationDropdownProps {
 export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
   const { notifications, unreadCount, loading, markAllAsRead, isAdmin } = useNotifications()
   const [soundEnabled, setSoundEnabledState] = useState(true)
+  const [expandedNotificationId, setExpandedNotificationId] = useState<string | null>(null)
 
-  // Filter out read notifications - only show unread in the dropdown
-  const unreadNotifications = notifications.filter(notification => !notification.is_read)
+  // Visible notifications: show unread notifications only, except allow the
+  // currently expanded notification to remain visible even if it becomes read.
+  const visibleNotifications = notifications.filter(n => !n.is_read || n.id === expandedNotificationId)
 
   // Load sound preference on mount
   useEffect(() => {
@@ -78,17 +80,24 @@ export function NotificationDropdown({ onClose }: NotificationDropdownProps) {
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
           </div>
-        ) : unreadNotifications.length === 0 ? (
+        ) : notifications.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-sm text-gray-500">No unread notifications</p>
+            <p className="text-sm text-gray-500">No notifications</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {unreadNotifications.map((notification) => (
+            {visibleNotifications.map((notification) => (
               <NotificationItem
                 key={notification.id}
                 notification={notification}
                 onClose={onClose}
+                onExpandedChange={(id, expanded) => {
+                  if (expanded) {
+                    setExpandedNotificationId(id)
+                  } else {
+                    setExpandedNotificationId(prev => prev === id ? null : prev)
+                  }
+                }}
               />
             ))}
           </div>
