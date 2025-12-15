@@ -189,25 +189,21 @@ export function NotificationItem({ notification, onClose, onExpandedChange }: No
     }
   }
 
-  const handleToggleExpand = async (e: React.MouseEvent) => {
+  const handleToggleExpand = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
-    // Toggle expanded state first and inform parent so the dropdown
-    // keeps this item visible while we asynchronously mark it read.
+    // Toggle expanded state and inform parent so the dropdown
+    // keeps this item visible while expanded.
     const next = !isExpanded
     setIsExpanded(next)
     if (typeof onExpandedChange === 'function') {
       try { onExpandedChange(notification.id, next) } catch (err) { }
     }
-
-    // If we're expanding and the notification is unread, mark it as read
-    // asynchronously. Do not await here to avoid race with parent visibility.
-    if (next && !notification.is_read) {
-      markAsRead(notification.id).catch(err => {
-        console.error('Error marking notification as read:', err)
-      })
-    }
+    
+    // Note: Viewing details does NOT mark the notification as read
+    // It will only be marked as read when user explicitly clicks "Mark as read"
+    // or when they navigate to the full order details page
   }
 
   // Ensure parent knows when this item unmounts while expanded
@@ -544,7 +540,18 @@ export function NotificationItem({ notification, onClose, onExpandedChange }: No
 
               {/* View Full Order Link */}
               {href && (
-                <Link href={href} onClick={onClose}>
+                <Link 
+                  href={href} 
+                  onClick={(e) => {
+                    // Mark as read when navigating to full order details
+                    if (!notification.is_read) {
+                      markAsRead(notification.id).catch(err => {
+                        console.error('Error marking notification as read:', err)
+                      })
+                    }
+                    onClose()
+                  }}
+                >
                   <Button
                     variant="outline"
                     size="sm"

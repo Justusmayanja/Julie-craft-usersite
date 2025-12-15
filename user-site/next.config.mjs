@@ -57,6 +57,10 @@ const nextConfig = {
   // Configure which packages should be externalized (not bundled)
   // Supabase requires Node.js runtime, so we ensure it's treated as a server-side package
   serverExternalPackages: ['@supabase/supabase-js', '@supabase/realtime-js'],
+  // Next.js 16 uses Turbopack by default, but we have webpack config
+  // Adding empty turbopack config to silence the error
+  // The webpack config will still be used when explicitly requested
+  turbopack: {},
 }
 
 export default nextConfig
