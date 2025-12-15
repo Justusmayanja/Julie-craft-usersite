@@ -39,7 +39,7 @@ const nextConfig = {
       },
       // Suppress Edge Runtime warnings for Supabase (uses Node.js APIs)
       // These warnings occur during build analysis but Supabase is only used in Node.js runtime (API routes)
-      // The middleware uses Supabase but handles it gracefully with try-catch
+      // The proxy uses Supabase but handles it gracefully with try-catch
       {
         message: /Node.js API.*not supported in the Edge Runtime/,
       },

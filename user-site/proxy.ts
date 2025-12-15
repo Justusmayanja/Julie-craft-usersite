@@ -54,7 +54,7 @@ const publicRoutes = [
   '/api/auth'
 ]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Check if the route is an admin route
@@ -71,7 +71,7 @@ export async function middleware(request: NextRequest) {
                                pathname !== '/api/orders' && 
                                !pathname.startsWith('/api/orders/admin')
 
-  // Skip middleware for exempt API routes, public routes, and customer inventory routes
+  // Skip proxy for exempt API routes, public routes, and customer inventory routes
   if (isExemptApiRoute || isPublicRoute || isCustomerInventoryRoute) {
     return NextResponse.next()
   }
@@ -205,7 +205,7 @@ export async function middleware(request: NextRequest) {
         error = result.error
       } catch (networkError: any) {
         // Handle network/fetch errors gracefully
-        console.error('Middleware network error:', {
+        console.error('Proxy network error:', {
           message: networkError?.message || 'TypeError: fetch failed',
           hint: 'Supabase connection issue - allowing access for development'
         })
@@ -261,7 +261,7 @@ export async function middleware(request: NextRequest) {
         profileError = result.error
       } catch (networkError: any) {
         // Handle network/fetch errors gracefully
-        console.error('Middleware profile fetch error:', {
+        console.error('Proxy profile fetch error:', {
           message: networkError?.message || 'TypeError: fetch failed',
           hint: 'Supabase connection issue - allowing access for development'
         })
@@ -323,7 +323,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next()
 
     } catch (error) {
-      console.error('Middleware error:', error)
+      console.error('Proxy error:', error)
       
       // For development, allow access even if there are errors
       if (isAdminApiRoute) {
@@ -415,7 +415,7 @@ export async function middleware(request: NextRequest) {
       } catch (error) {
         // If there's an error checking admin status, continue normally
         // This prevents blocking legitimate users if there's a database issue
-        console.error('Error checking admin status in middleware:', error)
+        console.error('Error checking admin status in proxy:', error)
       }
     }
   }
@@ -430,3 +430,4 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
+

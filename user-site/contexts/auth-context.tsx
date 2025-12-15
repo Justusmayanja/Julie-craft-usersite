@@ -142,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = await response.json()
             console.log('Token verification successful:', data.user)
             
-            // Store token in cookie for middleware access
+            // Store token in cookie for proxy access
             document.cookie = `julie-crafts-token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`
             
             // Update session manager to convert guest to registered user
