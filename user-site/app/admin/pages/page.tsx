@@ -37,6 +37,8 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/components/admin/ui/toast"
+import { AboutUsEditor } from "@/components/admin/about-us-editor"
+import { CarouselEditor } from "@/components/admin/carousel-editor"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,6 +100,8 @@ export default function AdminPagesPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [pageToDelete, setPageToDelete] = useState<string | null>(null)
+  const [aboutUsEditorOpen, setAboutUsEditorOpen] = useState(false)
+  const [carouselEditorOpen, setCarouselEditorOpen] = useState(false)
   
   // Homepage sections state
   const [sections, setSections] = useState<HomepageSection[]>([])
@@ -440,7 +444,16 @@ export default function AdminPagesPage() {
             <TabsContent value="pages" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Website Pages</CardTitle>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>Website Pages</CardTitle>
+                    <Button
+                      onClick={() => setAboutUsEditorOpen(true)}
+                      variant="outline"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit About Us Page
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {editingPage ? (
@@ -582,7 +595,16 @@ export default function AdminPagesPage() {
             <TabsContent value="homepage" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Homepage Sections</CardTitle>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>Homepage Sections</CardTitle>
+                    <Button
+                      onClick={() => setCarouselEditorOpen(true)}
+                      variant="outline"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Manage Hero Carousel
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <HomepageSectionsEditor 
@@ -654,6 +676,32 @@ export default function AdminPagesPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* About Us Editor */}
+          <AboutUsEditor
+            open={aboutUsEditorOpen}
+            onOpenChange={setAboutUsEditorOpen}
+            onSave={() => {
+              addToast({
+                type: "success",
+                title: "Success",
+                description: "About Us page content updated successfully."
+              })
+            }}
+          />
+
+          {/* Carousel Editor */}
+          <CarouselEditor
+            open={carouselEditorOpen}
+            onOpenChange={setCarouselEditorOpen}
+            onSave={() => {
+              addToast({
+                type: "success",
+                title: "Success",
+                description: "Carousel slides updated successfully."
+              })
+            }}
+          />
         </div>
       </div>
     </div>

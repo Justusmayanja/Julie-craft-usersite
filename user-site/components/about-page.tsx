@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,11 +21,48 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import { Logo } from "@/components/logo"
+import { StatsSection } from "@/components/about/stats-section"
+
+// Icon mapping
+const iconMap: Record<string, any> = {
+  Heart,
+  Users,
+  Award,
+  Leaf,
+  Globe,
+  Handshake,
+  CheckCircle2,
+  TrendingUp,
+  Shield,
+  Palette
+}
 
 export function AboutPage() {
-  const values = [
+  const [content, setContent] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchContent()
+  }, [])
+
+  const fetchContent = async () => {
+    try {
+      const response = await fetch('/api/site-content/about')
+      const data = await response.json()
+      if (data.content) {
+        setContent(data.content)
+      }
+    } catch (error) {
+      console.error('Error fetching about page content:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Default values if content is not loaded
+  const defaultValues = [
     {
-      icon: Heart,
+      icon: "Heart",
       title: "Authentic Craftsmanship",
       description:
         "Every piece is handmade using traditional techniques passed down through generations of skilled Ugandan artisans.",
@@ -32,7 +70,7 @@ export function AboutPage() {
       bgColor: "bg-red-50 dark:bg-red-950/20"
     },
     {
-      icon: Users,
+      icon: "Users",
       title: "Community Support",
       description:
         "We work directly with local artisan communities, ensuring fair wages and supporting traditional craft preservation.",
@@ -40,7 +78,7 @@ export function AboutPage() {
       bgColor: "bg-blue-50 dark:bg-blue-950/20"
     },
     {
-      icon: Leaf,
+      icon: "Leaf",
       title: "Sustainable Materials",
       description:
         "We use only sustainable, locally-sourced materials that respect both the environment and cultural traditions.",
@@ -48,7 +86,7 @@ export function AboutPage() {
       bgColor: "bg-green-50 dark:bg-green-950/20"
     },
     {
-      icon: Globe,
+      icon: "Globe",
       title: "Cultural Heritage",
       description:
         "Each craft tells a story of Uganda's rich cultural heritage, connecting you to centuries of artistic tradition.",
@@ -57,60 +95,109 @@ export function AboutPage() {
     },
   ]
 
-  const achievements = [
-    { number: "500+", label: "Artisans Supported", icon: Users },
-    { number: "50+", label: "Communities Reached", icon: Globe },
-    { number: "10,000+", label: "Happy Customers", icon: Heart },
-    { number: "15+", label: "Years of Experience", icon: Award },
+  const defaultAchievements = [
+    { number: "500+", label: "Artisans Supported", icon: "Users" },
+    { number: "50+", label: "Communities Reached", icon: "Globe" },
+    { number: "10,000+", label: "Happy Customers", icon: "Heart" },
+    { number: "15+", label: "Years of Experience", icon: "Award" },
   ]
 
-  const process = [
+  const defaultProcess = [
     {
       step: "1",
       title: "Artisan Partnership",
       description: "We partner with skilled local artisans who have mastered traditional techniques.",
-      icon: Handshake
+      icon: "Handshake"
     },
     {
       step: "2",
       title: "Quality Selection",
       description: "Each piece is carefully selected for quality, authenticity, and cultural significance.",
-      icon: Shield
+      icon: "Shield"
     },
     {
       step: "3",
       title: "Fair Trade",
       description: "We ensure fair compensation and sustainable working conditions for all our partners.",
-      icon: CheckCircle2
+      icon: "CheckCircle2"
     },
     {
       step: "4",
       title: "Global Delivery",
       description: "We bring these beautiful crafts to customers who appreciate authentic artistry.",
-      icon: TrendingUp
+      icon: "TrendingUp"
     },
   ]
 
-  const awards = [
+  const defaultAwards = [
     {
-      icon: Award,
+      icon: "Award",
       title: "Uganda Export Award",
       subtitle: "Best Cultural Export Business 2023",
       description: "Recognized for excellence in promoting Ugandan culture globally"
     },
     {
-      icon: Handshake,
+      icon: "Handshake",
       title: "Fair Trade Certified",
       subtitle: "Certified since 2018",
       description: "Committed to ethical trading practices and fair compensation"
     },
     {
-      icon: Users,
+      icon: "Users",
       title: "Community Impact Award",
       subtitle: "Outstanding Development 2022",
       description: "Honored for significant positive impact on artisan communities"
     },
   ]
+
+  // Use content from API or defaults
+  const values = content?.values_content?.length > 0 
+    ? content.values_content.map((v: any) => ({
+        ...v,
+        icon: iconMap[v.icon] || Heart
+      }))
+    : defaultValues.map(v => ({
+        ...v,
+        icon: iconMap[v.icon] || Heart
+      }))
+
+  const achievements = content?.achievements_content?.length > 0
+    ? content.achievements_content.map((a: any) => ({
+        ...a,
+        icon: iconMap[a.icon] || Users
+      }))
+    : defaultAchievements.map(a => ({
+        ...a,
+        icon: iconMap[a.icon] || Users
+      }))
+
+  const process = content?.process_content?.length > 0
+    ? content.process_content.map((p: any) => ({
+        ...p,
+        icon: iconMap[p.icon] || Handshake
+      }))
+    : defaultProcess.map(p => ({
+        ...p,
+        icon: iconMap[p.icon] || Handshake
+      }))
+
+  const awards = content?.awards_content?.length > 0
+    ? content.awards_content.map((a: any) => ({
+        ...a,
+        icon: iconMap[a.icon] || Award
+      }))
+    : defaultAwards.map(a => ({
+        ...a,
+        icon: iconMap[a.icon] || Award
+      }))
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
@@ -124,28 +211,27 @@ export function AboutPage() {
               className="mb-4 bg-amber-500/20 text-amber-300 border-amber-500/30 hover:bg-amber-500/30 transition-colors"
             >
               <Sparkles className="w-3 h-3 mr-2" />
-              Our Story
+              {content?.hero_badge_text || "Our Story"}
             </Badge>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-              Celebrating Uganda's Rich
+              {content?.hero_title_line1 || "Celebrating Uganda's Rich"}
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">
-                Craft Heritage
+                {content?.hero_title_line2 || "Craft Heritage"}
               </span>
             </h1>
             <p className="text-lg sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
-              Julie Crafts was born from a passion for preserving traditional Ugandan artistry while supporting local
-              communities. We bridge the gap between skilled artisans and craft enthusiasts worldwide.
+              {content?.hero_description || "Julie Crafts was born from a passion for preserving traditional Ugandan artistry while supporting local communities. We bridge the gap between skilled artisans and craft enthusiasts worldwide."}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Link href="/products">
+              <Link href={content?.hero_cta_primary_link || "/products"}>
                 <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-white">
-                  Explore Our Crafts
+                  {content?.hero_cta_primary_text || "Explore Our Crafts"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/contact">
+              <Link href={content?.hero_cta_secondary_link || "/contact"}>
                 <Button size="lg" variant="outline" className="border-slate-600 text-white hover:bg-slate-800">
-                  Get in Touch
+                  {content?.hero_cta_secondary_text || "Get in Touch"}
                 </Button>
               </Link>
             </div>
@@ -172,28 +258,29 @@ export function AboutPage() {
                 </Badge>
               </div>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
-                Meet Juliet Nnyonyozi
+                Meet {content?.founder_name || "Juliet Nnyonyozi"}
               </h2>
               <div className="space-y-4 text-slate-600 leading-relaxed">
-                <p className="text-base sm:text-lg">
-                  Growing up in Kampala, I was surrounded by the incredible artistry of Ugandan craftspeople. My grandmother
-                  was a skilled weaver, and watching her work sparked my lifelong appreciation for traditional crafts.
-                </p>
-                <p className="text-base sm:text-lg">
-                  After studying business and traveling the world, I realized how unique and valuable our local crafts are.
-                  In 2009, I founded Julie Crafts to create a sustainable platform that celebrates our artisans while
-                  sharing their beautiful work with the world.
-                </p>
-                <p className="text-base sm:text-lg">
-                  Today, we work with over 500 artisans across Uganda, ensuring they receive fair compensation while
-                  preserving traditional techniques for future generations. Every purchase supports not just an artisan, but
-                  an entire community.
-                </p>
+                {content?.founder_story_paragraph1 && (
+                  <p className="text-base sm:text-lg">
+                    {content.founder_story_paragraph1}
+                  </p>
+                )}
+                {content?.founder_story_paragraph2 && (
+                  <p className="text-base sm:text-lg">
+                    {content.founder_story_paragraph2}
+                  </p>
+                )}
+                {content?.founder_story_paragraph3 && (
+                  <p className="text-base sm:text-lg">
+                    {content.founder_story_paragraph3}
+                  </p>
+                )}
               </div>
               <div className="pt-4">
-                <Link href="/contact">
+                <Link href={content?.founder_cta_link || "/contact"}>
                   <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-white">
-                    Connect With Us
+                    {content?.founder_cta_text || "Connect With Us"}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
@@ -203,16 +290,16 @@ export function AboutPage() {
               <div className="relative rounded-2xl overflow-hidden shadow-2xl">
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-2xl"></div>
                 <Image
-                  src="/young-african-woman-weaving-traditional-mat.jpg"
-                  alt="Juliet Nnyonyozi, Founder of Julie Crafts, weaving a traditional mat"
+                  src={content?.founder_image_url || "/young-african-woman-weaving-traditional-mat.jpg"}
+                  alt={`${content?.founder_name || "Juliet Nnyonyozi"}, Founder of Julie Crafts, weaving a traditional mat`}
                   width={600}
                   height={700}
                   className="w-full h-[400px] sm:h-[500px] lg:h-[600px] object-cover relative z-10"
                   priority
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6 z-20">
-                  <p className="font-bold text-xl text-white mb-1">Juliet Nnyonyozi</p>
-                  <p className="text-sm text-amber-300">Founder & CEO, Julie Crafts</p>
+                  <p className="font-bold text-xl text-white mb-1">{content?.founder_name || "Juliet Nnyonyozi"}</p>
+                  <p className="text-sm text-amber-300">{content?.founder_title || "Founder & CEO, Julie Crafts"}</p>
                 </div>
               </div>
               {/* Decorative element */}
@@ -228,26 +315,26 @@ export function AboutPage() {
               What We Stand For
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-              Our Core Values
+              {content?.values_title || "Our Core Values"}
             </h2>
             <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-              These core values guide everything we do, from selecting artisan partners to delivering your order.
+              {content?.values_subtitle || "These core values guide everything we do, from selecting artisan partners to delivering your order."}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6 sm:gap-6 lg:gap-8">
             {values.map((value, index) => (
               <Card 
                 key={index} 
-                className="group border-2 hover:border-amber-300 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 overflow-hidden"
+                className="group border-2 hover:border-amber-300 transition-all duration-300 lg:hover:shadow-xl lg:hover:-translate-y-2 overflow-hidden h-full"
               >
-                <CardContent className="p-6 sm:p-8 text-center relative">
+                <CardContent className="p-6 sm:p-8 text-center relative h-full flex flex-col">
                   <div className={`absolute inset-0 bg-gradient-to-br ${value.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
-                  <div className={`inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br ${value.color} mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                  <div className={`inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br ${value.color} mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0`}>
                     <value.icon className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
                   </div>
                   <h3 className="font-bold text-xl sm:text-2xl mb-3 text-slate-900">{value.title}</h3>
-                  <p className="text-slate-600 leading-relaxed text-sm sm:text-base">{value.description}</p>
+                  <p className="text-slate-600 leading-relaxed text-sm sm:text-base flex-1">{value.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -255,42 +342,15 @@ export function AboutPage() {
         </section>
 
         {/* Achievements */}
-        <section className="mb-20 sm:mb-24 lg:mb-32">
-          <div className="relative bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 rounded-3xl p-8 sm:p-12 lg:p-16 overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-200/20 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-200/20 rounded-full blur-3xl"></div>
-            <div className="relative z-10">
-              <div className="text-center mb-12">
-                <Badge variant="outline" className="mb-4 bg-white/80 text-amber-700 border-amber-200">
-                  Our Impact
-                </Badge>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-                  Making a Difference
-                </h2>
-                <p className="text-lg sm:text-xl text-slate-700 max-w-3xl mx-auto leading-relaxed">
-                  Over the years, we've built a thriving ecosystem that benefits artisans, communities, and customers alike.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-                {achievements.map((achievement, index) => (
-                  <div 
-                    key={index} 
-                    className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-2xl hover:bg-white transition-all duration-300 hover:shadow-lg"
-                  >
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 mb-4">
-                      <achievement.icon className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600 mb-2">
-                      {achievement.number}
-                    </div>
-                    <p className="text-slate-700 font-semibold text-sm sm:text-base">{achievement.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
+        <StatsSection
+          title={content?.achievements_title || "Making a Difference"}
+          subtitle={content?.achievements_subtitle || "Over the years, we've built a thriving ecosystem that benefits artisans, communities, and customers alike."}
+          stats={achievements.map(achievement => ({
+            number: achievement.number,
+            label: achievement.label,
+            icon: achievement.icon
+          }))}
+        />
 
         {/* Process Section */}
         <section className="mb-20 sm:mb-24 lg:mb-32">
@@ -299,10 +359,10 @@ export function AboutPage() {
               Our Process
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-              How We Work
+              {content?.process_title || "How We Work"}
             </h2>
             <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-              Our process ensures quality, authenticity, and fair trade practices at every step.
+              {content?.process_subtitle || "Our process ensures quality, authenticity, and fair trade practices at every step."}
             </p>
           </div>
 
@@ -342,10 +402,10 @@ export function AboutPage() {
               Recognition
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-              Awards & Recognition
+              {content?.awards_title || "Awards & Recognition"}
             </h2>
             <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-              We're honored to be recognized for our commitment to artisan communities and cultural preservation.
+              {content?.awards_subtitle || "We're honored to be recognized for our commitment to artisan communities and cultural preservation."}
             </p>
           </div>
 
@@ -380,22 +440,21 @@ export function AboutPage() {
                 <Logo variant="text-only" size="lg" dark={true} showTagline={true} />
               </div>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
-                Join Our Mission
+                {content?.cta_title || "Join Our Mission"}
               </h2>
               <p className="text-lg sm:text-xl text-slate-300 leading-relaxed">
-                Every purchase supports Ugandan artisans and helps preserve traditional crafts for future generations.
-                Discover authentic pieces that tell a story.
+                {content?.cta_description || "Every purchase supports Ugandan artisans and helps preserve traditional crafts for future generations. Discover authentic pieces that tell a story."}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <Link href="/products">
+                <Link href={content?.cta_primary_link || "/products"}>
                   <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-white">
-                    Browse Our Crafts
+                    {content?.cta_primary_text || "Browse Our Crafts"}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <Link href="/contact">
+                <Link href={content?.cta_secondary_link || "/contact"}>
                   <Button size="lg" variant="outline" className="border-slate-600 text-white hover:bg-slate-800">
-                    Contact Us
+                    {content?.cta_secondary_text || "Contact Us"}
                   </Button>
                 </Link>
               </div>

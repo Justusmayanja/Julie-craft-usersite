@@ -83,7 +83,22 @@ export async function POST(request: NextRequest) {
     const updateData: any = { ...updates }
     const now = new Date().toISOString()
 
-    // Auto-update dates based on status changes
+    // Check if status is being updated and if it's a status that should clear reservations
+    const statusBeingUpdated = updates.status !== undefined
+    const newStatus = updates.status
+    const shouldClearReservations = statusBeingUpdated && 
+      (newStatus === 'processing' || newStatus === 'shipped' || newStatus === 'delivered')
+    
+    // Track which orders actually changed status (for reservation clearing)
+    const ordersWithStatusChange: string[] = []
+    if (statusBeingUpdated) {
+      existingOrders.forEach(order => {
+        if (order.status !== newStatus) {
+          ordersWithStatusChange.push(order.id)
+        }
+      })
+    }
+    
     if (updates.status) {
       if (updates.status === 'shipped' && !updates.shipped_date) {
         updateData.shipped_date = now
@@ -118,6 +133,26 @@ export async function POST(request: NextRequest) {
         error: 'Failed to update orders',
         details: updateError.message 
       }, { status: 500 })
+    }
+
+    // Clear reservations for orders that actually changed to processing, shipped, or delivered
+    if (shouldClearReservations && ordersWithStatusChange.length > 0) {
+      // Mark all active reservations for these orders as fulfilled
+      const { error: reservationError } = await supabaseAdmin
+        .from('order_item_reservations')
+        .update({
+          status: 'fulfilled',
+          released_at: now
+        })
+        .in('order_id', ordersWithStatusChange)
+        .eq('status', 'active')
+      
+      if (reservationError) {
+        console.error('[Orders Bulk API] Error clearing reservations:', reservationError)
+        // Don't fail the request, but log the error
+      } else {
+        console.log(`[Orders Bulk API] Cleared reservations for ${ordersWithStatusChange.length} orders that changed to ${newStatus}`)
+      }
     }
 
     const updatedCount = updatedOrders?.length || 0

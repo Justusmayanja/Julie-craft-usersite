@@ -245,10 +245,35 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
     }
 
+    // Clear reservations when order status changes to processing, shipped, or delivered
+    const statusChanged = body.status && body.status !== currentOrder.status
+    const newStatus = body.status || currentOrder.status
+    const shouldClearReservations = statusChanged && 
+      (newStatus === 'processing' || newStatus === 'shipped' || newStatus === 'delivered')
+    
+    if (shouldClearReservations) {
+      const now = new Date().toISOString()
+      // Mark all active reservations for this order as fulfilled
+      const { error: reservationError } = await supabaseAdmin
+        .from('order_item_reservations')
+        .update({
+          status: 'fulfilled',
+          released_at: now
+        })
+        .eq('order_id', orderId)
+        .eq('status', 'active')
+      
+      if (reservationError) {
+        console.error('[Orders API] Error clearing reservations:', reservationError)
+        // Don't fail the request, but log the error
+      } else {
+        console.log(`[Orders API] Cleared reservations for order ${orderId} (status: ${newStatus})`)
+      }
+    }
+
     // Create notifications for status/payment changes (async, don't wait)
     const previousStatus = currentOrder.status
     const previousPaymentStatus = currentOrder.payment_status
-    const statusChanged = body.status && body.status !== previousStatus
     const paymentStatusChanged = body.payment_status && body.payment_status !== previousPaymentStatus
     const trackingUpdated = body.tracking_number && body.tracking_number !== currentOrder.tracking_number
 

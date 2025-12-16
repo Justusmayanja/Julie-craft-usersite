@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils"
 import { useNotifications } from "@/contexts/notification-context"
 import { useChatUnreadCount } from "@/hooks/admin/use-chat-unread-count"
 import { useMediaCount } from "@/hooks/admin/use-media-count"
+import { useProductCount } from "@/hooks/admin/use-product-count"
+import { useInventoryAlertCount } from "@/hooks/admin/use-inventory-alert-count"
+import { useBlogCount } from "@/hooks/admin/use-blog-count"
 import { 
   LayoutDashboard, 
   Package, 
@@ -77,7 +80,7 @@ const navigationSections: NavigationSection[] = [
     name: "Products",
     href: "/admin/products",
     icon: Package,
-        badge: "9",
+    badge: null, // Will be set dynamically
   },
   {
     name: "Orders",
@@ -95,9 +98,9 @@ const navigationSections: NavigationSection[] = [
     name: "Inventory",
     href: "/admin/inventory",
     icon: Warehouse,
-        badge: "3",
-        badgeColor: "bg-red-500",
-      },
+    badge: null, // Will be set dynamically (low stock alerts)
+    badgeColor: "bg-red-500",
+  },
     ]
   },
   {
@@ -118,7 +121,7 @@ const navigationSections: NavigationSection[] = [
         name: "Blog & News",
         href: "/admin/content/blog",
         icon: Newspaper,
-        badge: "3",
+        badge: null, // Will be set dynamically
       },
     ]
   },
@@ -188,6 +191,9 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
   const { unreadCount, notifications } = useNotifications()
   const { unreadCount: chatUnreadCount } = useChatUnreadCount()
   const { count: mediaCount } = useMediaCount()
+  const { count: productCount } = useProductCount()
+  const { count: inventoryAlertCount } = useInventoryAlertCount()
+  const { count: blogCount } = useBlogCount()
   const [logoUrl, setLogoUrl] = useState<string>('/julie-logo.jpeg')
 
   // Load logo from site settings
@@ -323,7 +329,7 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                         </div>
                         
                         <div className="flex items-center space-x-2">
-                          {/* Enhanced Badge - Dynamic for Orders and Media Library */}
+                          {/* Enhanced Badge - Dynamic for Orders, Media Library, Products, Inventory, and Blog */}
                           {item.name === 'Media Library' && mediaCount !== null && mediaCount > 0 && (
                             <span className={cn(
                               "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 animate-pulse",
@@ -334,7 +340,37 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                               {mediaCount}
                             </span>
                           )}
-                          {item.name !== 'Media Library' && (item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
+                          {item.name === 'Products' && productCount !== null && productCount > 0 && (
+                            <span className={cn(
+                              "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 animate-pulse",
+                              isActive || hasActiveSubmenu
+                                ? "bg-amber-500 text-white ring-amber-200" 
+                                : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
+                            )}>
+                              {productCount}
+                            </span>
+                          )}
+                          {item.name === 'Inventory' && inventoryAlertCount !== null && inventoryAlertCount > 0 && (
+                            <span className={cn(
+                              "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 animate-pulse",
+                              isActive || hasActiveSubmenu
+                                ? "bg-red-500 text-white ring-red-200" 
+                                : "bg-red-500 text-white ring-red-200 group-hover:bg-red-600"
+                            )}>
+                              {inventoryAlertCount}
+                            </span>
+                          )}
+                          {item.name === 'Blog & News' && blogCount !== null && blogCount > 0 && (
+                            <span className={cn(
+                              "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 animate-pulse",
+                              isActive || hasActiveSubmenu
+                                ? "bg-amber-500 text-white ring-amber-200" 
+                                : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
+                            )}>
+                              {blogCount}
+                            </span>
+                          )}
+                          {item.name !== 'Media Library' && item.name !== 'Products' && item.name !== 'Inventory' && item.name !== 'Blog & News' && (item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
                             <span className={cn(
                               "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 animate-pulse",
                               item.badgeColor === "bg-red-500" 
@@ -407,7 +443,37 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                             {mediaCount}
                           </span>
                         )}
-                        {item.name !== 'Chat Support' && item.name !== 'Media Library' && (item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
+                        {item.name === 'Products' && productCount !== null && productCount > 0 && (
+                          <span className={cn(
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
+                            isActive 
+                              ? "bg-amber-500 text-white ring-amber-200" 
+                              : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
+                          )}>
+                            {productCount}
+                          </span>
+                        )}
+                        {item.name === 'Inventory' && inventoryAlertCount !== null && inventoryAlertCount > 0 && (
+                          <span className={cn(
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
+                            isActive 
+                              ? "bg-red-500 text-white ring-red-200" 
+                              : "bg-red-500 text-white ring-red-200 group-hover:bg-red-600"
+                          )}>
+                            {inventoryAlertCount}
+                          </span>
+                        )}
+                        {item.name === 'Blog & News' && blogCount !== null && blogCount > 0 && (
+                          <span className={cn(
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
+                            isActive 
+                              ? "bg-amber-500 text-white ring-amber-200" 
+                              : "bg-slate-600 text-slate-200 ring-slate-500 group-hover:bg-amber-500/20 group-hover:text-amber-300 group-hover:ring-amber-400/50"
+                          )}>
+                            {blogCount}
+                          </span>
+                        )}
+                        {item.name !== 'Chat Support' && item.name !== 'Media Library' && item.name !== 'Products' && item.name !== 'Inventory' && item.name !== 'Blog & News' && (item.name === 'Orders' ? orderNotificationsCount > 0 : item.badge) && (
                           <span className={cn(
                             "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
                             item.badgeColor === "bg-red-500" 
