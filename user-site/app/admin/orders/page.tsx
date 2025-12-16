@@ -636,15 +636,14 @@ export default function OrdersPage() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <Checkbox
-                            checked={selectedOrderIds.has(order.id)}
-                            onCheckedChange={(e) => {
-                              e.stopPropagation()
-                              handleSelectOrder(order.id)
-                            }}
-                            aria-label={`Select order ${order.order_number}`}
-                            className="mt-1"
-                          />
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedOrderIds.has(order.id)}
+                              onCheckedChange={() => handleSelectOrder(order.id)}
+                              aria-label={`Select order ${order.order_number}`}
+                              className="mt-1"
+                            />
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-2">
                               <div className="font-semibold text-sm truncate">{order.order_number}</div>

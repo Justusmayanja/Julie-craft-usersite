@@ -145,7 +145,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const orderId = params.id
+    // Next.js may provide `params` as a thenable in some runtimes — await it first
+    const resolvedParams = await (params as any)
+    const orderId = resolvedParams.id
     const body = await request.json()
 
     // Check if Supabase is configured

@@ -7,6 +7,7 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useNotifications } from "@/contexts/notification-context"
 import { useChatUnreadCount } from "@/hooks/admin/use-chat-unread-count"
+import { useContactUnreadCount } from "@/hooks/admin/use-contact-unread-count"
 import { useMediaCount } from "@/hooks/admin/use-media-count"
 import { useProductCount } from "@/hooks/admin/use-product-count"
 import { useInventoryAlertCount } from "@/hooks/admin/use-inventory-alert-count"
@@ -32,7 +33,8 @@ import {
   Image as ImageIcon,
   Newspaper,
   UserCircle,
-  MessageCircle
+  MessageCircle,
+  Mail
 } from "lucide-react"
 
 // Type definitions
@@ -136,6 +138,13 @@ const navigationSections: NavigationSection[] = [
         badgeColor: "bg-amber-500",
       },
       {
+        name: "Contact Messages",
+        href: "/admin/contact-messages",
+        icon: Mail,
+        badge: null, // Will be set dynamically (unread count)
+        badgeColor: "bg-blue-500",
+      },
+      {
         name: "Customers",
         href: "/admin/customers",
         icon: Users,
@@ -190,6 +199,7 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
   const pathname = usePathname()
   const { unreadCount, notifications } = useNotifications()
   const { unreadCount: chatUnreadCount } = useChatUnreadCount()
+  const { unreadCount: contactUnreadCount } = useContactUnreadCount()
   const { count: mediaCount } = useMediaCount()
   const { count: productCount } = useProductCount()
   const { count: inventoryAlertCount } = useInventoryAlertCount()
@@ -431,6 +441,16 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
                               : "bg-amber-500 text-white ring-amber-200 group-hover:bg-amber-600"
                           )}>
                             {chatUnreadCount}
+                          </span>
+                        )}
+                        {item.name === 'Contact Messages' && contactUnreadCount > 0 && (
+                          <span className={cn(
+                            "px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full shadow-sm ring-1 flex-shrink-0",
+                            isActive
+                              ? "bg-blue-500 text-white ring-blue-200"
+                              : "bg-blue-500 text-white ring-blue-200 group-hover:bg-blue-600"
+                          )}>
+                            {contactUnreadCount}
                           </span>
                         )}
                         {item.name === 'Media Library' && mediaCount !== null && mediaCount > 0 && (

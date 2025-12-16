@@ -11,6 +11,23 @@ const emailConfig = {
   },
 }
 
+// Helper function to get site URL (only returns if properly configured, not localhost)
+const getSiteUrl = (): string | null => {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  if (siteUrl && !siteUrl.includes('localhost') && !siteUrl.includes('127.0.0.1')) {
+    return siteUrl
+  }
+  
+  // Check Vercel URL as fallback
+  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL
+  if (vercelUrl && !vercelUrl.includes('localhost')) {
+    return `https://${vercelUrl}`
+  }
+  
+  // Return null if no proper URL is configured (don't use localhost)
+  return null
+}
+
 // Create reusable transporter
 const createTransporter = () => {
   // If SMTP credentials are not provided, return null (emails won't be sent)
@@ -29,9 +46,8 @@ const createTransporter = () => {
 
 // Generate HTML email template for verification code
 const generateVerificationEmailHTML = (name: string, verificationCode: string, siteName: string = 'Julie Crafts') => {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-    (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
-  const verificationUrl = `${baseUrl}/verify-email`
+  const baseUrl = getSiteUrl()
+  const verificationUrl = baseUrl ? `${baseUrl}/verify-email` : null
   
   return `
 <!DOCTYPE html>
@@ -86,6 +102,7 @@ const generateVerificationEmailHTML = (name: string, verificationCode: string, s
                                 Enter this code on the verification page to complete your registration:
                             </p>
                             
+                            ${verificationUrl ? `
                             <!-- Verification Link Button -->
                             <table role="presentation" style="width: 100%; margin: 30px 0;">
                                 <tr>
@@ -97,6 +114,7 @@ const generateVerificationEmailHTML = (name: string, verificationCode: string, s
                                     </td>
                                 </tr>
                             </table>
+                            ` : ''}
                             
                             <div style="margin: 30px 0; padding: 20px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;">
                                 <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
@@ -142,18 +160,18 @@ export async function sendVerificationEmail(
       return false
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-      (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
-    
-    const verificationUrl = `${baseUrl}/verify-email`
+    const baseUrl = getSiteUrl()
+    const verificationUrl = baseUrl ? `${baseUrl}/verify-email` : null
     const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Julie Crafts'
+
+    const textVersion = `Welcome to ${siteName}, ${name}!\n\nYour verification code is: ${verificationCode}\n\n${verificationUrl ? `Enter this code on the verification page: ${verificationUrl}\n\n` : ''}This code will expire in 24 hours.\n\nIf you didn't create an account, please ignore this email.`
 
     const mailOptions = {
       from: `"${siteName}" <${emailConfig.auth.user}>`,
       to: to,
       subject: `Verify Your Email - ${siteName}`,
       html: generateVerificationEmailHTML(name, verificationCode, siteName),
-      text: `Welcome to ${siteName}, ${name}!\n\nYour verification code is: ${verificationCode}\n\nEnter this code on the verification page: ${verificationUrl}\n\nThis code will expire in 24 hours.\n\nIf you didn't create an account, please ignore this email.`,
+      text: textVersion,
     }
 
     const info = await transporter.sendMail(mailOptions)
@@ -167,9 +185,8 @@ export async function sendVerificationEmail(
 
 // Generate HTML email template for password reset code
 const generatePasswordResetEmailHTML = (name: string, resetCode: string, siteName: string = 'Julie Crafts') => {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-    (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
-  const resetUrl = `${baseUrl}/reset-password`
+  const baseUrl = getSiteUrl()
+  const resetUrl = baseUrl ? `${baseUrl}/reset-password` : null
   
   return `
 <!DOCTYPE html>
@@ -220,6 +237,7 @@ const generatePasswordResetEmailHTML = (name: string, resetCode: string, siteNam
                                 </tr>
                             </table>
                             
+                            ${resetUrl ? `
                             <p style="margin: 20px 0 0 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
                                 Enter this code on the password reset page to change your password:
                             </p>
@@ -235,6 +253,7 @@ const generatePasswordResetEmailHTML = (name: string, resetCode: string, siteNam
                                     </td>
                                 </tr>
                             </table>
+                            ` : ''}
                             
                             <div style="margin: 30px 0; padding: 20px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;">
                                 <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
@@ -280,18 +299,18 @@ export async function sendPasswordResetEmail(
       return false
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-      (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
-    
-    const resetUrl = `${baseUrl}/reset-password`
+    const baseUrl = getSiteUrl()
+    const resetUrl = baseUrl ? `${baseUrl}/reset-password` : null
     const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Julie Crafts'
+
+    const textVersion = `Hello ${name},\n\nWe received a request to reset your password. Your reset code is: ${resetCode}\n\n${resetUrl ? `Enter this code on the password reset page: ${resetUrl}\n\n` : ''}This code will expire in 1 hour.\n\nIf you didn't request a password reset, please ignore this email and your password will remain unchanged.`
 
     const mailOptions = {
       from: `"${siteName}" <${emailConfig.auth.user}>`,
       to: to,
       subject: `Reset Your Password - ${siteName}`,
       html: generatePasswordResetEmailHTML(name, resetCode, siteName),
-      text: `Hello ${name},\n\nWe received a request to reset your password. Your reset code is: ${resetCode}\n\nEnter this code on the password reset page: ${resetUrl}\n\nThis code will expire in 1 hour.\n\nIf you didn't request a password reset, please ignore this email and your password will remain unchanged.`,
+      text: textVersion,
     }
 
     const info = await transporter.sendMail(mailOptions)
@@ -313,6 +332,7 @@ const generateNewOrderEmailHTML = (
   orderItems: Array<{ product_name: string; quantity: number; price: number }>,
   siteName: string = 'Julie Crafts'
 ): string => {
+  const baseUrl = getSiteUrl()
   const itemsList = orderItems.map(item => `
     <tr>
       <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.product_name}</td>
@@ -391,17 +411,19 @@ const generateNewOrderEmailHTML = (
                 </table>
               </div>
               
+              ${baseUrl ? `
               <!-- Action Button -->
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/orders/${orderNumber}" 
+                    <a href="${baseUrl}/admin/orders/${orderNumber}" 
                        style="display: inline-block; padding: 12px 24px; background-color: #f59e0b; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
                       View Order in Admin Panel
                     </a>
                   </td>
                 </tr>
               </table>
+              ` : ''}
               
               <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
                 This is an automated notification. Please log in to the admin panel to process this order.
@@ -444,8 +466,7 @@ export async function sendNewOrderNotificationEmail(
     }
 
     const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Julie Crafts'
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-      (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000')
+    const baseUrl = getSiteUrl()
 
     // Generate text version
     const textVersion = `New Order Notification - ${siteName}
@@ -463,9 +484,7 @@ Order Details:
 Order Items:
 ${orderItems.map(item => `- ${item.product_name} (Qty: ${item.quantity}) - ${currency} ${item.price.toLocaleString()}`).join('\n')}
 
-View order in admin panel: ${baseUrl}/admin/orders/${orderNumber}
-
-This is an automated notification. Please log in to the admin panel to process this order.`
+${baseUrl ? `View order in admin panel: ${baseUrl}/admin/orders/${orderNumber}\n\n` : ''}This is an automated notification. Please log in to the admin panel to process this order.`
 
     const mailOptions = {
       from: `"${siteName}" <${emailConfig.auth.user}>`,
@@ -480,6 +499,126 @@ This is an automated notification. Please log in to the admin panel to process t
     return true
   } catch (error) {
     console.error('Error sending new order notification email:', error)
+    return false
+  }
+}
+
+// Generate HTML email template for chat support response
+const generateChatSupportResponseHTML = (
+  customerName: string,
+  adminName: string,
+  message: string,
+  conversationSubject: string,
+  siteName: string = 'Julie Crafts'
+) => {
+  const baseUrl = getSiteUrl()
+  const chatUrl = baseUrl ? `${baseUrl}/contact` : null
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Response - ${siteName}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 30px 20px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Support Response</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px 20px;">
+                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Hello ${customerName},
+                            </p>
+                            
+                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Thank you for contacting ${siteName} support. We have received your inquiry regarding <strong>"${conversationSubject}"</strong> and here is our response:
+                            </p>
+                            
+                            <!-- Message Box -->
+                            <div style="background-color: #f3f4f6; border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 8px;">
+                                <p style="margin: 0; color: #1f2937; font-size: 15px; line-height: 1.8; white-space: pre-wrap;">${message}</p>
+                            </div>
+                            
+                            <p style="margin: 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                If you have any further questions or need additional assistance, please don't hesitate to reach out to us again.
+                            </p>
+                            
+                            <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                Best regards,<br>
+                                <strong>${adminName}</strong><br>
+                                ${siteName} Support Team
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+                            ${chatUrl ? `
+                            <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 12px;">
+                                You can continue this conversation by visiting our <a href="${chatUrl}" style="color: #3b82f6; text-decoration: none;">contact page</a>.
+                            </p>
+                            ` : ''}
+                            <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                                This is an automated email from ${siteName}. Please do not reply directly to this email.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+`
+}
+
+// Send chat support response email to customer
+export async function sendChatSupportResponseEmail(
+  to: string,
+  customerName: string,
+  adminName: string,
+  message: string,
+  conversationSubject: string
+): Promise<boolean> {
+  try {
+    const transporter = createTransporter()
+    if (!transporter) {
+      console.error('Email transporter not configured')
+      return false
+    }
+
+    const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'Julie Crafts'
+
+    const baseUrl = getSiteUrl()
+    const chatUrl = baseUrl ? `${baseUrl}/contact` : null
+    
+    const textVersion = `Hello ${customerName},\n\nThank you for contacting ${siteName} support. We have received your inquiry regarding "${conversationSubject}" and here is our response:\n\n${message}\n\nIf you have any further questions or need additional assistance, please don't hesitate to reach out to us again.\n\n${chatUrl ? `You can continue this conversation by visiting our contact page: ${chatUrl}\n\n` : ''}Best regards,\n${adminName}\n${siteName} Support Team`
+
+    const mailOptions = {
+      from: `"${siteName} Support" <${emailConfig.auth.user}>`,
+      to: to,
+      subject: `Re: ${conversationSubject} - ${siteName} Support`,
+      html: generateChatSupportResponseHTML(customerName, adminName, message, conversationSubject, siteName),
+      text: textVersion,
+    }
+
+    const info = await transporter.sendMail(mailOptions)
+    console.log('Chat support response email sent:', info.messageId)
+    return true
+  } catch (error) {
+    console.error('Error sending chat support response email:', error)
     return false
   }
 }

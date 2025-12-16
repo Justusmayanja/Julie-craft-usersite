@@ -34,7 +34,8 @@ import {
   ArrowUpDown,
   Settings,
   X,
-  Loader2
+  Loader2,
+  CheckCircle
 } from "lucide-react"
 import { useRobustInventory } from "@/hooks/admin/use-robust-inventory"
 import { StockAdjustmentModal } from "@/components/admin/inventory/stock-adjustment-modal"
@@ -142,7 +143,11 @@ export default function InventoryPage() {
   
   const lowStockCount = inventory.filter((item: any) => getStockStatus(item) === 'low_stock').length
   const outOfStockCount = inventory.filter((item: any) => getStockStatus(item) === 'out_of_stock').length
-  const totalValue = inventory.reduce((sum: number, item: any) => sum + ((item.physical_stock || item.stock_quantity || 0) * (item.unit_cost || 0)), 0)
+  const totalValue = inventory.reduce((sum: number, item: any) => {
+    const physicalStock = Number(item.physical_stock) || 0
+    const unitCost = Number(item.unit_cost) || 0
+    return sum + (physicalStock * unitCost)
+  }, 0)
   const avgStockLevel = totalItems > 0 ? ((totalItems - lowStockCount - outOfStockCount) / totalItems) * 100 : 0
 
   // Handle filter changes
@@ -608,164 +613,376 @@ export default function InventoryPage() {
 
               {/* Table Content */}
               {!loading && !error && (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gradient-to-r from-slate-50 to-blue-50/30 border-b border-slate-200/60">
-                        <TableHead className="font-bold text-slate-900 py-4 text-xs uppercase tracking-wide cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort("product_name")}>
-                          <div className="flex items-center space-x-1">
-                            <span>Product / SKU</span>
-                            <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                          </div>
-                        </TableHead>
-                        <TableHead className="font-bold text-slate-900 py-4 text-xs uppercase tracking-wide cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort("current_quantity")}>
-                          <div className="flex items-center space-x-1">
-                            <span>On Hand</span>
-                            <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                          </div>
-                        </TableHead>
-                        <TableHead className="font-bold text-slate-900 py-4 text-xs uppercase tracking-wide">Available</TableHead>
-                        <TableHead className="font-bold text-slate-900 py-4 text-xs uppercase tracking-wide">Reserved</TableHead>
-                        <TableHead className="font-bold text-slate-900 py-4 text-xs uppercase tracking-wide">Location</TableHead>
-                        <TableHead className="font-bold text-slate-900 py-4 text-xs uppercase tracking-wide">Reorder Point</TableHead>
-                        <TableHead className="font-bold text-slate-900 py-4 text-xs uppercase tracking-wide cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort("status")}>
-                          <div className="flex items-center space-x-1">
-                            <span>Status</span>
-                            <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                          </div>
-                        </TableHead>
-                        <TableHead className="font-bold text-slate-900 py-4 text-xs uppercase tracking-wide cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort("total_value")}>
-                          <div className="flex items-center space-x-1">
-                            <span>Value</span>
-                            <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                          </div>
-                        </TableHead>
-                        <TableHead className="font-bold text-slate-900 py-4 text-xs uppercase tracking-wide cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort("last_updated")}>
-                          <div className="flex items-center space-x-1">
-                            <span>Last Updated</span>
-                            <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                          </div>
-                        </TableHead>
-                        <TableHead className="w-32 font-bold text-slate-900 py-4 text-xs uppercase tracking-wide">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {inventory.map((item: any) => (
-                        <TableRow key={item.id} className="hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-indigo-50/20 transition-all duration-200 border-b border-slate-100/60">
-                          <TableCell className="py-4">
-                            <div className="space-y-1">
-                              <div className="font-bold text-slate-900 text-sm">{item.name}</div>
-                              <div className="text-xs text-slate-600 font-medium">{item.sku} • {item.category_name || 'Uncategorized'}</div>
+                <>
+                  {/* Desktop Table View */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gradient-to-r from-slate-50 via-blue-50/40 to-indigo-50/30 border-b-2 border-slate-200">
+                          <TableHead className="font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider cursor-pointer hover:bg-slate-100/60 transition-colors duration-200" onClick={() => handleSort("product_name")}>
+                            <div className="flex items-center space-x-2">
+                              <Package className="w-3.5 h-3.5 text-slate-600" />
+                              <span>Product / SKU</span>
+                              <ArrowUpDown className="w-3 h-3 text-slate-500" />
                             </div>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <div className="space-y-1">
-                              <div className="flex items-center space-x-2">
-                                <span className="font-bold text-slate-900 text-base">{item.physical_stock || 0}</span>
-                                {(() => {
-                                  const availableStock = item.available_stock !== undefined 
-                                    ? item.available_stock 
-                                    : (item.physical_stock || item.stock_quantity || 0) - (item.reserved_stock || 0);
-                                  return availableStock <= (item.reorder_point || 10);
-                                })() && (
-                                  <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                )}
-                              </div>
-                              <div className="text-xs text-slate-500 font-medium">
-                                Max: {item.max_stock_level || 1000}
-                              </div>
+                          </TableHead>
+                          <TableHead className="font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider cursor-pointer hover:bg-slate-100/60 transition-colors duration-200" onClick={() => handleSort("current_quantity")}>
+                            <div className="flex items-center space-x-2">
+                              <Warehouse className="w-3.5 h-3.5 text-slate-600" />
+                              <span>On Hand</span>
+                              <ArrowUpDown className="w-3 h-3 text-slate-500" />
                             </div>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <div className="font-bold text-slate-900 text-base">
-                              {item.available_stock !== undefined 
-                                ? item.available_stock 
-                                : (item.physical_stock || item.stock_quantity || 0) - (item.reserved_stock || 0)
-                              }
+                          </TableHead>
+                          <TableHead className="font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider">
+                            <div className="flex items-center space-x-2">
+                              <CheckCircle className="w-3.5 h-3.5 text-slate-600" />
+                              <span>Available</span>
                             </div>
-                            <div className="text-xs text-slate-500 font-medium">Available</div>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <div className="font-bold text-slate-900 text-base">{item.reserved_stock || 0}</div>
-                            <div className="text-xs text-slate-500 font-medium">Reserved</div>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <div className="text-sm text-slate-700 font-semibold">Main Warehouse</div>
-                            <div className="text-xs text-slate-500 font-medium">Main Warehouse</div>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <div className="font-bold text-slate-900 text-base">{item.reorder_point || 10}</div>
-                            <div className="text-xs text-slate-500 font-medium">Min: {item.min_stock_level || 5}</div>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <Badge className={`${getStatusColor(getStockStatus(item))} font-semibold px-2 py-1 rounded-full shadow-sm`}>
-                              <div className="flex items-center space-x-1">
-                                {getStatusIcon(getStockStatus(item))}
-                                <span className="text-xs">{getStockStatus(item).split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
-                              </div>
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <div className="space-y-1">
-                              <div className="font-bold text-slate-900 text-sm">{((item.physical_stock || 0) * (item.unit_cost || 0)).toLocaleString()} UGX</div>
-                              <div className="text-xs text-slate-600 font-medium">
-                                {item.unit_cost?.toLocaleString() || "0"} UGX cost • {item.unit_price?.toLocaleString() || "0"} UGX retail
-                              </div>
+                          </TableHead>
+                          <TableHead className="font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider">
+                            <div className="flex items-center space-x-2">
+                              <AlertTriangle className="w-3.5 h-3.5 text-slate-600" />
+                              <span>Reserved</span>
                             </div>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <div className="text-sm text-slate-700 font-semibold">
-                              {item.last_stock_update ? format(new Date(item.last_stock_update), "MMM dd, yyyy") : "Never"}
+                          </TableHead>
+                          <TableHead className="font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider">Location</TableHead>
+                          <TableHead className="font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider">Reorder Point</TableHead>
+                          <TableHead className="font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider cursor-pointer hover:bg-slate-100/60 transition-colors duration-200" onClick={() => handleSort("status")}>
+                            <div className="flex items-center space-x-2">
+                              <span>Status</span>
+                              <ArrowUpDown className="w-3 h-3 text-slate-500" />
                             </div>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <div className="flex items-center space-x-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                onClick={() => handleAdjustStock(item)}
-                                title="Adjust Stock"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-slate-600 hover:bg-green-50 hover:text-green-700 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                onClick={() => handleViewHistory(item)}
-                                title="View History"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
+                          </TableHead>
+                          <TableHead className="font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider cursor-pointer hover:bg-slate-100/60 transition-colors duration-200" onClick={() => handleSort("total_value")}>
+                            <div className="flex items-center space-x-2">
+                              <DollarSign className="w-3.5 h-3.5 text-slate-600" />
+                              <span>Value</span>
+                              <ArrowUpDown className="w-3 h-3 text-slate-500" />
                             </div>
-                          </TableCell>
+                          </TableHead>
+                          <TableHead className="font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider cursor-pointer hover:bg-slate-100/60 transition-colors duration-200" onClick={() => handleSort("last_updated")}>
+                            <div className="flex items-center space-x-2">
+                              <span>Last Updated</span>
+                              <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="w-32 font-bold text-slate-900 py-5 px-6 text-xs uppercase tracking-wider text-center">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {inventory.map((item: any, index: number) => {
+                          const availableStock = item.available_stock !== undefined 
+                            ? item.available_stock 
+                            : (item.physical_stock || item.stock_quantity || 0) - (item.reserved_stock || 0);
+                          const stockStatus = getStockStatus(item);
+                          const isLowStock = availableStock <= (item.reorder_point || 10);
+                          
+                          return (
+                            <TableRow 
+                              key={item.id} 
+                              className={`group hover:bg-gradient-to-r hover:from-blue-50/40 hover:via-indigo-50/30 hover:to-purple-50/20 transition-all duration-300 border-b border-slate-100/80 ${
+                                index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
+                              }`}
+                            >
+                              <TableCell className="py-5 px-6">
+                                <div className="space-y-1.5">
+                                  <div className="font-bold text-slate-900 text-sm leading-tight">{item.name}</div>
+                                  <div className="text-xs text-slate-600 font-medium flex items-center gap-2">
+                                    <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-mono">{item.sku}</span>
+                                    <span className="text-slate-400">•</span>
+                                    <span>{item.category_name || 'Uncategorized'}</span>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-5 px-6">
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="font-bold text-slate-900 text-lg">{item.physical_stock || 0}</span>
+                                    {isLowStock && (
+                                      <AlertTriangle className="w-4 h-4 text-amber-500 animate-pulse" />
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-slate-500 font-medium">
+                                    Max: <span className="font-semibold">{item.max_stock_level || 1000}</span>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-5 px-6">
+                                <div className="space-y-1">
+                                  <div className="font-bold text-slate-900 text-lg text-emerald-700">
+                                    {availableStock}
+                                  </div>
+                                  <div className="text-xs text-slate-500 font-medium">Available</div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-5 px-6">
+                                <div className="space-y-1">
+                                  <div className="font-bold text-slate-900 text-lg text-amber-700">
+                                    {item.reserved_stock || 0}
+                                  </div>
+                                  <div className="text-xs text-slate-500 font-medium">Reserved</div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-5 px-6">
+                                <div className="text-sm text-slate-700 font-semibold">Main Warehouse</div>
+                                <div className="text-xs text-slate-500 font-medium mt-0.5">Primary Location</div>
+                              </TableCell>
+                              <TableCell className="py-5 px-6">
+                                <div className="space-y-1">
+                                  <div className="font-bold text-slate-900 text-base">{item.reorder_point || 10}</div>
+                                  <div className="text-xs text-slate-500 font-medium">
+                                    Min: <span className="font-semibold">{item.min_stock_level || 5}</span>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-5 px-6">
+                                <Badge className={`${getStatusColor(stockStatus)} font-semibold px-3 py-1.5 rounded-full shadow-sm border transition-all duration-200 group-hover:shadow-md`}>
+                                  <div className="flex items-center space-x-1.5">
+                                    {getStatusIcon(stockStatus)}
+                                    <span className="text-xs font-medium">
+                                      {stockStatus.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                    </span>
+                                  </div>
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-5 px-6">
+                                <div className="space-y-1.5">
+                                  <div className="font-bold text-slate-900 text-sm">
+                                    {(() => {
+                                      const physicalStock = Number(item.physical_stock) || 0
+                                      const unitCost = Number(item.unit_cost) || 0
+                                      const totalValue = physicalStock * unitCost
+                                      return totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                                    })()} UGX
+                                  </div>
+                                  <div className="text-xs text-slate-600 font-medium space-y-0.5">
+                                    <div>
+                                      Cost: {(() => {
+                                        const unitCost = Number(item.unit_cost) || 0
+                                        return unitCost > 0 ? unitCost.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "0"
+                                      })()} UGX
+                                    </div>
+                                    <div>
+                                      Retail: {(() => {
+                                        const unitPrice = Number(item.unit_price) || 0
+                                        return unitPrice > 0 ? unitPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "0"
+                                      })()} UGX
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-5 px-6">
+                                <div className="text-sm text-slate-700 font-semibold">
+                                  {item.last_stock_update ? format(new Date(item.last_stock_update), "MMM dd, yyyy") : "Never"}
+                                </div>
+                                {item.last_stock_update && (
+                                  <div className="text-xs text-slate-500 font-medium mt-0.5">
+                                    {format(new Date(item.last_stock_update), "h:mm a")}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-5 px-6">
+                                <div className="flex items-center justify-center space-x-1.5">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 h-8 w-8 p-0"
+                                    onClick={() => handleAdjustStock(item)}
+                                    title="Adjust Stock"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-slate-600 hover:bg-green-50 hover:text-green-700 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 h-8 w-8 p-0"
+                                    onClick={() => handleViewHistory(item)}
+                                    title="View History"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile/Tablet Card View */}
+                  <div className="lg:hidden space-y-4 p-4">
+                    {inventory.map((item: any) => {
+                      const availableStock = item.available_stock !== undefined 
+                        ? item.available_stock 
+                        : (item.physical_stock || item.stock_quantity || 0) - (item.reserved_stock || 0);
+                      const stockStatus = getStockStatus(item);
+                      const isLowStock = availableStock <= (item.reorder_point || 10);
+                      
+                      return (
+                        <Card 
+                          key={item.id} 
+                          className="bg-white border border-slate-200 shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden"
+                        >
+                          <CardContent className="p-5">
+                            {/* Header */}
+                            <div className="flex items-start justify-between mb-4 pb-4 border-b border-slate-200">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-slate-900 text-base mb-1.5 leading-tight">{item.name}</h3>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-700 text-xs font-mono font-semibold">
+                                    {item.sku}
+                                  </span>
+                                  <span className="text-slate-400 text-xs">•</span>
+                                  <span className="text-xs text-slate-600 font-medium">{item.category_name || 'Uncategorized'}</span>
+                                </div>
+                              </div>
+                              <Badge className={`${getStatusColor(stockStatus)} font-semibold px-2.5 py-1 rounded-full shadow-sm border flex-shrink-0 ml-2`}>
+                                <div className="flex items-center space-x-1">
+                                  {getStatusIcon(stockStatus)}
+                                  <span className="text-[10px] font-medium">
+                                    {stockStatus.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                  </span>
+                                </div>
+                              </Badge>
+                            </div>
+
+                            {/* Stock Information Grid */}
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
+                                <div className="text-xs text-slate-600 font-semibold mb-1 uppercase tracking-wide">On Hand</div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-bold text-slate-900 text-xl">{item.physical_stock || 0}</span>
+                                  {isLowStock && (
+                                    <AlertTriangle className="w-4 h-4 text-amber-500 animate-pulse" />
+                                  )}
+                                </div>
+                                <div className="text-xs text-slate-500 font-medium mt-1">
+                                  Max: {item.max_stock_level || 1000}
+                                </div>
+                              </div>
+
+                              <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg p-3 border border-emerald-100">
+                                <div className="text-xs text-slate-600 font-semibold mb-1 uppercase tracking-wide">Available</div>
+                                <div className="font-bold text-emerald-700 text-xl">{availableStock}</div>
+                                <div className="text-xs text-slate-500 font-medium mt-1">Ready to sell</div>
+                              </div>
+
+                              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-100">
+                                <div className="text-xs text-slate-600 font-semibold mb-1 uppercase tracking-wide">Reserved</div>
+                                <div className="font-bold text-amber-700 text-xl">{item.reserved_stock || 0}</div>
+                                <div className="text-xs text-slate-500 font-medium mt-1">In orders</div>
+                              </div>
+
+                              <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-3 border border-purple-100">
+                                <div className="text-xs text-slate-600 font-semibold mb-1 uppercase tracking-wide">Reorder Point</div>
+                                <div className="font-bold text-slate-900 text-xl">{item.reorder_point || 10}</div>
+                                <div className="text-xs text-slate-500 font-medium mt-1">
+                                  Min: {item.min_stock_level || 5}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Additional Info */}
+                            <div className="space-y-3 mb-4 pt-4 border-t border-slate-200">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-slate-600 font-semibold">Total Value</span>
+                                <span className="font-bold text-slate-900 text-sm">
+                                  {(() => {
+                                    const physicalStock = Number(item.physical_stock) || 0
+                                    const unitCost = Number(item.unit_cost) || 0
+                                    const totalValue = physicalStock * unitCost
+                                    return totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                                  })()} UGX
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-slate-600 font-semibold">Unit Cost</span>
+                                <span className="text-sm text-slate-700 font-medium">
+                                  {(() => {
+                                    const unitCost = Number(item.unit_cost) || 0
+                                    return unitCost > 0 ? unitCost.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "0"
+                                  })()} UGX
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-slate-600 font-semibold">Retail Price</span>
+                                <span className="text-sm text-slate-700 font-medium">
+                                  {(() => {
+                                    const unitPrice = Number(item.unit_price) || 0
+                                    return unitPrice > 0 ? unitPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "0"
+                                  })()} UGX
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-slate-600 font-semibold">Location</span>
+                                <span className="text-sm text-slate-700 font-medium">Main Warehouse</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-slate-600 font-semibold">Last Updated</span>
+                                <span className="text-sm text-slate-700 font-medium">
+                                  {item.last_stock_update ? format(new Date(item.last_stock_update), "MMM dd, yyyy") : "Never"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center space-x-2 pt-4 border-t border-slate-200">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1 bg-white hover:bg-blue-50 hover:text-blue-700 border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                onClick={() => handleAdjustStock(item)}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Adjust Stock
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1 bg-white hover:bg-green-50 hover:text-green-700 border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                onClick={() => handleViewHistory(item)}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View History
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </>
               )}
 
               {/* Empty State */}
               {!loading && !error && inventory.length === 0 && (
-                <div className="text-center py-12 px-4">
-                  <Warehouse className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No inventory items found</h3>
-                  <p className="text-gray-600 mb-4">Try adjusting your search or filter criteria</p>
-                  <Button variant="outline" onClick={() => setFilters({
-                    search: "",
-                    status: "all" as const,
-                    location: "",
-                    category_id: "",
-                    sort_by: "product_name" as const,
-                    sort_order: "asc" as const,
-                    page: 1,
-                    limit: 20,
-                    show_low_stock_only: false,
-                    show_out_of_stock_only: false,
-                  })}>
-                    Clear Filters
+                <div className="text-center py-16 px-4">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl mb-6 shadow-lg">
+                    <Warehouse className="w-10 h-10 text-slate-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Inventory Items Found</h3>
+                  <p className="text-slate-600 font-medium mb-6 max-w-md mx-auto">
+                    Try adjusting your search or filter criteria to find what you're looking for
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setFilters({
+                      search: "",
+                      status: "all" as const,
+                      location: "",
+                      category_id: "",
+                      sort_by: "product_name" as const,
+                      sort_order: "asc" as const,
+                      page: 1,
+                      limit: 20,
+                      show_low_stock_only: false,
+                      show_out_of_stock_only: false,
+                    })}
+                    className="bg-white hover:bg-slate-50 border-slate-300 text-slate-700 font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Clear All Filters
                   </Button>
                 </div>
               )}

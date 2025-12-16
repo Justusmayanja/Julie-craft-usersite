@@ -50,7 +50,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
       'content': 'Content',
       'media': 'Media Library',
       'homepage': 'Homepage',
-      'chat': 'Chat Support'
+      'chat': 'Chat Support',
+      'contact-messages': 'Contact Messages'
     }
     
     return pageNames[pageSegment] || pageSegment.charAt(0).toUpperCase() + pageSegment.slice(1).replace(/-/g, ' ')

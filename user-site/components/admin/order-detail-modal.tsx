@@ -153,7 +153,8 @@ export function OrderDetailModal({ order, open, onOpenChange, onOrderUpdated }: 
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update order status')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Failed to update order status')
       }
 
       const updatedOrder = await response.json()
@@ -184,7 +185,8 @@ export function OrderDetailModal({ order, open, onOpenChange, onOrderUpdated }: 
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update payment status')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Failed to update payment status')
       }
 
       const updatedOrder = await response.json()
@@ -215,7 +217,8 @@ export function OrderDetailModal({ order, open, onOpenChange, onOrderUpdated }: 
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update tracking number')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Failed to update tracking number')
       }
 
       const updatedOrder = await response.json()
@@ -246,7 +249,8 @@ export function OrderDetailModal({ order, open, onOpenChange, onOrderUpdated }: 
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update notes')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Failed to update notes')
       }
 
       const updatedOrder = await response.json()

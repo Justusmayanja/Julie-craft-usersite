@@ -13,12 +13,16 @@ export async function GET(request: NextRequest) {
           id: '1',
           name: 'Handwoven Basket',
           sku: 'HW-BASKET-001',
+          category_name: 'Baskets',
           physical_stock: 25,
           reserved_stock: 3,
           available_stock: 22,
           reorder_point: 5,
-          reorder_quantity: 20,
+          min_stock_level: 3,
           max_stock_level: 50,
+          reorder_quantity: 20,
+          unit_cost: 15000,
+          unit_price: 25000,
           stock_status: 'in_stock',
           inventory_version: 1,
           last_stock_update: new Date().toISOString(),
@@ -27,12 +31,16 @@ export async function GET(request: NextRequest) {
           id: '2',
           name: 'Ceramic Vase',
           sku: 'CER-VASE-002',
+          category_name: 'Ceramics',
           physical_stock: 8,
           reserved_stock: 2,
           available_stock: 6,
           reorder_point: 10,
-          reorder_quantity: 15,
+          min_stock_level: 5,
           max_stock_level: 30,
+          reorder_quantity: 15,
+          unit_cost: 20000,
+          unit_price: 35000,
           stock_status: 'low_stock',
           inventory_version: 1,
           last_stock_update: new Date().toISOString(),
@@ -41,12 +49,16 @@ export async function GET(request: NextRequest) {
           id: '3',
           name: 'Wooden Sculpture',
           sku: 'WD-SCULP-003',
+          category_name: 'Sculptures',
           physical_stock: 0,
           reserved_stock: 0,
           available_stock: 0,
           reorder_point: 5,
-          reorder_quantity: 10,
+          min_stock_level: 3,
           max_stock_level: 20,
+          reorder_quantity: 10,
+          unit_cost: 30000,
+          unit_price: 50000,
           stock_status: 'out_of_stock',
           inventory_version: 1,
           last_stock_update: new Date().toISOString(),
@@ -105,6 +117,12 @@ export async function GET(request: NextRequest) {
         name,
         sku,
         stock_quantity,
+        price,
+        cost_price,
+        reorder_point,
+        min_stock_level,
+        max_stock_level,
+        category_name,
         status,
         created_at,
         updated_at
@@ -123,24 +141,50 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform products to match the expected format
-    const transformedProducts = (products || []).map(product => ({
-      id: product.id,
-      name: product.name,
-      sku: product.sku || `SKU-${product.id}`,
-      physical_stock: product.stock_quantity || 0,
-      reserved_stock: 0, // Will be calculated from reservations
-      available_stock: product.stock_quantity || 0, // Will be calculated
-      reorder_point: 5, // Default value
-      reorder_quantity: 10, // Default value
-      max_stock_level: 100, // Default value
-      stock_status: product.stock_quantity > 10 ? 'in_stock' : 
-                   product.stock_quantity > 0 ? 'low_stock' : 'out_of_stock',
-      inventory_version: 1,
-      last_stock_update: product.updated_at || product.created_at,
-    }))
+    const transformedProducts = (products || []).map(product => {
+      const physicalStock = product.stock_quantity || 0
+      const reorderPoint = product.reorder_point || 10
+      const minStock = product.min_stock_level || 5
+      const maxStock = product.max_stock_level || 100
+      
+      // Determine stock status
+      let stockStatus = 'out_of_stock'
+      if (physicalStock > reorderPoint) {
+        stockStatus = 'in_stock'
+      } else if (physicalStock > 0) {
+        stockStatus = 'low_stock'
+      }
+      
+      return {
+        id: product.id,
+        name: product.name,
+        sku: product.sku || `SKU-${product.id}`,
+        category_name: product.category_name || null,
+        physical_stock: physicalStock,
+        reserved_stock: 0, // Will be calculated from reservations
+        available_stock: physicalStock, // Will be calculated
+        reorder_point: reorderPoint,
+        min_stock_level: minStock,
+        max_stock_level: maxStock,
+        reorder_quantity: 10, // Default value
+        unit_cost: product.cost_price ? Number(product.cost_price) : null,
+        unit_price: product.price ? Number(product.price) : null,
+        stock_status: stockStatus,
+        inventory_version: 1,
+        last_stock_update: product.updated_at || product.created_at,
+      }
+    })
 
     // Get reservations if requested
-    let reservations = []
+    let reservations: Array<{
+      id: string
+      product_id: string
+      order_id: string
+      quantity_reserved: number
+      reservation_status: string
+      reserved_at: string
+      expires_at: string
+    }> = []
     if (includeReservations) {
       const { data: reservationsData, error: reservationsError } = await supabaseAdmin
         .from('order_item_reservations')

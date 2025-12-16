@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
+import { sendChatSupportResponseEmail } from '@/lib/email-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -103,10 +104,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'conversation_id and message are required' }, { status: 400 })
     }
 
-    // Verify user has access to this conversation
+    // Verify user has access to this conversation and get full conversation details
     const { data: conversation } = await supabaseAdmin
       .from('chat_conversations')
-      .select('user_id, assigned_to')
+      .select('user_id, assigned_to, customer_name, customer_email, subject')
       .eq('id', conversation_id)
       .single()
 
@@ -149,6 +150,21 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) throw error
+
+    // If admin sent message to a guest user (user_id is null), send email notification
+    if (isAdmin && !conversation.user_id && conversation.customer_email) {
+      // Send email asynchronously (don't wait for it)
+      sendChatSupportResponseEmail(
+        conversation.customer_email,
+        conversation.customer_name || 'Customer',
+        senderName,
+        message.trim(),
+        conversation.subject || 'Support Inquiry'
+      ).catch(err => {
+        console.error('[Chat Messages API] Error sending email to guest user:', err)
+        // Don't fail the request if email sending fails
+      })
+    }
 
     return NextResponse.json({ message: chatMessage })
   } catch (error) {
