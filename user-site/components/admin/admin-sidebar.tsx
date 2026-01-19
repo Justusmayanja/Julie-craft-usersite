@@ -309,7 +309,10 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
             </div>
             <div className="space-y-1">
               {section.items.map((item) => {
-                const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+                // For Dashboard (/admin), only match exactly
+                // For other routes, match exactly or if pathname starts with the href followed by "/"
+                const isActive = pathname === item.href || 
+                  (item.href !== "/" && item.href !== "/admin" && pathname.startsWith(item.href + "/"))
                 const isExpanded = expandedMenus.includes(item.name)
                 const hasActiveSubmenu = item.submenu?.some(subItem => pathname === subItem.href)
                 
